@@ -1,0 +1,7 @@
+
+*.db
+*.ipch
+*.log
+*.properties
+bin/
+.vs/
