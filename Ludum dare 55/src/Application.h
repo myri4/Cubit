@@ -61,7 +61,7 @@ namespace wc
 
 			auto& style = ImGui::GetStyle();
 			style.WindowMenuButtonPosition = ImGuiDir_None;
-			game.Create(glm::vec2{1280, 720});
+			game.Create(Globals.window.GetSize());
 		}
 		//----------------------------------------------------------------------------------------------------------------------
 		void OnInput() 

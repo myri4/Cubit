@@ -45,6 +45,7 @@ namespace wc
 	protected:
 		// Game objects
 		OrthographicCamera camera;
+		glm::vec2 m_TargetPosition;
 		Map m_Map;
 
 		class ContactListener : public b2ContactListener
@@ -59,10 +60,10 @@ namespace wc
 
 				GameEntity* entityA = reinterpret_cast<GameEntity*>(fixtureUserDataA.pointer);
 				GameEntity* entityB = reinterpret_cast<GameEntity*>(fixtureUserDataB.pointer);
-				
+
 				b2Vec2 bNormal = contact->GetManifold()->localNormal;
-				glm::vec2 normal = { bNormal.x, bNormal.y };
-				
+				glm::vec2 normal = glm::round(glm::vec2{ bNormal.x, bNormal.y });
+
 				if (entityA && entityA->Type > EntityType::Entity)
 				{
 					if (fixtureB->GetType() == b2Shape::e_chain)
@@ -73,13 +74,12 @@ namespace wc
 						if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts++;
 					}
 				}
-				
 				if (entityB && entityB->Type > EntityType::Entity)
 				{
 					if (fixtureA->GetType() == b2Shape::e_chain)
 					{
 						if (normal == glm::vec2(0.f, -1.f)) entityB->UpContacts++;
-						if (normal == glm::vec2(0.f, 1.f)) entityB->DownContacts++;
+						if (normal == glm::vec2(0.f, 1.f))   entityB->DownContacts++;
 						if (normal == glm::vec2(1.f, 0.f)) entityB->LeftContacts++;
 						if (normal == glm::vec2(-1.f, 0.f)) entityB->RightContacts++;
 					}
@@ -96,10 +96,10 @@ namespace wc
 
 				GameEntity* entityA = reinterpret_cast<GameEntity*>(fixtureUserDataA.pointer);
 				GameEntity* entityB = reinterpret_cast<GameEntity*>(fixtureUserDataB.pointer);
-				
+
 				b2Vec2 bNormal = contact->GetManifold()->localNormal;
-				glm::vec2 normal = { bNormal.x, bNormal.y };
-				
+				glm::vec2 normal = glm::round(glm::vec2{ bNormal.x, bNormal.y });
+
 				if (entityA && entityA->Type > EntityType::Entity)
 				{
 					if (fixtureB->GetType() == b2Shape::e_chain)
@@ -110,7 +110,7 @@ namespace wc
 						if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts--;
 					}
 				}
-				
+
 				if (entityB && entityB->Type > EntityType::Entity)
 				{
 					if (fixtureA->GetType() == b2Shape::e_chain)
@@ -128,8 +128,10 @@ namespace wc
 
 		Renderer2D m_Renderer;
 	public:
-		float DragStrength = 3.f;
+		float DragStrength = 2.f;
 		float AirSpeedFactor = 0.7f;
+		uint32_t PlasmaGunTexture = 0;
+		uint32_t SawedOffTexture = 0;
 
 	public:
 
@@ -146,6 +148,8 @@ namespace wc
 			m_Renderer.Init(camera);
 
 			//LoadAssets();
+			PlasmaGunTexture = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
+			SawedOffTexture = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
 
 			LoadMap("levels/level1.malen");
 
@@ -165,27 +169,10 @@ namespace wc
 
 			if (ImGui::IsKeyPressed(ImGuiKey_Space))
 			{
-				if (player.DownContacts == 0)
+				if (player.DownContacts != 0)
 				{
-					if (player.LeftContacts && !player.RightContacts)
-					{
-						//player.body->SetLinearVelocity(b2Vec2(0, 0));
-						glm::vec2 f = glm::vec2(0.5f, 0.5f) * player.JumpForce * 2.f;
-						player.body->ApplyLinearImpulseToCenter({ f.x,f.y }, true); //wall on left, jump to right
-					}
-					if (!player.LeftContacts && player.RightContacts)
-					{
-						//player.body->SetLinearVelocity(b2Vec2(0, 0));
-						glm::vec2 f = glm::vec2(-0.5f, 0.5f) * player.JumpForce * 2.f;
-						player.body->ApplyLinearImpulseToCenter({ f.x,f.y }, true); //wall on left, jump to right
-					}
-					if (!player.LeftContacts && !player.RightContacts)
-					{
-						player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);//air jump
-					}
-				}
-				else
 					player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true); //normal jump
+				}
 			}
 
 			if (moveDir != glm::vec2(0.f))
@@ -206,12 +193,13 @@ namespace wc
 			}
 		}
 
-		void UpdateGame(glm::vec2 cursorPos)
+		void UpdateGame()
 		{
 			m_Map.Update();
 
 			Player& player = m_Map.player;
-			camera.Position = glm::vec3(player.Position, camera.Position.z);
+			m_TargetPosition = player.Position;
+			camera.Position += glm::vec3((m_TargetPosition - glm::vec2(camera.Position)) * 11.5f * Globals.deltaTime, 0.f);
 
 
 			if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
@@ -236,6 +224,19 @@ namespace wc
 				m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, entity.TextureID, entity.Alive() ?
 					glm::vec4(1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
 			}
+			
+			// @TODO: Fix this
+			{
+				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
+				float angle = atan2(dir.y, dir.x);
+				if (dir.x < 0.f)
+				{
+					glm::vec2 newDir = glm::normalize(glm::vec2(1.f - dir.x, dir.y));
+					angle = glm::radians(360.f - glm::degrees(atan2(newDir.y, newDir.x)));
+				}
+				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(m_Map.player.Position, 0.f)) * glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f), { (dir.x < 0.f ? -1.f : 1.f) * 1.f, 0.45f, 1.f });
+				m_RenderData.DrawQuad(transform, PlasmaGunTexture);
+			}
 
 			m_Renderer.Flush(m_RenderData);
 			m_RenderData.Reset();
@@ -243,7 +244,7 @@ namespace wc
 
 		void Update()
 		{
-			UpdateGame(glm::vec2(0.f));
+			UpdateGame();
 			RenderGame();
 		}
 

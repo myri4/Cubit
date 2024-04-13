@@ -88,7 +88,7 @@ namespace wc
 
     struct Player : public GameEntity
     {
-        float JumpForce = 1150.f;
+        float JumpForce = 1750.f;
 
         Player()
         {

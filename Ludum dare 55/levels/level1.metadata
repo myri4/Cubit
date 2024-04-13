@@ -1,4 +1,4 @@
-Gravity: [0, -11.8000002]
+Gravity: [0, -9.8000002]
 TopDown: false
 Tileset: scripts/debug.tileset
 Repeaters: ~

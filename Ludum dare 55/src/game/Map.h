@@ -45,7 +45,7 @@ namespace wc
 			if (Entities.size() == 0)
 			{
 				Entities.push_back(&player);
-				player.Size = glm::vec2(1.15f, 2.03f) * 0.5f;
+				player.Size = glm::vec2(1.15f, 2.f) * 0.5f;
 				player.HitBoxSize = player.Size;
 			}
 		}
@@ -162,7 +162,7 @@ namespace wc
 
 				fixtureDef.shape = &shape;
 				e->body->CreateFixture(&fixtureDef);
-				e->body->SetLinearDamping(2.8f);
+				e->body->SetLinearDamping(1.8f);
 			}
 			uint32_t faceCount = 0;
 			auto addFace = [&](const b2Vec2* face)

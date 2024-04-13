@@ -173,12 +173,6 @@ namespace wc
 		}
 
 		// Note: Rotation should be in radians
-		void DrawQuad(const glm::vec3& position, glm::vec2 size, float rotation, uint32_t texID = 0)
-		{
-			glm::mat4 transform = glm::translate(glm::mat4(1.f), position) * glm::rotate(glm::mat4(1.f), rotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f), { size.x, size.y, 1.f });
-			DrawQuad(transform, texID);
-		}
-
 		void DrawQuad(const glm::vec3& position, glm::vec2 size, float rotation, uint32_t texID = 0, const glm::vec4& color = glm::vec4(1.f))
 		{
 			glm::mat4 transform = glm::translate(glm::mat4(1.f), position) * glm::rotate(glm::mat4(1.f), rotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f), { size.x, size.y, 1.f });
