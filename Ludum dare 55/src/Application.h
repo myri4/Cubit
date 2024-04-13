@@ -37,7 +37,7 @@ namespace wc
 			windowInfo.Width = 1280;
 			windowInfo.Height = 720;
 			windowInfo.Resizeable = true;
-			windowInfo.AppName = "Ignis Level Editor";
+			windowInfo.AppName = "Ludum dare 55";
 			windowInfo.StartMode = WindowMode::Maximized;
 			Globals.window.Create(windowInfo);
 
@@ -49,10 +49,10 @@ namespace wc
 
 			ImGuiIO& io = ImGui::GetIO();
 			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-			//io.IniFilename = nullptr;
+			io.IniFilename = nullptr;
 			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-			io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/fonts/OpenSans-Regular.ttf", 17.f);
+			//io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/fonts/OpenSans-Regular.ttf", 17.f);
 
 			ImGui_ImplGlfw_Init(Globals.window, false);
 

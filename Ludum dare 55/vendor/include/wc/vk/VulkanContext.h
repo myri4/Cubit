@@ -588,6 +588,7 @@ namespace VulkanContext
 			features12.runtimeDescriptorArray = true;
 			features12.descriptorBindingVariableDescriptorCount = true;
 			features12.descriptorBindingPartiallyBound = true;
+			features12.bufferDeviceAddress = true;
 
 			VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 

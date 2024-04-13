@@ -60,7 +60,7 @@ namespace wc
 		VmaAllocation m_Allocation = VK_NULL_HANDLE;
 	public:
 
-		void Allocate(VkDeviceSize bufferSize, uint32_t usage = wc::STORAGE_BUFFER | wc::DEVICE_ADDRESS)
+		void Allocate(VkDeviceSize bufferSize, uint32_t usage = wc::STORAGE_BUFFER)
 		{
 			VkBufferCreateInfo bufferInfo = {
 				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
