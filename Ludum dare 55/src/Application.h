@@ -1,16 +1,16 @@
 #pragma once
-#include "Globals.h"
-#include "wc/vk/SyncContext.h"
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_vulkan.h>
 #include <imgui/ImGuizmo.h>
 
+#include "game/Game.h"
+
 namespace wc
 {
 	class Application 
 	{
-
+		GameInstance game;
 		//----------------------------------------------------------------------------------------------------------------------
 		bool IsEngineOK() { return Globals.window.IsOpen(); }
 		//----------------------------------------------------------------------------------------------------------------------
@@ -61,6 +61,7 @@ namespace wc
 
 			auto& style = ImGui::GetStyle();
 			style.WindowMenuButtonPosition = ImGuiDir_None;
+			game.Create(glm::vec2{1280, 720});
 		}
 		//----------------------------------------------------------------------------------------------------------------------
 		void OnInput() 
@@ -68,6 +69,11 @@ namespace wc
 			Globals.window.PoolEvents();
 
 			if (Globals.window.resized) Resize();
+
+			if (Globals.window.HasFocus())
+			{
+				game.InputGame();
+			}
 		}
 
 		void OnUpdate()
@@ -85,10 +91,12 @@ namespace wc
 				return;
 			}
 
+			game.Update();
+
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 			ImGuizmo::BeginFrame();
-
+			game.UI();
 			ImGui::Render();			
 
 			CommandBuffer& cmd = SyncContext::MainCommandBuffer;
@@ -157,8 +165,10 @@ namespace wc
 			ImGui_ImplVulkan_Shutdown();
 			ImGui_ImplGlfw_Shutdown();
 
+			game.DestroyGame();
+
 			descriptorAllocator.Destroy();
-						
+			
 			SyncContext::Destroy();
 			Globals.window.Destroy();
 
