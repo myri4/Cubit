@@ -13,7 +13,8 @@ namespace wc
         UNDEFINED = 0,
         // Entities
         Entity,
-        TestEnemy,
+        Bullet,
+        EyeballEnemy,
 
         Player,
     };
@@ -73,6 +74,9 @@ namespace wc
         uint32_t DownContacts = 0;
         uint32_t LeftContacts = 0;
         uint32_t RightContacts = 0;
+        uint32_t Contacts = 0;
+
+        bool playerTouch = false;
 
         glm::vec2 HitBoxSize = glm::vec2(0.5f);
 
@@ -83,13 +87,48 @@ namespace wc
             YAML_LOAD_VAR(node, Position);
         }
 
+        void CreateBody(b2World* PhysicsWorld)
+        {
+            b2BodyDef bodyDef;
+            bodyDef.type = b2_dynamicBody;
+            bodyDef.position.Set(Position.x, Position.y);
+            bodyDef.fixedRotation = true;
+            body = PhysicsWorld->CreateBody(&bodyDef);
+
+            b2PolygonShape shape;
+            shape.SetAsBox(HitBoxSize.x, HitBoxSize.y);
+
+
+            b2FixtureDef fixtureDef;
+            fixtureDef.density = Density;
+            fixtureDef.friction = 0.f;
+
+            fixtureDef.userData.pointer = (uintptr_t)this;
+
+            fixtureDef.shape = &shape;
+            body->CreateFixture(&fixtureDef);
+            body->SetLinearDamping(2.8f);
+        }
+
         GameEntity() = default;
+    };
+
+    enum class BulletType { BFG, Eyeball };
+
+    struct Bullet : public GameEntity
+    {
+        BulletType bulletType;
+        bool Shot = false; // bool for one time change at the start
+
+        Bullet() { Type = EntityType::Bullet; }
     };
 
     struct Player : public GameEntity
     {
         float JumpForce = 1750.f;
 
+        float swordCD = 1.5f;
+        bool swordAttack = false;
         Player()
         {
             Type = EntityType::Player;
@@ -97,8 +136,11 @@ namespace wc
         }
     };
 
-    struct Enemy : public GameEntity
+    struct EyeballEnemy : public GameEntity
     {
-        Enemy() { Type = EntityType::TestEnemy; }
+        float attackTimer = 2.f;
+        float range = 8.f;
+
+        EyeballEnemy() { Type = EntityType::EyeballEnemy; Speed = 1.1f; Damage = 0.5f; }
     };
 }

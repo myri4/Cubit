@@ -130,6 +130,12 @@ namespace wc
 						Type = magic_enum::enum_cast<EntityType>(metaData["Type"].as<std::string>()).value();
 
 						if (Type == EntityType::Player) Entities[0]->LoadMapBase(metaData);
+						else if (Type == EntityType::EyeballEnemy)
+						{
+							EyeballEnemy* e = new EyeballEnemy();
+							e->LoadMapBase(metaData);
+							Entities.push_back(e);
+						}
 					}
 				}
 			}
@@ -339,6 +345,22 @@ namespace wc
 			}
 		}
 
+		void Explode(glm::vec2 position, float radius, float blastPower)
+		{
+			for (auto& en : Entities)
+			{
+				auto& e = *en;
+				float dist = glm::distance(position, e.Position);
+
+				if (dist <= radius)
+				{
+					float invDistance = 1 / dist;
+					glm::vec2 dir = glm::normalize(e.Position - position) * blastPower * invDistance * invDistance;
+					e.body->ApplyLinearImpulse(b2Vec2{ dir.x, dir.y }, b2Vec2{ position.x, position.y }, true);
+				}
+			}
+		}
+
 		void DestroyPhysicsWorld()
 		{
 			delete PhysicsWorld;
@@ -347,8 +369,9 @@ namespace wc
 
 		void UpdateAI()
 		{
-			for (auto& e : Entities)
+			for (uint32_t i = 0; i < Entities.size(); i++)
 			{
+				auto& e = Entities[i];
 				switch (e->Type)
 				{
 				//case EntityType::TornadoEnemy:
@@ -356,9 +379,71 @@ namespace wc
 				//	TornadoEnemy& entity = *reinterpret_cast<TornadoEnemy*>(e);
 				//	entity.body->ApplyForceToCenter({ 500.f, 0.f }, true);
 				//}
+				case EntityType::EyeballEnemy:
+				{
+					EyeballEnemy& entity = *reinterpret_cast<EyeballEnemy*>(e);
+					if (entity.attackTimer > 0)entity.attackTimer -= Globals.deltaTime;
+					if (player.swordAttack) 
+					{
+						WC_INFO("Sword Attack");
+						glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0.f, player.Size.y * 0.5f)) - entity.Position);
+						entity.body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
+					}
+					bool inRange = glm::distance(player.Position, entity.Position) < entity.range;
+					if (!inRange) 
+					{
+						if (entity.Position.x > player.Position.x)entity.body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
+						else entity.body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
+					}
+					else
+					{
+						if (entity.attackTimer <= 0 && entity.Alive())
+						{
+							//shoot
+							Bullet* bullet = new Bullet();
+							bullet->Position = entity.Position + glm::vec2(0, 0.5f);
+							bullet->Size = { 0.25f, 0.25f };
+							bullet->Density = 75.f;
+							bullet->bulletType = BulletType::Eyeball;
+							bullet->CreateBody(PhysicsWorld);
+							bullet->body->SetBullet(true);
+							bullet->body->GetFixtureList()->SetSensor(true);
+							Entities.push_back(bullet);
+							entity.attackTimer = 2.f;
+						}
+					}
+				}
+				break;
+				case EntityType::Bullet:
+				{
+					Bullet& bullet = *reinterpret_cast<Bullet*>(e);
+					if (bullet.bulletType == BulletType::Eyeball)
+					{
+						glm::vec2 directionToPlayer;
+						if (!bullet.Shot)
+						{
+							directionToPlayer = glm::normalize(player.Position - bullet.Position);
+							bullet.Rotation = std::atan2(directionToPlayer.y, directionToPlayer.x);
+							//make it true so it only does it once
+							bullet.Shot = true;
+						}
+
+						bullet.body->ApplyLinearImpulseToCenter(1750.f * b2Vec2(directionToPlayer.x, directionToPlayer.y), true);
+						if (bullet.Contacts != 0 && glm::distance(player.Position, bullet.Position) > 50.f && bullet.playerTouch)
+						{
+							if (bullet.playerTouch) player.Health -= bullet.Damage;
+
+							//Destroy
+							bullet.body->DestroyFixture(bullet.body->GetFixtureList());
+							PhysicsWorld->DestroyBody(bullet.body);
+							Entities.erase(Entities.begin() + i);
+						}
+					}
+				}
 				break;
 				default:
 					break;
+
 				}
 			}
 		}

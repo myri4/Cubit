@@ -68,21 +68,29 @@ namespace wc
 				{
 					if (fixtureB->GetType() == b2Shape::e_chain)
 					{
+						entityA->Contacts++;
 						if (normal == glm::vec2(0.f, -1.f)) entityA->UpContacts++;
 						if (normal == glm::vec2(0.f, 1.f)) entityA->DownContacts++;
 						if (normal == glm::vec2(1.f, 0.f)) entityA->LeftContacts++;
 						if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts++;
 					}
+
+					if (entityB && entityB->Type == EntityType::Player)
+						entityA->playerTouch = true;
 				}
 				if (entityB && entityB->Type > EntityType::Entity)
 				{
 					if (fixtureA->GetType() == b2Shape::e_chain)
 					{
+						entityB->Contacts++;
 						if (normal == glm::vec2(0.f, -1.f)) entityB->UpContacts++;
 						if (normal == glm::vec2(0.f, 1.f))   entityB->DownContacts++;
 						if (normal == glm::vec2(1.f, 0.f)) entityB->LeftContacts++;
 						if (normal == glm::vec2(-1.f, 0.f)) entityB->RightContacts++;
 					}
+
+					if (entityA && entityA->Type == EntityType::Player)
+						entityB->playerTouch = true;
 				}
 			}
 
@@ -104,22 +112,30 @@ namespace wc
 				{
 					if (fixtureB->GetType() == b2Shape::e_chain)
 					{
+						entityA->Contacts--;
 						if (normal == glm::vec2(0.f, -1.f)) entityA->UpContacts--;
 						if (normal == glm::vec2(0.f, 1.f)) entityA->DownContacts--;
 						if (normal == glm::vec2(1.f, 0.f)) entityA->LeftContacts--;
 						if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts--;
 					}
+
+					if (entityB && entityB->Type == EntityType::Player)
+						entityA->playerTouch = false;
 				}
 
 				if (entityB && entityB->Type > EntityType::Entity)
 				{
 					if (fixtureA->GetType() == b2Shape::e_chain)
 					{
+						entityB->Contacts--;
 						if (normal == glm::vec2(0.f, -1.f)) entityB->UpContacts--;
 						if (normal == glm::vec2(0.f, 1.f)) entityB->DownContacts--;
 						if (normal == glm::vec2(1.f, 0.f)) entityB->LeftContacts--;
 						if (normal == glm::vec2(-1.f, 0.f)) entityB->RightContacts--;
 					}
+
+					if (entityA && entityA->Type == EntityType::Player)
+						entityB->playerTouch = false;
 				}
 			}
 		} m_ContactListenerInstance;
@@ -167,6 +183,8 @@ namespace wc
 			if (Key::GetKey(Key::A)) { moveDir.x = -1.f; keyPressed = true; }
 			else if (Key::GetKey(Key::D)) { moveDir.x = 1.f;  keyPressed = true; }
 
+			if (Key::GetKey(Key::E) && player.swordCD <= 0) player.swordAttack = true;
+
 			if (ImGui::IsKeyPressed(ImGuiKey_Space))
 			{
 				if (player.DownContacts != 0)
@@ -204,7 +222,14 @@ namespace wc
 
 			if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
 			{
+				m_Map.Explode({2.f, 2.f}, 100.f, 1000.f);
+			}
 
+			if (player.swordCD > 0.f) player.swordCD -= Globals.deltaTime;
+			if (player.swordAttack) 
+			{
+				player.swordCD = 2.5f;
+				player.swordAttack = false;
 			}
 		}
 
