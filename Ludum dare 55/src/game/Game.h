@@ -93,8 +93,7 @@ namespace wc
 				}
 
 				b2Vec2 bNormal = contact->GetManifold()->localNormal;
-				glm::vec2 normal = { bNormal.x, bNormal.y };
-
+				glm::vec2 normal = { glm::round(bNormal.x), glm::round(bNormal.y) };
 				if (entityA && entityA->Type > EntityType::Entity)
 				{
 					if (fixtureB->GetType() == b2Shape::e_chain)
@@ -228,7 +227,7 @@ namespace wc
 			m_Particle.Position = { 0.0f, 0.0f };
 		}
 
-
+		
 		void InputGame()
 		{
 			glm::vec2 moveDir;
@@ -284,32 +283,33 @@ namespace wc
 
 			if (player.swordCD > 0.f) player.swordCD -= Globals.deltaTime;
 			if (player.attackCD > 0.f) player.attackCD -= Globals.deltaTime;
-			if (player.dashCD > 0.f) player.attackCD -= Globals.deltaTime;
+			if (player.dashCD > 0.f) player.dashCD -= Globals.deltaTime;
 
 			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.attackCD <= 0)
 			{
 				if (player.weapon)
 				{
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
-					m_Map.SpawnBullet(player.Position + dir * 0.75f, dir, 25.f, 3.5f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
+					m_Map.SpawnBullet(player.Position + glm::vec2(0.f, 0.1f) + dir * 0.75f, dir, 25.f, 3.5f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
 					player.attackCD = 0.3f;
 				}
 				else
 				{
 					std::random_device rd;
 					std::mt19937 gen(rd());
-					std::uniform_real_distribution<float> dis(-2.f, 2.f);
+					std::uniform_real_distribution<float> dis(-1.75f, 2.25f);
 
 					for (uint32_t i = 0; i < 9; i++)
 					{
 						glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position + glm::vec2(0.f, dis(gen)));
-						glm::vec2 startPos = player.Position + dir * 0.55f;
-						m_Map.SpawnBullet(startPos, dir, 25.f, 1.5f, { 0.15f, 0.15f }, glm::vec4(1.f, 1.f, 0, 1.f), BulletType::Shotgun);
+						m_Map.SpawnBullet(player.Position + dir * 0.45f, dir, 25.f, 1.5f, { 0.15f, 0.15f }, glm::vec4(1.f, 1.f, 0, 1.f), BulletType::Shotgun);
 
-						m_Particle.Position = startPos;
+						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();
-						m_Particle.Velocity = { vel.x, vel.y };
-						m_Particle.VelocityVariation = glm::normalize(startPos - player.Position) * 5.f;
+						m_Particle.ColorBegin = { 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f };
+						m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
+						m_Particle.Velocity = glm::vec2(vel.x, vel.y) * 0.5f;
+						m_Particle.VelocityVariation = glm::normalize(player.Position + dir * 0.55f - player.Position) * 5.f;
 						for (int i = 0; i < 6; i++)
 							m_ParticleEmitter.Emit(m_Particle);
 					}
@@ -319,8 +319,7 @@ namespace wc
 
 			if (player.dash && player.dashCD <= 0)
 			{
-				if (player.body->GetLinearVelocity().x > 0.1f) 
-				{
+				if (player.body->GetLinearVelocity().x > 0.1f) {
 					player.body->ApplyLinearImpulseToCenter({ 5000.f, 0.f }, true);
 					player.dash = false;
 				}
@@ -351,17 +350,27 @@ namespace wc
 				{
 					Bullet& bullet = *reinterpret_cast<Bullet*>(m_Map.Entities[i]);
 					m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bullet.Color);
+					if(bullet.bulletType == BulletType::BFG)
+					if (bullet.Contacts != 0 || bullet.shotEnemy) {
+						m_Particle.LifeTime = 0.35f;
+						m_Particle.ColorBegin = bullet.Color;
+						m_Particle.ColorEnd = bullet.Color;
+						m_Particle.Position = entity.Position;
+						m_Particle.Velocity = glm::vec2(0.5f);
+						m_Particle.VelocityVariation = glm::normalize(entity.Position - m_Map.player.Position) * 2.5f;
+						for (int i = 0; i < 6; i++)
+							m_ParticleEmitter.Emit(m_Particle);
+					}
 				}
 				else
 					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Alive() ? glm::vec4(1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
-
 			}
 			
 			{
 				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
 				float angle = atan2(dir.y, dir.x);
 				if (dir.x < 0.f) angle = glm::pi<float>() - angle;
-				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(m_Map.player.Position, 0.f)) * 
+				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(m_Map.player.Position + glm::vec2(0.25f, 0), 0.f)) *
 					glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, dir.x < 0.f ? -1.f : 1.f }) * glm::scale(glm::mat4(1.f), 
 						{ (dir.x < 0.f ? -1.f : 1.f) * 1.f, 0.45f, 1.f });
 
@@ -394,7 +403,9 @@ namespace wc
 
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
-			ImGui::Image(m_Renderer.GetRenderImageID(), ImVec2((float)Globals.window.GetSize().x, (float)Globals.window.GetSize().y));
+			ImGui::SetWindowFontScale(2.5f);
+			ImGui::TextColored(ImVec4(1.f, 0, 1.f, 1.f), std::format("HP: {}", m_Map.player.Health).c_str());
+			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(0, 0), ImVec2((float)Globals.window.GetSize().x, (float)Globals.window.GetSize().y));
 			ImGui::End();
 			ImGui::PopStyleVar(3);
 		}
