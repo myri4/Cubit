@@ -27,7 +27,7 @@ namespace wc
 		Map()
 		{
 			Entities.push_back(&player);
-			player.Size = glm::vec2(1.15f, 2.03f) * 0.5f;
+			player.Size = glm::vec2(1.f) * 0.5f;
 			player.HitBoxSize = player.Size;
 		}
 
@@ -45,7 +45,7 @@ namespace wc
 			if (Entities.size() == 0)
 			{
 				Entities.push_back(&player);
-				player.Size = glm::vec2(1.15f, 2.f) * 0.5f;
+				player.Size = glm::vec2(1.f) * 0.5f;
 				player.HitBoxSize = player.Size;
 			}
 		}
@@ -115,12 +115,6 @@ namespace wc
 			{
 				YAML::Node mapMetaData = YAML::LoadFile(metaFilepath);
 
-				if (mapMetaData["Gravity"]) Gravity = mapMetaData["Gravity"].as<glm::vec2>();
-				if (mapMetaData["Tileset"])
-				{
-					TilesetName = mapMetaData["Tileset"].as<std::string>();
-				}
-
 				{
 					auto objects = mapMetaData["Entities"];
 					for (int i = 0; i < objects.size(); i++)
@@ -144,7 +138,7 @@ namespace wc
 
 		void CreatePhysicsWorld(b2ContactListener* contactListener)
 		{
-			PhysicsWorld = new b2World({ Gravity.x, Gravity.y });
+			PhysicsWorld = new b2World({ 0.f, -9.8f });
 			PhysicsWorld->SetContactListener(contactListener);
 
 			b2Vec2 vs[4];
@@ -374,11 +368,6 @@ namespace wc
 				auto& e = Entities[i];
 				switch (e->Type)
 				{
-				//case EntityType::TornadoEnemy:
-				//{
-				//	TornadoEnemy& entity = *reinterpret_cast<TornadoEnemy*>(e);
-				//	entity.body->ApplyForceToCenter({ 500.f, 0.f }, true);
-				//}
 				case EntityType::EyeballEnemy:
 				{
 					EyeballEnemy& entity = *reinterpret_cast<EyeballEnemy*>(e);
@@ -521,13 +510,9 @@ namespace wc
 
 		std::vector<GameEntity*> Entities;
 
-		glm::vec2 Gravity;
-
 		Player player;
 
 		b2World* PhysicsWorld = nullptr;
-
-		std::string TilesetName;
 
 	private:
 		TileID* m_Data = nullptr;

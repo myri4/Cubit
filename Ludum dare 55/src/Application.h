@@ -34,11 +34,11 @@ namespace wc
 			VulkanContext::Create();
 
 			WindowCreateInfo windowInfo;
-			windowInfo.Width = 1280;
-			windowInfo.Height = 720;
-			windowInfo.Resizeable = true;
+			windowInfo.Width = 1980;
+			windowInfo.Height = 1080;
+			windowInfo.Resizeable = false;
 			windowInfo.AppName = "Ludum dare 55";
-			windowInfo.StartMode = WindowMode::Maximized;
+			windowInfo.StartMode = WindowMode::Fullscreen;
 			Globals.window.Create(windowInfo);
 
 			SyncContext::Create();

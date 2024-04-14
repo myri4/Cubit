@@ -35,6 +35,7 @@
 
 #include "../Globals.h"
 #include "../Rendering/Renderer2D.h"
+#include "ParticleSystem.h"
 
 #include "Map.h"
 
@@ -46,6 +47,9 @@ namespace wc
 		// Game objects
 		OrthographicCamera camera;
 		glm::vec2 m_TargetPosition;
+		ParticleSystem m_ParticleEmitter;
+		ParticleProps m_Particle;
+
 		Map m_Map;
 
 		class ContactListener : public b2ContactListener
@@ -154,7 +158,6 @@ namespace wc
 		void LoadMap(const std::string& filePath)
 		{
 			m_Map.Load(filePath);
-			m_Tileset.Load(m_Map.TilesetName, m_RenderData);
 			m_Map.CreatePhysicsWorld(&m_ContactListenerInstance);
 		}
 
@@ -162,14 +165,22 @@ namespace wc
 		{
 			m_RenderData.Create();
 			m_Renderer.Init(camera);
+			m_Tileset.Load();
 
-			//LoadAssets();
 			PlasmaGunTexture = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			SawedOffTexture = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
 
 			LoadMap("levels/level1.malen");
 
 			m_Renderer.CreateScreen(renderSize, m_RenderData);
+			m_ParticleEmitter.Init();
+			m_Particle.ColorBegin = { 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f };
+			m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
+			m_Particle.SizeBegin = 0.5f, m_Particle.SizeVariation = 0.3f, m_Particle.SizeEnd = 0.0f;
+			m_Particle.LifeTime = 2.0f;
+			m_Particle.Velocity = { 0.0f, 0.0f };
+			m_Particle.VelocityVariation = { 5.0f, 5.0f };
+			m_Particle.Position = { 0.0f, 0.0f };
 		}
 
 
@@ -223,7 +234,14 @@ namespace wc
 			if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
 			{
 				m_Map.Explode({2.f, 2.f}, 100.f, 1000.f);
+
+				m_Particle.Position = {2.f, 2.f};
+				m_Particle.VelocityVariation = glm::normalize(glm::vec2{ 2.f, 2.f } - player.Position) * 5.f;
+				for (int i = 0; i < 6; i++)
+					m_ParticleEmitter.Emit(m_Particle);
 			}
+
+			m_ParticleEmitter.OnUpdate();
 
 			if (player.swordCD > 0.f) player.swordCD -= Globals.deltaTime;
 			if (player.swordAttack) 
@@ -239,29 +257,27 @@ namespace wc
 				for (uint32_t y = 0; y < m_Map.Size.y; y++)
 				{
 					TileID tileID = m_Map.GetTile({ x,y, 0 });
-					if (tileID != 0) m_RenderData.DrawQuad({ x, y , 0.f }, { 1.f, 1.f }, m_Tileset.Tiles[tileID].TextureID);
+					if (tileID != 0) m_RenderData.DrawQuad({ x, y , 0.f }, { 1.f, 1.f }, 0, glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
 				}
 
 			for (int i = 0; i < m_Map.Entities.size(); i++)
 			{
 				GameEntity& entity = *reinterpret_cast<GameEntity*>(m_Map.Entities[i]);
 
-				m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, entity.TextureID, entity.Alive() ?
-					glm::vec4(1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
+				m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Alive() ? glm::vec4(1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
 			}
 			
-			// @TODO: Fix this
 			{
 				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
 				float angle = atan2(dir.y, dir.x);
-				if (dir.x < 0.f)
-				{
-					glm::vec2 newDir = glm::normalize(glm::vec2(1.f - dir.x, dir.y));
-					angle = glm::radians(360.f - glm::degrees(atan2(newDir.y, newDir.x)));
-				}
-				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(m_Map.player.Position, 0.f)) * glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f), { (dir.x < 0.f ? -1.f : 1.f) * 1.f, 0.45f, 1.f });
+				if (dir.x < 0.f) angle = glm::pi<float>() - angle;
+				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(m_Map.player.Position, 0.f)) * 
+					glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, dir.x < 0.f ? -1.f : 1.f }) * glm::scale(glm::mat4(1.f), 
+						{ (dir.x < 0.f ? -1.f : 1.f) * 1.f, 0.45f, 1.f });
 				m_RenderData.DrawQuad(transform, PlasmaGunTexture);
 			}
+
+			m_ParticleEmitter.OnRender(m_RenderData);
 
 			m_Renderer.Flush(m_RenderData);
 			m_RenderData.Reset();

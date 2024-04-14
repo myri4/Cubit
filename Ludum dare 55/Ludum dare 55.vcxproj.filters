@@ -158,5 +158,19 @@
     <ClInclude Include="src\Rendering\Renderer2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\game\ParticleSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\shaders\bloom.comp" />
+    <CustomBuild Include="src\shaders\composite.comp" />
+    <CustomBuild Include="src\shaders\crt.comp" />
+    <CustomBuild Include="src\shaders\imgui.frag" />
+    <CustomBuild Include="src\shaders\Line.vert" />
+    <CustomBuild Include="src\shaders\Line.frag" />
+    <CustomBuild Include="src\shaders\imgui.vert" />
+    <CustomBuild Include="src\shaders\Renderer2D.frag" />
+    <CustomBuild Include="src\shaders\Renderer2D.vert" />
   </ItemGroup>
 </Project>

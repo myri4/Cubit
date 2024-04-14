@@ -66,8 +66,6 @@ namespace wc
         float Speed = 7.f;
         float Density = 55.f;
 
-        uint32_t TextureID = 0;
-
         float Health = 10.f;
 
         uint32_t UpContacts = 0;

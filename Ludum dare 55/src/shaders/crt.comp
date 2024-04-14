@@ -1,0 +1,64 @@
+#pragma shader_stage(compute)
+
+layout(local_size_x = 4, local_size_y = 4) in;
+layout(binding = 0, rgba32f) restrict writeonly uniform image2D o_Image;
+
+layout(binding = 1) uniform sampler2D finalTexture;
+
+layout (push_constant) uniform Uniforms
+{
+    // Settings
+    float time;
+};
+
+vec3 scanline(vec2 coord, vec3 screen)
+{
+	screen.rgb -= sin((coord.y + (time * 29.0))) * 0.02;
+	return screen;
+}
+
+vec2 crt(vec2 coord, float bend)
+{
+	// put in symmetrical coords
+	coord = (coord - 0.5) * 2.0;
+
+	//coord *= 1.1;	
+
+	// deform coords
+	coord.x *= 1.f + pow((abs(coord.y) / bend), 2.f);
+	coord.y *= 1.f + pow((abs(coord.x) / bend), 2.f);
+
+	// transform back to 0.0 - 1.0 space
+	coord  = (coord / 2.0) + 0.5;
+
+	return coord;
+}
+
+void main() 
+{ 
+  vec2 imgSize = vec2(imageSize(o_Image));
+  ivec2 invocID = ivec2(gl_GlobalInvocationID);  
+  vec2 uv = vec2(float(invocID.x) / imgSize.x, float(invocID.y) / imgSize.y);
+  vec2 texCoords = uv;
+  texCoords += (1.f / imgSize) * 0.5f;
+  float sTime = sin(time);
+  float bend = 3.6f;
+  texCoords = crt(texCoords, bend); // warped uvs
+
+  vec3 result = texture(finalTexture, texCoords).rgb;
+  
+  float redOffset   =  0.003 * sTime;
+  float greenOffset =  0.005 * sTime;
+  float blueOffset  = -0.007 * sTime;
+  result.r  = texture(finalTexture, texCoords + (crt(vec2(-0.5f,  0.5f), bend) * vec2(redOffset  ))).r;
+  result.g  = texture(finalTexture, texCoords + (crt(vec2( 0.f,   1.f), bend) * vec2(greenOffset))).g;
+  result.b  = texture(finalTexture, texCoords + (crt(vec2( 0.5f, -0.5f), bend) * vec2(blueOffset ))).b;
+
+  vec2 screenSpace = texCoords * imgSize;
+  result.rgb = scanline(screenSpace, result.rgb);
+
+  vec2 V  = 1.f - 2.f * uv;  
+  result *= 1.25f * vec3(1.f - smoothstep(0.1f, 1.8f, length(V * V))); // vigneting
+  
+  imageStore(o_Image, invocID, vec4(result, 1.f));
+}

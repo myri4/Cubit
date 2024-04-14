@@ -1,0 +1,39 @@
+#pragma shader_stage(compute)
+
+vec3 Tonemap_ACES(vec3 x) 
+{
+    // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
+layout(local_size_x = 4, local_size_y = 4) in;
+layout(binding = 0, rgba32f) restrict writeonly uniform image2D o_Image;
+
+layout(binding = 1) uniform sampler2D screenTexture;
+layout(binding = 2) uniform sampler2D bloomTexture;
+
+void main() 
+{ 
+  vec2 imgSize = vec2(imageSize(o_Image));
+  ivec2 invocID = ivec2(gl_GlobalInvocationID);  
+  vec2 uv = vec2(float(invocID.x) / imgSize.x, float(invocID.y) / imgSize.y);
+  vec2 texCoords = uv;
+  texCoords += (1.f / imgSize) * 0.5f;
+
+  vec4 screenColor = texture(screenTexture, texCoords);
+  vec4 bloomColor = texture(bloomTexture, texCoords); 
+  vec3 result = screenColor.rgb + bloomColor.rgb;
+  
+  // HDR tonemapping  
+  result = Tonemap_ACES(result);  
+
+  // Gamma correct
+  result = pow(result, vec3(1.f / 2.2f));
+  
+  imageStore(o_Image, invocID, vec4(result, 1.f));
+}
