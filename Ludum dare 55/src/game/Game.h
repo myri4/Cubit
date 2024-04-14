@@ -65,8 +65,35 @@ namespace wc
 				GameEntity* entityA = reinterpret_cast<GameEntity*>(fixtureUserDataA.pointer);
 				GameEntity* entityB = reinterpret_cast<GameEntity*>(fixtureUserDataB.pointer);
 
+				if (entityA && entityB)
+				{
+					bool anyPlayer = entityA->Type == EntityType::Player || entityB->Type == EntityType::Player;
+
+					if (entityA->Type == EntityType::Bullet)
+					{
+						if (entityB->Type == EntityType::Player)
+							entityA->playerTouch = true;
+						else if (entityB->Type == EntityType::EyeballEnemy)
+						{
+							entityA->shotEnemy = true;
+							entityA->EnemyID = entityB->ID;
+						}
+					}
+
+					if (entityB->Type == EntityType::Bullet)
+					{
+						if (entityA->Type == EntityType::Player)
+							entityB->playerTouch = true;
+						else if (entityA->Type == EntityType::EyeballEnemy)
+						{
+							entityB->shotEnemy = true;
+							entityB->EnemyID = entityA->ID;
+						}
+					}
+				}
+
 				b2Vec2 bNormal = contact->GetManifold()->localNormal;
-				glm::vec2 normal = glm::round(glm::vec2{ bNormal.x, bNormal.y });
+				glm::vec2 normal = { bNormal.x, bNormal.y };
 
 				if (entityA && entityA->Type > EntityType::Entity)
 				{
@@ -79,22 +106,18 @@ namespace wc
 						if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts++;
 					}
 
-					if (entityB && entityB->Type == EntityType::Player)
-						entityA->playerTouch = true;
 				}
+
 				if (entityB && entityB->Type > EntityType::Entity)
 				{
 					if (fixtureA->GetType() == b2Shape::e_chain)
 					{
 						entityB->Contacts++;
 						if (normal == glm::vec2(0.f, -1.f)) entityB->UpContacts++;
-						if (normal == glm::vec2(0.f, 1.f))   entityB->DownContacts++;
+						if (normal == glm::vec2(0.f, 1.f)) entityB->DownContacts++;
 						if (normal == glm::vec2(1.f, 0.f)) entityB->LeftContacts++;
 						if (normal == glm::vec2(-1.f, 0.f)) entityB->RightContacts++;
 					}
-
-					if (entityA && entityA->Type == EntityType::Player)
-						entityB->playerTouch = true;
 				}
 			}
 
@@ -109,8 +132,34 @@ namespace wc
 				GameEntity* entityA = reinterpret_cast<GameEntity*>(fixtureUserDataA.pointer);
 				GameEntity* entityB = reinterpret_cast<GameEntity*>(fixtureUserDataB.pointer);
 
+				if (entityA && entityB)
+				{
+					if (entityA->Type == EntityType::Bullet)
+					{
+						if (entityB->Type == EntityType::Player)
+							entityA->playerTouch = false;
+						else if (entityB->Type == EntityType::EyeballEnemy)
+						{
+							entityA->shotEnemy = false;
+							entityA->EnemyID = entityB->ID;
+						}
+
+					}
+
+					if (entityB->Type == EntityType::Bullet)
+					{
+						if (entityA->Type == EntityType::Player)
+							entityB->playerTouch = false;
+						else if (entityA->Type == EntityType::EyeballEnemy)
+						{
+							entityB->shotEnemy = false;
+							entityB->EnemyID = entityA->ID;
+						}
+					}
+				}
+
 				b2Vec2 bNormal = contact->GetManifold()->localNormal;
-				glm::vec2 normal = glm::round(glm::vec2{ bNormal.x, bNormal.y });
+				glm::vec2 normal = { bNormal.x, bNormal.y };
 
 				if (entityA && entityA->Type > EntityType::Entity)
 				{
@@ -122,9 +171,6 @@ namespace wc
 						if (normal == glm::vec2(1.f, 0.f)) entityA->LeftContacts--;
 						if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts--;
 					}
-
-					if (entityB && entityB->Type == EntityType::Player)
-						entityA->playerTouch = false;
 				}
 
 				if (entityB && entityB->Type > EntityType::Entity)
@@ -137,9 +183,6 @@ namespace wc
 						if (normal == glm::vec2(1.f, 0.f)) entityB->LeftContacts--;
 						if (normal == glm::vec2(-1.f, 0.f)) entityB->RightContacts--;
 					}
-
-					if (entityA && entityA->Type == EntityType::Player)
-						entityB->playerTouch = false;
 				}
 			}
 		} m_ContactListenerInstance;
@@ -152,6 +195,7 @@ namespace wc
 		float AirSpeedFactor = 0.7f;
 		uint32_t PlasmaGunTexture = 0;
 		uint32_t SawedOffTexture = 0;
+		uint32_t SwordTexture = 0;
 
 	public:
 
@@ -169,6 +213,7 @@ namespace wc
 
 			PlasmaGunTexture = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			SawedOffTexture = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
+			SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
 
 			LoadMap("levels/level1.malen");
 
@@ -177,9 +222,9 @@ namespace wc
 			m_Particle.ColorBegin = { 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f };
 			m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
 			m_Particle.SizeBegin = 0.5f, m_Particle.SizeVariation = 0.3f, m_Particle.SizeEnd = 0.0f;
-			m_Particle.LifeTime = 2.0f;
+			m_Particle.LifeTime = 0.6f;
 			m_Particle.Velocity = { 0.0f, 0.0f };
-			m_Particle.VelocityVariation = { 5.0f, 5.0f };
+			m_Particle.VelocityVariation = { 6.f, 6.f };
 			m_Particle.Position = { 0.0f, 0.0f };
 		}
 
@@ -194,7 +239,13 @@ namespace wc
 			if (Key::GetKey(Key::A)) { moveDir.x = -1.f; keyPressed = true; }
 			else if (Key::GetKey(Key::D)) { moveDir.x = 1.f;  keyPressed = true; }
 
-			if (Key::GetKey(Key::E) && player.swordCD <= 0) player.swordAttack = true;
+			if (ImGui::IsKeyPressed(ImGuiKey_E)) player.swordAttack = true;
+			player.dash = Key::GetKey(Key::LeftShift) == GLFW_PRESS;
+			if (ImGui::IsKeyReleased(ImGuiKey_Q)) 
+			{
+				player.weapon = !player.weapon;
+				player.attackCD = 0.2f;
+			}
 
 			if (ImGui::IsKeyPressed(ImGuiKey_Space))
 			{
@@ -231,24 +282,56 @@ namespace wc
 			camera.Position += glm::vec3((m_TargetPosition - glm::vec2(camera.Position)) * 11.5f * Globals.deltaTime, 0.f);
 
 
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
-			{
-				m_Map.Explode({2.f, 2.f}, 100.f, 1000.f);
+			if (player.swordCD > 0.f) player.swordCD -= Globals.deltaTime;
+			if (player.attackCD > 0.f) player.attackCD -= Globals.deltaTime;
+			if (player.dashCD > 0.f) player.attackCD -= Globals.deltaTime;
 
-				m_Particle.Position = {2.f, 2.f};
-				m_Particle.VelocityVariation = glm::normalize(glm::vec2{ 2.f, 2.f } - player.Position) * 5.f;
-				for (int i = 0; i < 6; i++)
-					m_ParticleEmitter.Emit(m_Particle);
+			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.attackCD <= 0)
+			{
+				if (player.weapon)
+				{
+					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
+					m_Map.SpawnBullet(player.Position + dir * 0.75f, dir, 25.f, 3.5f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
+					player.attackCD = 0.3f;
+				}
+				else
+				{
+					std::random_device rd;
+					std::mt19937 gen(rd());
+					std::uniform_real_distribution<float> dis(-2.f, 2.f);
+
+					for (uint32_t i = 0; i < 9; i++)
+					{
+						glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position + glm::vec2(0.f, dis(gen)));
+						glm::vec2 startPos = player.Position + dir * 0.55f;
+						m_Map.SpawnBullet(startPos, dir, 25.f, 1.5f, { 0.15f, 0.15f }, glm::vec4(1.f, 1.f, 0, 1.f), BulletType::Shotgun);
+
+						m_Particle.Position = startPos;
+						auto& vel = player.body->GetLinearVelocity();
+						m_Particle.Velocity = { vel.x, vel.y };
+						m_Particle.VelocityVariation = glm::normalize(startPos - player.Position) * 5.f;
+						for (int i = 0; i < 6; i++)
+							m_ParticleEmitter.Emit(m_Particle);
+					}
+					player.attackCD = 0.8f;
+				}
+			}
+
+			if (player.dash && player.dashCD <= 0)
+			{
+				if (player.body->GetLinearVelocity().x > 0.1f) 
+				{
+					player.body->ApplyLinearImpulseToCenter({ 5000.f, 0.f }, true);
+					player.dash = false;
+				}
+				else if (player.body->GetLinearVelocity().x < -0.1f) {
+					player.body->ApplyLinearImpulseToCenter({ -5000.f, 0.f }, true);
+					player.dash = false;
+				}
+				player.dashCD = 2.f;
 			}
 
 			m_ParticleEmitter.OnUpdate();
-
-			if (player.swordCD > 0.f) player.swordCD -= Globals.deltaTime;
-			if (player.swordAttack) 
-			{
-				player.swordCD = 2.5f;
-				player.swordAttack = false;
-			}
 		}
 
 		void RenderGame()
@@ -264,7 +347,14 @@ namespace wc
 			{
 				GameEntity& entity = *reinterpret_cast<GameEntity*>(m_Map.Entities[i]);
 
-				m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Alive() ? glm::vec4(1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
+				if (entity.Type == EntityType::Bullet)
+				{
+					Bullet& bullet = *reinterpret_cast<Bullet*>(m_Map.Entities[i]);
+					m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bullet.Color);
+				}
+				else
+					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Alive() ? glm::vec4(1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
+
 			}
 			
 			{
@@ -274,7 +364,10 @@ namespace wc
 				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(m_Map.player.Position, 0.f)) * 
 					glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, dir.x < 0.f ? -1.f : 1.f }) * glm::scale(glm::mat4(1.f), 
 						{ (dir.x < 0.f ? -1.f : 1.f) * 1.f, 0.45f, 1.f });
-				m_RenderData.DrawQuad(transform, PlasmaGunTexture);
+
+				uint32_t tex = m_Map.player.weapon ? PlasmaGunTexture : SawedOffTexture;
+
+				m_RenderData.DrawQuad(transform, tex);
 			}
 
 			m_ParticleEmitter.OnRender(m_RenderData);

@@ -63,8 +63,10 @@ namespace wc
         // Properties
         float StartHealth = 10.f;
         float Damage = 0.5f;
-        float Speed = 7.f;
+        float Speed = 8.5f;
         float Density = 55.f;
+
+        uint32_t ID;
 
         float Health = 10.f;
 
@@ -75,6 +77,8 @@ namespace wc
         uint32_t Contacts = 0;
 
         bool playerTouch = false;
+        bool shotEnemy = false;
+        uint32_t EnemyID;
 
         glm::vec2 HitBoxSize = glm::vec2(0.5f);
 
@@ -111,27 +115,27 @@ namespace wc
         GameEntity() = default;
     };
 
-    enum class BulletType { BFG, Eyeball };
-
-    struct Bullet : public GameEntity
-    {
-        BulletType bulletType;
-        bool Shot = false; // bool for one time change at the start
-
-        Bullet() { Type = EntityType::Bullet; }
-    };
-
     struct Player : public GameEntity
     {
-        float JumpForce = 1750.f;
+        bool weapon = true;
+
+        float JumpForce = 2200.f;
+
+        bool dash = false;
+        float dashCD = 0.f;
 
         float swordCD = 1.5f;
         bool swordAttack = false;
+        float SwordDamage = 5.5f;
+
+        float attackCD = 0.5f;
+
         Player()
         {
             Type = EntityType::Player;
-            Density = 47.11f;
+            Density = 100.f;
         }
+
     };
 
     struct EyeballEnemy : public GameEntity
@@ -139,6 +143,17 @@ namespace wc
         float attackTimer = 2.f;
         float range = 8.f;
 
-        EyeballEnemy() { Type = EntityType::EyeballEnemy; Speed = 1.1f; Damage = 0.5f; }
+        EyeballEnemy() { Type = EntityType::EyeballEnemy; Speed = 1.1f; Damage = 1.f; }
+    };
+
+    enum class BulletType { BFG, Eyeball, Shotgun };
+    struct Bullet : public GameEntity
+    {
+        glm::vec2 direction;
+        glm::vec4 Color;
+        BulletType bulletType;
+        bool Shot = false; // bool for one time change at the start
+
+        Bullet() { Type = EntityType::Bullet; }
     };
 }
