@@ -69,10 +69,8 @@ namespace wc
 
 			if (Globals.window.resized) Resize();
 
-			if (Globals.window.HasFocus())
-			{
-				if(Globals.gameState == GameState::PLAY)game.InputGame();
-			}
+			if (Globals.window.HasFocus() && Globals.gameState == GameState::PLAY)
+				game.InputGame();
 		}
 
 		void OnUpdate()
@@ -95,8 +93,8 @@ namespace wc
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 			ImGuizmo::BeginFrame();
-			if(Globals.gameState == GameState::MENU)game.MENU();
-			if(Globals.gameState == GameState::PLAY)game.UI();
+			if(Globals.gameState == GameState::MENU) game.MENU();
+			else if(Globals.gameState == GameState::PLAY) game.UI();
 			ImGui::Render();			
 
 			CommandBuffer& cmd = SyncContext::MainCommandBuffer;

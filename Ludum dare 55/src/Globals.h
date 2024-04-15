@@ -7,7 +7,6 @@
 
 namespace wc 
 {
-
 	enum class GameState
 	{
 		MENU,

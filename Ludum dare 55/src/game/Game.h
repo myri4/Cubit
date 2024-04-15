@@ -204,6 +204,9 @@ namespace wc
 
 		ma_engine sfx_engine;
 
+		bool m_RotateSword = false;
+		float m_SwordRotation = 0.f;
+
 	public:
 
 		void LoadMap(const std::string& filePath)
@@ -358,7 +361,7 @@ namespace wc
 			{
 				//play sound
 				ma_engine_play_sound(&sfx_engine, "assets/sound/sfx/sword_swing.wav", NULL);
-
+				m_RotateSword = true;
 				player.swordAttack = false;
 			}
 			m_ParticleEmitter.OnUpdate();
@@ -397,6 +400,22 @@ namespace wc
 					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Alive() ? glm::vec4(1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
 			}
 			
+			if (m_RotateSword)
+			{
+				m_SwordRotation += (2.f * glm::pi<float>() - m_SwordRotation) * 11.5f * Globals.deltaTime;
+
+				if (m_SwordRotation >= 2.f * glm::pi<float>() - 0.1f)
+				{
+					m_SwordRotation = 0.f;
+					m_RotateSword = false;
+				}
+				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(m_Map.player.Position, 0.f)) *
+					glm::rotate(glm::mat4(1.f), m_SwordRotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f),
+						glm::vec3{ 0.14f, 1.f, 0.5f } * 6.f);
+
+				m_RenderData.DrawQuad(transform, SwordTexture);
+			}
+			else
 			{
 				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
 				float angle = atan2(dir.y, dir.x);
