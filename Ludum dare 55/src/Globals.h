@@ -11,6 +11,7 @@ namespace wc
 	enum class GameState
 	{
 		MENU,
+		DEATH,
 		PLAY,
 		PAUSE
 	};

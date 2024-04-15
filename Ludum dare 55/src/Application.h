@@ -94,7 +94,8 @@ namespace wc
 			ImGui::NewFrame();
 			ImGuizmo::BeginFrame();
 			if(Globals.gameState == GameState::MENU) game.MENU();
-			else if(Globals.gameState == GameState::PLAY) game.UI();
+			else if(Globals.gameState == GameState::DEATH) game.DEATH_MENU();
+			else if (Globals.gameState == GameState::PLAY) game.UI();
 			ImGui::Render();			
 
 			CommandBuffer& cmd = SyncContext::MainCommandBuffer;
