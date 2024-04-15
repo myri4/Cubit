@@ -8,6 +8,7 @@
 #include <vector>
 #include <random>
 
+#include "ParticleSystem.h"
 #include "Entities.h"
 //#include "Raycasting.h"
 #include "Tile.h"
@@ -22,6 +23,9 @@ namespace wc
 	}
 
 	Tileset m_Tileset;
+
+	ParticleSystem m_ParticleEmitter;
+	ParticleProps m_Particle;
 
 	struct Map
 	{

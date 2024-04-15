@@ -35,7 +35,6 @@
 
 #include "../Globals.h"
 #include "../Rendering/Renderer2D.h"
-#include "ParticleSystem.h"
 
 #include "Map.h"
 
@@ -47,8 +46,6 @@ namespace wc
 		// Game objects
 		OrthographicCamera camera;
 		glm::vec2 m_TargetPosition;
-		ParticleSystem m_ParticleEmitter;
-		ParticleProps m_Particle;
 
 		Map m_Map;
 
