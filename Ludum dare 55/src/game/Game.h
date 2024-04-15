@@ -242,6 +242,16 @@ namespace wc
 			m_Particle.Velocity = { 0.0f, 0.0f };
 			m_Particle.VelocityVariation = { 6.f, 6.f };
 			m_Particle.Position = { 0.0f, 0.0f };
+
+			m_SummonParticle.ColorBegin = glm::vec4{ 1.f, 0.37f, 0.12f, 1.f } * 2.f;
+			m_SummonParticle.ColorEnd = { 1.f, 0.37f, 0.12f, 1.0f };
+			m_SummonParticle.SizeBegin = 0.5f, m_SummonParticle.SizeVariation = 0.3f, m_SummonParticle.SizeEnd = 0.0f;
+			m_SummonParticle.LifeTime = 0.35f;
+			m_SummonParticle.Velocity = { 0.0f, 0.0f };
+			m_SummonParticle.VelocityVariation = { 6.f, 6.f };
+			m_SummonParticle.Position = { 0.0f, 0.0f };
+
+			//m_SummonParticle.VelocityVariation = glm::normalize(entity.Position - m_Map.player.Position) * 2.5f;
 		}
 
 		
@@ -329,7 +339,7 @@ namespace wc
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();
-						m_Particle.ColorBegin = { 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f };
+						m_Particle.ColorBegin = glm::vec4{ 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f } * 2.f;
 						m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
 						m_Particle.Velocity = glm::vec2(vel.x, vel.y) * 0.5f;
 						m_Particle.VelocityVariation = glm::normalize(player.Position + dir * 0.55f - player.Position) * 5.f;
@@ -386,11 +396,11 @@ namespace wc
 				if (entity.Type == EntityType::Bullet)
 				{
 					Bullet& bullet = *reinterpret_cast<Bullet*>(m_Map.Entities[i]);
-					m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bullet.Color);
+					m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bullet.Color * 1.3f);
 					if(bullet.bulletType == BulletType::BFG)
 					if (bullet.Contacts != 0 || bullet.shotEnemy) {
 						m_Particle.LifeTime = 0.35f;
-						m_Particle.ColorBegin = bullet.Color;
+						m_Particle.ColorBegin = bullet.Color * 2.f;
 						m_Particle.ColorEnd = bullet.Color;
 						m_Particle.Position = entity.Position;
 						m_Particle.Velocity = glm::vec2(0.5f);
@@ -472,7 +482,7 @@ namespace wc
 
 		void DEATH_MENU()
 		{
-			WC_CORE_INFO("You died nigger")
+			WC_CORE_INFO("You died")
 		}
 
 		void UI()

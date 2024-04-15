@@ -26,6 +26,7 @@ namespace wc
 
 	ParticleSystem m_ParticleEmitter;
 	ParticleProps m_Particle;
+	ParticleProps m_SummonParticle;
 
 	struct Map
 	{
@@ -475,6 +476,16 @@ namespace wc
 									EyeballEnemy* em = new EyeballEnemy();
 									em->Position = entity.Position + glm::vec2(0.f, 1.f);
 									em->CreateBody(PhysicsWorld);
+
+									m_SummonParticle.Position = em->Position;
+									m_SummonParticle.Velocity = glm::vec2(0.5f);
+									for (int i = 0; i < 6; i++)
+									{
+										m_SummonParticle.VelocityVariation = glm::normalize(glm::vec3(RandomValue(), RandomValue(), RandomValue()));
+
+										m_ParticleEmitter.Emit(m_SummonParticle);
+									}
+
 									Entities.push_back(em);
 								}
 
