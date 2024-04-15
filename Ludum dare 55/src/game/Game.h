@@ -7,8 +7,8 @@
 #include <sstream>
 #include <string>
 #include <thread>
-#include <unordered_map>
 #include <vector>
+#include <unordered_map>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -196,13 +196,13 @@ namespace wc
 		uint32_t SawedOffTexture = 0;
 		uint32_t SwordTexture = 0;
 
-		//sound
+		////sound
 
-		float sfx_volume = 0.6f;
+		//float sfx_volume = 0.6f;
 
-		ma_result result;
+		//ma_result result;
 
-		ma_engine sfx_engine;
+		//ma_engine sfx_engine;
 
 		bool m_RotateSword = false;
 		float m_SwordRotation = 0.f;
@@ -219,12 +219,12 @@ namespace wc
 		{
 
 			//sound
-			result = ma_engine_init(NULL, &sfx_engine);
-			if (result != MA_SUCCESS) {
+			Globals.result = ma_engine_init(NULL, &Globals.sfx_engine);
+			if (Globals.result != MA_SUCCESS) {
 				std::cout << "sound engine fail\n";
-				std::cout << result;
+				std::cout << Globals.result;
 			}
-			ma_engine_set_volume(&sfx_engine, sfx_volume);
+			ma_engine_set_volume(&Globals.sfx_engine, Globals.sfx_volume);
 
 			m_RenderData.Create();
 			m_Renderer.Init(camera);
@@ -309,18 +309,18 @@ namespace wc
 			{
 				if (player.weapon)
 				{
-					result = ma_engine_play_sound(&sfx_engine, "assets/sound/sfx/gun.wav", NULL);
-					if (result != MA_SUCCESS) {
+					Globals.result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/gun.wav", NULL);
+					if (Globals.result != MA_SUCCESS) {
 						std::cout << "sound play fail\n";
-						std::cout << result;
+						std::cout << Globals.result;
 					}
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
-					m_Map.SpawnBullet(player.Position + glm::vec2(0.f, 0.1f) + dir * 0.75f, dir, 25.f, 3.5f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
+					m_Map.SpawnBullet(player.Position + dir * 0.75f, dir, 25.f, 3.5f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
 					player.attackCD = 0.3f;
 				}
 				else
 				{
-					ma_engine_play_sound(&sfx_engine, "assets/sound/sfx/shotgun.wav", NULL);
+					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/shotgun.wav", NULL);
 					std::random_device rd;
 					std::mt19937 gen(rd());
 					std::uniform_real_distribution<float> dis(-1.75f, 2.25f);
@@ -345,7 +345,7 @@ namespace wc
 
 			if (player.dash && player.dashCD <= 0)
 			{
-				ma_engine_play_sound(&sfx_engine, "assets/sound/sfx/dash.wav", NULL);
+				ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
 				if (player.body->GetLinearVelocity().x > 0.1f) {
 					player.body->ApplyLinearImpulseToCenter({ 5000.f, 0.f }, true);
 					player.dash = false;
@@ -359,9 +359,13 @@ namespace wc
 
 			if (player.swordAttack)
 			{
+				if (player.swordCD <= 0.f)
+				{
 				//play sound
-				ma_engine_play_sound(&sfx_engine, "assets/sound/sfx/sword_swing.wav", NULL);
+				ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/sword_swing.wav", NULL);
 				m_RotateSword = true;
+				player.swordCD = 2.5f;
+				}
 				player.swordAttack = false;
 			}
 			m_ParticleEmitter.OnUpdate();
@@ -397,7 +401,7 @@ namespace wc
 					}
 				}
 				else
-					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Alive() ? glm::vec4(1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
+					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::EyeballEnemy ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
 			}
 			
 			if (m_RotateSword)
@@ -482,6 +486,7 @@ namespace wc
 			ImGui::SetWindowFontScale(0.8f);
 			ImGui::SetCursorPos(ImVec2(10, 10));
 			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("HP: {}", m_Map.player.Health).c_str());
+			//ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("HP: {}", m_Map.Entities[1].Health).c_str());
 			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(0, 0), ImVec2((float)Globals.window.GetSize().x, (float)Globals.window.GetSize().y));
 			ImGui::End();
 			ImGui::PopStyleVar(3);

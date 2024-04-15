@@ -6,13 +6,14 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
+#include <random>
 
 #include "Entities.h"
 //#include "Raycasting.h"
 #include "Tile.h"
 #include <magic_enum.hpp>
 
-// @TODO: Separate tilemap and scene
+// @TODO: Separate tile map and scene
 namespace wc
 {
 	int to1D(const glm::uvec3& pos, const glm::uvec3& size)
@@ -392,12 +393,11 @@ namespace wc
 					//timer
 					if (entity.attackTimer > 0)entity.attackTimer -= Globals.deltaTime;
 
-					if (player.swordAttack) 
+					if (player.swordAttack && player.swordCD <=0) 
 					{
 						glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0, player.Size.y * 0.5f)) - entity.Position);
 						entity.body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
 						entity.Health -= player.SwordDamage;
-						player.swordCD = 2.5f;
 					}
 
 					if (!entity.Alive()) {
@@ -408,13 +408,14 @@ namespace wc
 						Entities.erase(Entities.begin() + i);
 					}
 
+
 					//movement
 					bool inRange = glm::distance(player.Position, entity.Position) < entity.range;
 					if (!inRange) {
 						if (entity.Position.x > player.Position.x)entity.body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
 					}
-					//attack behaviour
+					//attack behavior
 					else
 					{
 						if (entity.attackTimer <= 0 && entity.Alive())
@@ -442,7 +443,7 @@ namespace wc
 				{
 					Bullet& entity = *reinterpret_cast<Bullet*>(e);
 
-					//Eyeball Bullet Behaviour
+					//Eyeball Bullet Behavior
 					if (entity.bulletType == BulletType::Eyeball)
 					{
 						glm::vec2 directionToPlayer;
@@ -459,6 +460,20 @@ namespace wc
 						if (entity.Contacts != 0 || glm::distance(player.Position, entity.Position) > 50 || entity.playerTouch)
 						{
 							if (entity.playerTouch) {
+
+								std::random_device rd;
+								std::mt19937 gen(rd());
+								std::uniform_int_distribution<> dis(0, 2); // Define the range
+
+								if (dis(gen) == 0)
+								{
+									WC_CORE_INFO("Summon Entity");
+									//EyeballEnemy* e = new EyeballEnemy();
+									//e->Position = entity.Position + glm::vec2(0, 1.f);
+									//Entities.push_back(e);
+								}
+
+								Globals.result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
 								player.Health -= entity.Damage;
 							}
 
@@ -471,7 +486,7 @@ namespace wc
 
 
 
-					//BFG Bullet Behaviour
+					//BFG Bullet Behavior
 					if (entity.bulletType == BulletType::BFG)
 					{
 						//entity.body->ApplyLinearImpulseToCenter(1750.f * b2Vec2(directionToMouse.x, directionToMouse.y), true);
@@ -482,6 +497,7 @@ namespace wc
 							if (entity.shotEnemy)
 							{
 								//WC_CORE_INFO("Shot Enemy");
+								Globals.result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
 								Entities[entity.EnemyID]->Health -= entity.Damage;
 							}
 
@@ -492,7 +508,7 @@ namespace wc
 						}
 					}
 
-					//Shotgun Bullet Behaviour
+					//Shotgun Bullet Behavior
 					if (entity.bulletType == BulletType::Shotgun)
 					{
 						entity.body->SetLinearVelocity(b2Vec2(entity.direction.x * entity.Speed, entity.direction.y * entity.Speed));

@@ -143,7 +143,7 @@ namespace wc
         float attackTimer = 2.f;
         float range = 8.f;
 
-        EyeballEnemy() { Type = EntityType::EyeballEnemy; Speed = 1.1f; Damage = 1.f; }
+        EyeballEnemy() { Type = EntityType::EyeballEnemy; Health = 15.f;  Speed = 1.1f; Damage = 1.f; }
     };
 
     enum class BulletType { BFG, Eyeball, Shotgun };
