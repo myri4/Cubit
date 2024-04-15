@@ -1,0 +1,9 @@
+Gravity: [0, -9.80000019]
+TopDown: false
+Tileset: scripts/debug.tileset
+Repeaters: ~
+Filters: ~
+Observers: ~
+Entities:
+  - Position: [1.95704353, 1.55223978]
+    Type: Player
