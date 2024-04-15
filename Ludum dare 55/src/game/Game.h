@@ -315,7 +315,7 @@ namespace wc
 						std::cout << Globals.result;
 					}
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
-					m_Map.SpawnBullet(player.Position + dir * 0.75f, dir, 25.f, 3.5f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
+					m_Map.SpawnBullet(player.Position + dir * 0.75f, dir, 25.f, 3.f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
 					player.attackCD = 0.3f;
 				}
 				else

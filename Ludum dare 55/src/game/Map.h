@@ -372,6 +372,13 @@ namespace wc
 			Entities.push_back(bullet);
 		}
 
+		void SummonEnemy(glm::vec2 pos, glm::vec2 offset)
+		{
+			EyeballEnemy* em = new EyeballEnemy();
+			em->Position = pos + offset;
+			Entities.push_back(em);
+		}
+
 		void DestroyPhysicsWorld()
 		{
 			delete PhysicsWorld;
@@ -468,9 +475,8 @@ namespace wc
 								if (dis(gen) == 0)
 								{
 									WC_CORE_INFO("Summon Entity");
-									//EyeballEnemy* e = new EyeballEnemy();
-									//e->Position = entity.Position + glm::vec2(0, 1.f);
-									//Entities.push_back(e);
+									//SummonEnemy(entity.Position, glm::vec2(0, 1.f));
+									
 								}
 
 								Globals.result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
