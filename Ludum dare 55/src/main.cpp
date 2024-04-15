@@ -97,7 +97,7 @@ int main()
 	ma_engine engine;
 	ma_sound music_main;
 
-	std::string m_main = "assets/sound/music/main.wav";
+	std::string m_main = "assets/sound/music/main_new.wav";
 
 	result = ma_engine_init(NULL, &engine);
 	if (result != MA_SUCCESS) {
@@ -113,7 +113,7 @@ int main()
 	}
 
 	ma_sound_set_volume(&music_main, music_volume);
-	ma_sound_is_looping(&music_main);	//check if its actually looping
+	ma_sound_set_looping(&music_main, true);
 
 	result = ma_sound_start(&music_main);
 	if (result != MA_SUCCESS) {

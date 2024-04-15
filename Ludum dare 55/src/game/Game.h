@@ -457,6 +457,8 @@ namespace wc
 
 		void MENU()
 		{
+
+
 			const ImGuiViewport* viewport = ImGui::GetMainViewport();
 			ImGui::SetNextWindowPos(viewport->WorkPos);
 			ImGui::SetNextWindowSize(viewport->WorkSize);
@@ -468,27 +470,69 @@ namespace wc
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.7f));
-			ImGui::PushStyleColor(ImGuiCol_Button,  ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(95.f / 255.f, 35.f / 255.f, 61.f / 255.f, 1.f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(95.f / 255.f, 35.f / 255.f, 61.f / 255.f, 0.7f));
 
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 200) * 0.5f, (ImGui::GetWindowSize().y - 300) * 0.5f));
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 200) * 0.5f, (ImGui::GetWindowSize().y - 350) * 0.5f));
 			if (ImGui::Button("Play", ImVec2(200, 100)))Globals.gameState = GameState::PLAY;
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- Arcade Summoned -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- Arcade Summoned -").y) * 0.5f));
-			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "- Arcade Summoned -");
+			ImGui::SetWindowFontScale(1.5f);
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- Cube's Calling -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- Cube's Calling -").y) * 0.5f));
+			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "- Cube's Calling -");
+			ImGui::SetWindowFontScale(1.f);
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 200) * 0.5f, (ImGui::GetWindowSize().y + 400) * 0.5f));
+			if (ImGui::Button("Credits", ImVec2(200, 100)))Globals.gameState = GameState::CREDITS;
 			ImGui::End();
 			ImGui::PopStyleVar(5);
 		}
 
+		
+
 		void DEATH_MENU()
 		{
-			WC_CORE_INFO("You died")
+			const ImGuiViewport* viewport = ImGui::GetMainViewport();
+			ImGui::SetNextWindowPos(viewport->WorkPos);
+			ImGui::SetNextWindowSize(viewport->WorkSize);
+			ImGui::SetNextWindowViewport(viewport->ID);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
+			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::SetWindowFontScale(1.8f);
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("You Died").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("You Died").y) * 0.5f));
+			ImGui::TextColored(ImVec4(1.f, 0, 0, 1.f), "You Died");
+			ImGui::SetWindowFontScale(1.f);
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 270) * 0.5f, (ImGui::GetWindowSize().y + 300) * 0.5f));
+			if (ImGui::Button("Go Back", ImVec2(270, 100)))Globals.gameState = GameState::MENU;
+			ImGui::End();
+			ImGui::PopStyleVar(5);
 		}
 
 		void WIN_MENU()
 		{
-			WC_CORE_INFO("You won!")
+			const ImGuiViewport* viewport = ImGui::GetMainViewport();
+			ImGui::SetNextWindowPos(viewport->WorkPos);
+			ImGui::SetNextWindowSize(viewport->WorkSize);
+			ImGui::SetNextWindowViewport(viewport->ID);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.7f));
+ 
+			 
+			 
+
+			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("CONGRATS You Won!").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("CONGRATS You Won!").y) * 0.5f));
+			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "CONGRATS! You Won!");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 270) * 0.5f, (ImGui::GetWindowSize().y + 300) * 0.5f));
+			if (ImGui::Button("Go Back", ImVec2(270, 100)))Globals.gameState = GameState::MENU;
+			ImGui::End();
+			ImGui::PopStyleVar(5);
 		}
 
 		void UI()
@@ -506,7 +550,7 @@ namespace wc
 			ImGui::SetWindowFontScale(0.8f);
 			ImGui::SetCursorPos(ImVec2(10, 10));
 			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("HP: {}", m_Map.player.Health).c_str());
-			//ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("HP: {}", m_Map.Entities[1].Health).c_str());
+			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("Enemy count: {}", m_Map.EnemyCount).c_str());
 			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(0, 0), ImVec2((float)Globals.window.GetSize().x, (float)Globals.window.GetSize().y));
 			ImGui::End();
 			ImGui::PopStyleVar(3);

@@ -37,8 +37,8 @@ namespace wc
 			windowInfo.Width = 1980;
 			windowInfo.Height = 1080;
 			windowInfo.Resizeable = false;
-			windowInfo.AppName = "Arcade Summoned";
-			//windowInfo.StartMode = WindowMode::Fullscreen;
+			windowInfo.AppName = "Cube's Calling";
+			windowInfo.StartMode = WindowMode::Fullscreen;
 			Globals.window.Create(windowInfo);
 
 			SyncContext::Create();
@@ -75,7 +75,36 @@ namespace wc
 
 		void Credits()
 		{
-			//ImGui::Text("credits");
+			const ImGuiViewport* viewport = ImGui::GetMainViewport();
+			ImGui::SetNextWindowPos(viewport->WorkPos);
+			ImGui::SetNextWindowSize(viewport->WorkSize);
+			ImGui::SetNextWindowViewport(viewport->ID);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
+ 
+			 
+			 
+
+			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::SetWindowFontScale(0.65f);
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer").y) * 0.5f - 200));
+			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Martin Geshev(aka geshev) - Programming : Sound / Music / Sound Design").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Martin Geshev(aka geshev) - Programming : Sound / Music / Sound Design").y) * 0.5f - 150));
+			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Martin Geshev(aka geshev) - Programming : Sound / Music / Sound Design");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Hristo Arabadzhiev(aka Icaka) - Programming : Player Mechanics and Movement / Level Design / Credits").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Hristo Arabadzhiev(aka Icaka) - Programming : Player Mechanics and Movement / Level Design / Credits").y) * 0.5f - 100));
+			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Hristo Arabadzhiev(aka Icaka) - Programming : Player Mechanics and Movement / Level Design / Credits");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Georgi(aka gosho / jojo) - Programming : enemy AI").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Georgi(aka gosho / jojo) - Programming : enemy AI").y) * 0.5f - 50));
+			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Georgi(aka gosho / jojo) - Programming : enemy AI");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Bulgaria na 3 moreta").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Bulgaria na 3 moreta").y) * 0.5f));
+			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Bulgaria na 3 moreta");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 270) * 0.5f, (ImGui::GetWindowSize().y + 300) * 0.5f));
+			if (ImGui::Button("Go Back", ImVec2(270, 100)))Globals.gameState = GameState::MENU;
+			ImGui::End();
+			ImGui::PopStyleVar(5);
 		}
 
 		void OnUpdate()

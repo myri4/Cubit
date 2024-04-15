@@ -18,12 +18,6 @@ namespace wc
 		PAUSE
 	};
 
-	enum class Level
-	{
-		LEVEL1,
-		LEVEL2,
-		LEVEL3
-	};
 	struct GlobalVariables
 	{
 		//sound
