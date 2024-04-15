@@ -38,7 +38,7 @@ namespace wc
 			windowInfo.Height = 1080;
 			windowInfo.Resizeable = false;
 			windowInfo.AppName = "Ludum dare 55";
-			windowInfo.StartMode = WindowMode::Fullscreen;
+			//windowInfo.StartMode = WindowMode::Fullscreen;
 			Globals.window.Create(windowInfo);
 
 			SyncContext::Create();
@@ -51,8 +51,7 @@ namespace wc
 			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 			io.IniFilename = nullptr;
 			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-			//io.FontDefault = io.Fonts->AddFontFromFileTTF("Resources/fonts/OpenSans-Regular.ttf", 17.f);
+			io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/sci.ttf", 50.f);
 
 			ImGui_ImplGlfw_Init(Globals.window, false);
 
@@ -72,7 +71,7 @@ namespace wc
 
 			if (Globals.window.HasFocus())
 			{
-				game.InputGame();
+				if(Globals.gameState == GameState::PLAY)game.InputGame();
 			}
 		}
 
@@ -91,12 +90,13 @@ namespace wc
 				return;
 			}
 
-			game.Update();
+			if (Globals.gameState == GameState::PLAY)game.Update();
 
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 			ImGuizmo::BeginFrame();
-			game.UI();
+			if(Globals.gameState == GameState::MENU)game.MENU();
+			if(Globals.gameState == GameState::PLAY)game.UI();
 			ImGui::Render();			
 
 			CommandBuffer& cmd = SyncContext::MainCommandBuffer;

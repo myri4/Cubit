@@ -196,6 +196,14 @@ namespace wc
 		uint32_t SawedOffTexture = 0;
 		uint32_t SwordTexture = 0;
 
+		//sound
+
+		float sfx_volume = 0.6f;
+
+		ma_result result;
+
+		ma_engine sfx_engine;
+
 	public:
 
 		void LoadMap(const std::string& filePath)
@@ -206,6 +214,15 @@ namespace wc
 
 		void Create(glm::vec2 renderSize)
 		{
+
+			//sound
+			result = ma_engine_init(NULL, &sfx_engine);
+			if (result != MA_SUCCESS) {
+				std::cout << "sound engine fail\n";
+				std::cout << result;
+			}
+			ma_engine_set_volume(&sfx_engine, sfx_volume);
+
 			m_RenderData.Create();
 			m_Renderer.Init(camera);
 			m_Tileset.Load();
@@ -289,12 +306,18 @@ namespace wc
 			{
 				if (player.weapon)
 				{
+					result = ma_engine_play_sound(&sfx_engine, "assets/sound/sfx/gun.wav", NULL);
+					if (result != MA_SUCCESS) {
+						std::cout << "sound play fail\n";
+						std::cout << result;
+					}
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
 					m_Map.SpawnBullet(player.Position + glm::vec2(0.f, 0.1f) + dir * 0.75f, dir, 25.f, 3.5f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
 					player.attackCD = 0.3f;
 				}
 				else
 				{
+					ma_engine_play_sound(&sfx_engine, "assets/sound/sfx/shotgun.wav", NULL);
 					std::random_device rd;
 					std::mt19937 gen(rd());
 					std::uniform_real_distribution<float> dis(-1.75f, 2.25f);
@@ -319,6 +342,7 @@ namespace wc
 
 			if (player.dash && player.dashCD <= 0)
 			{
+				ma_engine_play_sound(&sfx_engine, "assets/sound/sfx/dash.wav", NULL);
 				if (player.body->GetLinearVelocity().x > 0.1f) {
 					player.body->ApplyLinearImpulseToCenter({ 5000.f, 0.f }, true);
 					player.dash = false;
@@ -330,6 +354,13 @@ namespace wc
 				player.dashCD = 2.f;
 			}
 
+			if (player.swordAttack)
+			{
+				//play sound
+				ma_engine_play_sound(&sfx_engine, "assets/sound/sfx/sword_swing.wav", NULL);
+
+				player.swordAttack = false;
+			}
 			m_ParticleEmitter.OnUpdate();
 		}
 
@@ -391,6 +422,32 @@ namespace wc
 			RenderGame();
 		}
 
+		void MENU()
+		{
+			const ImGuiViewport* viewport = ImGui::GetMainViewport();
+			ImGui::SetNextWindowPos(viewport->WorkPos);
+			ImGui::SetNextWindowSize(viewport->WorkSize);
+			ImGui::SetNextWindowViewport(viewport->ID);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.7f));
+			ImGui::PushStyleColor(ImGuiCol_Button,  ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(95.f / 255.f, 35.f / 255.f, 61.f / 255.f, 1.f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(95.f / 255.f, 35.f / 255.f, 61.f / 255.f, 0.7f));
+
+			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 200) * 0.5f, (ImGui::GetWindowSize().y - 300) * 0.5f));
+			if (ImGui::Button("Play", ImVec2(200, 100)))Globals.gameState = GameState::PLAY;
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- Solo Summoned -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- Solo Summoned -").y) * 0.5f));
+			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "- Solo Summoned -");
+			ImGui::End();
+			ImGui::PopStyleVar(5);
+		}
+
 		void UI()
 		{
 			const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -403,8 +460,9 @@ namespace wc
 
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
-			ImGui::SetWindowFontScale(2.5f);
-			ImGui::TextColored(ImVec4(1.f, 0, 1.f, 1.f), std::format("HP: {}", m_Map.player.Health).c_str());
+			ImGui::SetWindowFontScale(0.8f);
+			ImGui::SetCursorPos(ImVec2(10, 10));
+			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("HP: {}", m_Map.player.Health).c_str());
 			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(0, 0), ImVec2((float)Globals.window.GetSize().x, (float)Globals.window.GetSize().y));
 			ImGui::End();
 			ImGui::PopStyleVar(3);

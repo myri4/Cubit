@@ -7,6 +7,20 @@
 
 namespace wc 
 {
+
+	enum class GameState
+	{
+		MENU,
+		PLAY,
+		PAUSE
+	};
+
+	enum class Level
+	{
+		LEVEL1,
+		LEVEL2,
+		LEVEL3
+	};
 	struct GlobalVariables
 	{
 		Window window; // @TODO: maybe rename to main window
@@ -14,6 +28,7 @@ namespace wc
 		Clock deltaTimer;
 		float deltaTime = 0.f;
 
+		GameState gameState = GameState::MENU;
 
 		void UpdateTime()
 		{

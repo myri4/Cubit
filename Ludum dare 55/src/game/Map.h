@@ -397,7 +397,6 @@ namespace wc
 						glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0, player.Size.y * 0.5f)) - entity.Position);
 						entity.body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
 						entity.Health -= player.SwordDamage;
-						player.swordAttack = false;
 						player.swordCD = 2.5f;
 					}
 
