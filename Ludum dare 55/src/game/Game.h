@@ -234,7 +234,7 @@ namespace wc
 			SawedOffTexture = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
 			SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
 
-			LoadMap("levels/level1.malen");
+			LoadMap("levels/level2.malen");
 
 			m_Renderer.CreateScreen(renderSize, m_RenderData);
 			m_ParticleEmitter.Init();
