@@ -369,6 +369,8 @@ namespace wc
 				player.swordAttack = false;
 			}
 			m_ParticleEmitter.OnUpdate();
+
+			if (!player.Alive()) Globals.gameState = GameState::DEATH;
 		}
 
 		void RenderGame()
@@ -469,6 +471,11 @@ namespace wc
 			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "- Solo Summoned -");
 			ImGui::End();
 			ImGui::PopStyleVar(5);
+		}
+
+		void DEATH_MENU()
+		{
+			WC_CORE_INFO("You died nigger")
 		}
 
 		void UI()
