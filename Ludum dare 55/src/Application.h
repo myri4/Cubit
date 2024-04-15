@@ -37,7 +37,7 @@ namespace wc
 			windowInfo.Width = 1980;
 			windowInfo.Height = 1080;
 			windowInfo.Resizeable = false;
-			windowInfo.AppName = "Ludum dare 55";
+			windowInfo.AppName = "Arcade Summoned";
 			//windowInfo.StartMode = WindowMode::Fullscreen;
 			Globals.window.Create(windowInfo);
 
@@ -73,6 +73,11 @@ namespace wc
 				game.InputGame();
 		}
 
+		void Credits()
+		{
+			//ImGui::Text("credits");
+		}
+
 		void OnUpdate()
 		{
 			Globals.UpdateTime();
@@ -93,9 +98,11 @@ namespace wc
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 			ImGuizmo::BeginFrame();
-			if(Globals.gameState == GameState::MENU) game.MENU();
-			else if(Globals.gameState == GameState::DEATH) game.DEATH_MENU();
+			if (Globals.gameState == GameState::MENU) game.MENU();
+			else if (Globals.gameState == GameState::DEATH) game.DEATH_MENU();
+			else if (Globals.gameState == GameState::WIN) game.WIN_MENU();
 			else if (Globals.gameState == GameState::PLAY) game.UI();
+			else if (Globals.gameState == GameState::CREDITS) Credits();
 			ImGui::Render();			
 
 			CommandBuffer& cmd = SyncContext::MainCommandBuffer;

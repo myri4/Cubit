@@ -135,6 +135,7 @@ namespace wc
 							EyeballEnemy* e = new EyeballEnemy();
 							e->LoadMapBase(metaData);
 							Entities.push_back(e);
+							EnemyCount++;
 						}
 					}
 				}
@@ -411,18 +412,18 @@ namespace wc
 						//Destroy
 						entity.body->DestroyFixture(entity.body->GetFixtureList());
 						PhysicsWorld->DestroyBody(entity.body);
+						EnemyCount--;
 						Entities.erase(Entities.begin() + i);
 					}
 
 
 					//movement
-					bool inRange = glm::distance(player.Position, entity.Position) < entity.range;
-					if (!inRange) {
+					if (glm::distance(player.Position, entity.Position) < entity.detectRange) {
 						if (entity.Position.x > player.Position.x)entity.body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
 					}
 					//attack behavior
-					else
+					if (glm::distance(player.Position, entity.Position) < entity.shootRange)
 					{
 						if (entity.attackTimer <= 0 && entity.Alive())
 						{
@@ -469,7 +470,7 @@ namespace wc
 
 								std::random_device rd;
 								std::mt19937 gen(rd());
-								std::uniform_int_distribution<> dis(0, 2); // Define the range
+								std::uniform_int_distribution<> dis(0, 1); // Define the range
 
 								if (dis(gen) == 0)
 								{
@@ -485,7 +486,7 @@ namespace wc
 
 										m_ParticleEmitter.Emit(m_SummonParticle);
 									}
-
+									EnemyCount++;
 									Entities.push_back(em);
 								}
 
@@ -570,58 +571,6 @@ namespace wc
 				entity->UpdatePosition();
 		}
 
-		//HitInfo Intersect(const Ray& ray)
-		//{
-		//	HitInfo hitInfo;
-		//	float t = FLT_MAX;
-		//
-		//	float fMaxDistance = 36.f;
-		//
-		//	glm::vec2 vRayLength1D;
-		//	auto& vRayStart = ray.Origin;
-		//	auto& vRayDir = ray.Direction;
-		//	auto vRayUnitStepSize = abs(ray.InvDirection);
-		//	glm::ivec2 vMapCheck = glm::floor(vRayStart);
-		//	glm::ivec2 vMapLastCheck = vMapCheck;
-		//	glm::ivec2 vStep = glm::ivec2(glm::sign(vRayDir));
-		//
-		//	// Establish Starting Conditions
-		//	for (int i = 0; i < 2; i++)
-		//		vRayLength1D[i] = ((vRayDir[i] < 0.f ? (vRayStart[i] - float(vMapCheck[i])) : (float(vMapCheck[i]) - vRayStart[i])) + 0.5f) * vRayUnitStepSize[i];
-		//
-		//	bool bTileFound = false;
-		//	float fDistance = 0.f;
-		//	while (!bTileFound && fDistance < fMaxDistance)
-		//	{
-		//		// Walk along shortest path
-		//		int axis = 0;
-		//		for (int i = 0; i < 2; i++)
-		//		{
-		//			int nextAxis = (i + 1) % 2;
-		//			if (vRayLength1D[axis] > vRayLength1D[nextAxis]) axis = nextAxis;
-		//		}
-		//
-		//		vMapCheck[axis] += vStep[axis];
-		//		fDistance = vRayLength1D[axis];
-		//		vRayLength1D[axis] += vRayUnitStepSize[axis];
-		//
-		//		// Test tile at new test point
-		//		TileID tileID = GetTile(glm::uvec3(vMapCheck, 0));
-		//		if (tileID > 0)
-		//		{
-		//			hitInfo.Hit = true;
-		//			t = fDistance;
-		//			hitInfo.N = glm::vec2(vMapLastCheck - vMapCheck);
-		//			bTileFound = true;
-		//		}
-		//		vMapLastCheck = vMapCheck;
-		//	}
-		//
-		//	hitInfo.Point = ray.Origin + t * ray.Direction;
-		//
-		//	return hitInfo;
-		//}
-
 		uint32_t Get1DSize() { return m_Size; }
 		TileID* GetData() { return m_Data; }
 
@@ -633,6 +582,8 @@ namespace wc
 		Player player;
 
 		b2World* PhysicsWorld = nullptr;
+
+		uint32_t EnemyCount = 0;
 
 	private:
 		TileID* m_Data = nullptr;

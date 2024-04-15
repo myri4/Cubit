@@ -378,6 +378,7 @@ namespace wc
 			m_ParticleEmitter.OnUpdate();
 
 			if (!player.Alive()) Globals.gameState = GameState::DEATH;
+			if (m_Map.EnemyCount == 0) Globals.gameState = GameState::WIN;
 		}
 
 		void RenderGame()
@@ -474,8 +475,8 @@ namespace wc
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 200) * 0.5f, (ImGui::GetWindowSize().y - 300) * 0.5f));
 			if (ImGui::Button("Play", ImVec2(200, 100)))Globals.gameState = GameState::PLAY;
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- Solo Summoned -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- Solo Summoned -").y) * 0.5f));
-			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "- Solo Summoned -");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- Arcade Summoned -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- Arcade Summoned -").y) * 0.5f));
+			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "- Arcade Summoned -");
 			ImGui::End();
 			ImGui::PopStyleVar(5);
 		}
@@ -483,6 +484,11 @@ namespace wc
 		void DEATH_MENU()
 		{
 			WC_CORE_INFO("You died")
+		}
+
+		void WIN_MENU()
+		{
+			WC_CORE_INFO("You won!")
 		}
 
 		void UI()

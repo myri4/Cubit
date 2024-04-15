@@ -12,7 +12,9 @@ namespace wc
 	{
 		MENU,
 		DEATH,
+		WIN,
 		PLAY,
+		CREDITS,
 		PAUSE
 	};
 

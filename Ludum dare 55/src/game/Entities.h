@@ -140,8 +140,9 @@ namespace wc
 
     struct EyeballEnemy : public GameEntity
     {
-        float attackTimer = 2.f;
-        float range = 8.f;
+        float attackTimer = 2.f; 
+        float shootRange = 8.f;
+        float detectRange = 12.f;
 
         EyeballEnemy() { Type = EntityType::EyeballEnemy; Health = 15.f;  Speed = 1.1f; Damage = 1.f; }
     };
