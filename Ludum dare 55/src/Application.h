@@ -34,7 +34,7 @@ namespace wc
 			VulkanContext::Create();
 
 			WindowCreateInfo windowInfo;
-			windowInfo.Width = 1980;
+			windowInfo.Width = 1920;
 			windowInfo.Height = 1080;
 			windowInfo.Resizeable = false;
 			windowInfo.AppName = "Cube's Calling";
@@ -51,7 +51,7 @@ namespace wc
 			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 			io.IniFilename = nullptr;
 			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-			io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/sci.ttf", 50.f);
+			io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/Masterpiece.ttf", 50.f);
 
 			ImGui_ImplGlfw_Init(Globals.window, false);
 

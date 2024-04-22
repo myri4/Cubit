@@ -33,7 +33,7 @@ namespace wc
 		Map()
 		{
 			Entities.push_back(&player);
-			player.Size = glm::vec2(1.f) * 0.5f;
+			player.Size = glm::vec2(1.f, 1.f) * 0.5f;
 			player.HitBoxSize = player.Size;
 		}
 
@@ -51,7 +51,7 @@ namespace wc
 			if (Entities.size() == 0)
 			{
 				Entities.push_back(&player);
-				player.Size = glm::vec2(1.f) * 0.5f;
+				player.Size = glm::vec2(1.f, 1.f) * 0.5f;
 				player.HitBoxSize = player.Size;
 			}
 		}
@@ -400,7 +400,7 @@ namespace wc
 					//timer
 					if (entity.attackTimer > 0)entity.attackTimer -= Globals.deltaTime;
 
-					if (player.swordAttack && player.swordCD <=0) 
+					if (player.swordAttack && player.swordCD <=0 && glm::distance(entity.Position, player.Position) < 8.f) 
 					{
 						glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0, player.Size.y * 0.5f)) - entity.Position);
 						entity.body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
@@ -433,6 +433,7 @@ namespace wc
 							bullet->Damage = 0.5f;
 							bullet->Color = { 1.f, 0.f, 0.f, 1.f };
 							bullet->Size = { 0.25f, 0.25f };
+							bullet->Speed = 435.f;
 							bullet->Density = 75.f;
 							bullet->bulletType = BulletType::Eyeball;
 							bullet->CreateBody(PhysicsWorld);
@@ -462,7 +463,7 @@ namespace wc
 							entity.Shot = true;
 						}
 
-						entity.body->ApplyLinearImpulseToCenter(1750.f * b2Vec2(directionToPlayer.x, directionToPlayer.y), true);
+						entity.body->ApplyLinearImpulseToCenter(entity.Speed * b2Vec2(directionToPlayer.x, directionToPlayer.y), true);
 
 						if (entity.Contacts != 0 || glm::distance(player.Position, entity.Position) > 50 || entity.playerTouch)
 						{
@@ -506,7 +507,7 @@ namespace wc
 					//BFG Bullet Behavior
 					if (entity.bulletType == BulletType::BFG)
 					{
-						//entity.body->ApplyLinearImpulseToCenter(1750.f * b2Vec2(directionToMouse.x, directionToMouse.y), true);
+
 						entity.body->SetLinearVelocity(b2Vec2(entity.direction.x * entity.Speed, entity.direction.y * entity.Speed));
 
 						if (entity.Contacts != 0 || glm::distance(player.Position, entity.Position) > 50 || entity.shotEnemy)

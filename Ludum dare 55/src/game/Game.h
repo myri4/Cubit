@@ -231,7 +231,7 @@ namespace wc
 			SawedOffTexture = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
 			SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
 
-			LoadMap("levels/level2.malen");
+			//LoadMap("levels/level2.malen");
 
 			m_Renderer.CreateScreen(renderSize, m_RenderData);
 			m_ParticleEmitter.Init();
@@ -299,6 +299,11 @@ namespace wc
 			}
 		}
 
+		glm::vec2 RandomOnHemisphere(const glm::vec2& normal, const glm::vec2& dir)
+		{
+			return dir * glm::sign(dot(normal, dir));
+		}
+
 		void UpdateGame()
 		{
 			m_Map.Update();
@@ -330,12 +335,12 @@ namespace wc
 					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/shotgun.wav", NULL);
 					std::random_device rd;
 					std::mt19937 gen(rd());
-					std::uniform_real_distribution<float> dis(-1.75f, 2.25f);
+					std::uniform_real_distribution<float> dis(-0.35f, 0.35f);
 
+					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
 					for (uint32_t i = 0; i < 9; i++)
 					{
-						glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position + glm::vec2(0.f, dis(gen)));
-						m_Map.SpawnBullet(player.Position + dir * 0.45f, dir, 25.f, 1.5f, { 0.15f, 0.15f }, glm::vec4(1.f, 1.f, 0, 1.f), BulletType::Shotgun);
+						m_Map.SpawnBullet(player.Position + dir * 0.475f, RandomOnHemisphere(dir,glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 1.75f, { 0.1f, 0.1f }, glm::vec4(1.f, 1.f, 0, 1.f), BulletType::Shotgun);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();
@@ -346,7 +351,7 @@ namespace wc
 						for (int i = 0; i < 6; i++)
 							m_ParticleEmitter.Emit(m_Particle);
 					}
-					player.attackCD = 0.8f;
+					player.attackCD = 1.1f;
 				}
 			}
 
@@ -383,6 +388,7 @@ namespace wc
 
 		void RenderGame()
 		{
+			
 			for (uint32_t x = 0; x < m_Map.Size.x; x++)
 				for (uint32_t y = 0; y < m_Map.Size.y; y++)
 				{
@@ -413,7 +419,7 @@ namespace wc
 				else
 					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::EyeballEnemy ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
 			}
-			
+
 			if (m_RotateSword)
 			{
 				m_SwordRotation += (2.f * glm::pi<float>() - m_SwordRotation) * 11.5f * Globals.deltaTime;
@@ -473,7 +479,12 @@ namespace wc
 
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 200) * 0.5f, (ImGui::GetWindowSize().y - 350) * 0.5f));
-			if (ImGui::Button("Play", ImVec2(200, 100)))Globals.gameState = GameState::PLAY;
+			if (ImGui::Button("Play", ImVec2(200, 100))) {
+				Globals.gameState = GameState::PLAY;
+				m_Map.EnemyCount = 0;
+				LoadMap("levels/level2.malen");
+				m_Map.player.Health = 10;
+			}
 			ImGui::SetWindowFontScale(1.5f);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- Cube's Calling -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- Cube's Calling -").y) * 0.5f));
 			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "- Cube's Calling -");
@@ -521,11 +532,7 @@ namespace wc
 
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
-			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.7f));
  
-			 
-			 
-
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("CONGRATS You Won!").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("CONGRATS You Won!").y) * 0.5f));
 			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "CONGRATS! You Won!");

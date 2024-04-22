@@ -89,7 +89,7 @@ namespace wc
             YAML_LOAD_VAR(node, Position);
         }
 
-        void CreateBody(b2World* PhysicsWorld)
+        virtual void CreateBody(b2World* PhysicsWorld)
         {
             b2BodyDef bodyDef;
             bodyDef.type = b2_dynamicBody;
@@ -156,5 +156,29 @@ namespace wc
         bool Shot = false; // bool for one time change at the start
 
         Bullet() { Type = EntityType::Bullet; }
+
+		void CreateBody(b2World* PhysicsWorld) override
+		{
+			b2BodyDef bodyDef;
+			bodyDef.type = b2_dynamicBody;
+			bodyDef.position.Set(Position.x, Position.y);
+			bodyDef.fixedRotation = true;
+			body = PhysicsWorld->CreateBody(&bodyDef);
+
+			//b2PolygonShape shape;
+			//shape.SetAsBox(HitBoxSize.x, HitBoxSize.y);
+            b2CircleShape shape;
+            shape.m_radius = Size.x;
+
+			b2FixtureDef fixtureDef;
+			fixtureDef.density = Density;
+			fixtureDef.friction = 0.f;
+
+			fixtureDef.userData.pointer = (uintptr_t)this;
+
+			fixtureDef.shape = &shape;
+			body->CreateFixture(&fixtureDef);
+			//body->SetLinearDamping(2.8f);
+		}
     };
 }
