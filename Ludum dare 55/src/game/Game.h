@@ -321,13 +321,17 @@ namespace wc
 			{
 				if (player.weapon)
 				{
+					std::random_device rd;
+					std::mt19937 gen(rd());
+					std::uniform_real_distribution<float> dis(-0.08f, 0.12f);
+
 					Globals.result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/gun.wav", NULL);
 					if (Globals.result != MA_SUCCESS) {
 						std::cout << "sound play fail\n";
 						std::cout << Globals.result;
 					}
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
-					m_Map.SpawnBullet(player.Position + dir * 0.75f, dir, 25.f, 3.f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
+					m_Map.SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 3.f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
 					player.attackCD = 0.3f;
 				}
 				else
@@ -340,15 +344,15 @@ namespace wc
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
 					for (uint32_t i = 0; i < 9; i++)
 					{
-						m_Map.SpawnBullet(player.Position + dir * 0.475f, RandomOnHemisphere(dir,glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 1.75f, { 0.1f, 0.1f }, glm::vec4(1.f, 1.f, 0, 1.f), BulletType::Shotgun);
+						m_Map.SpawnBullet(player.Position + dir * 0.45f, RandomOnHemisphere(dir,glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 1.75f, { 0.1f, 0.1f }, glm::vec4(1.f, 1.f, 0, 1.f), BulletType::Shotgun);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();
 						m_Particle.ColorBegin = glm::vec4{ 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f } * 2.f;
 						m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
-						m_Particle.Velocity = glm::vec2(vel.x, vel.y) * 0.5f;
-						m_Particle.VelocityVariation = glm::normalize(player.Position + dir * 0.55f - player.Position) * 5.f;
-						for (int i = 0; i < 6; i++)
+						m_Particle.Velocity = glm::vec2(vel.x, vel.y) * 0.45f;
+						m_Particle.VelocityVariation = glm::normalize(player.Position + RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))) * 0.85f - player.Position) * 5.f;
+						for (uint32_t i = 0; i < 5; i++)
 							m_ParticleEmitter.Emit(m_Particle);
 					}
 					player.attackCD = 1.1f;
@@ -556,6 +560,7 @@ namespace wc
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetWindowFontScale(0.8f);
 			ImGui::SetCursorPos(ImVec2(10, 10));
+			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("FPS: {}",  int(1.f / Globals.deltaTime)).c_str());
 			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("HP: {}", m_Map.player.Health).c_str());
 			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("Enemy count: {}", m_Map.EnemyCount).c_str());
 			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(0, 0), ImVec2((float)Globals.window.GetSize().x, (float)Globals.window.GetSize().y));

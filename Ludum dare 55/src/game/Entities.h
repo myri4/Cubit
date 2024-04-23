@@ -69,6 +69,7 @@ namespace wc
         uint32_t ID;
 
         float Health = 10.f;
+        float linearDamping = 1.8f;
 
         uint32_t UpContacts = 0;
         uint32_t DownContacts = 0;
@@ -109,7 +110,7 @@ namespace wc
 
             fixtureDef.shape = &shape;
             body->CreateFixture(&fixtureDef);
-            body->SetLinearDamping(2.8f);
+            body->SetLinearDamping(linearDamping);
         }
 
         GameEntity() = default;
@@ -142,7 +143,7 @@ namespace wc
     {
         float attackTimer = 2.f; 
         float shootRange = 8.f;
-        float detectRange = 12.f;
+        float detectRange = 15.f;
 
         EyeballEnemy() { Type = EntityType::EyeballEnemy; Health = 15.f;  Speed = 1.1f; Damage = 1.f; }
     };
@@ -154,6 +155,7 @@ namespace wc
         glm::vec4 Color;
         BulletType bulletType;
         bool Shot = false; // bool for one time change at the start
+        glm::vec2 shotPos;
 
         Bullet() { Type = EntityType::Bullet; }
 
@@ -178,7 +180,7 @@ namespace wc
 
 			fixtureDef.shape = &shape;
 			body->CreateFixture(&fixtureDef);
-			//body->SetLinearDamping(2.8f);
+			body->SetLinearDamping(2.f);
 		}
     };
 }

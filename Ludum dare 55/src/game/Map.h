@@ -525,13 +525,20 @@ namespace wc
 							Entities.erase(Entities.begin() + i);
 						}
 					}
-
+					
 					//Shotgun Bullet Behavior
 					if (entity.bulletType == BulletType::Shotgun)
 					{
 						entity.body->SetLinearVelocity(b2Vec2(entity.direction.x * entity.Speed, entity.direction.y * entity.Speed));
 
-						if (entity.Contacts != 0 || glm::distance(player.Position, entity.Position) > 5 || entity.shotEnemy)
+						if (!entity.Shot)
+						{
+							entity.shotPos = entity.Position;
+							entity.Shot = true;
+							//make it true so it only does it once
+						}
+
+						if (entity.Contacts != 0 || glm::distance(entity.shotPos, entity.Position) > 5 || entity.shotEnemy)
 						{
 							if (entity.shotEnemy)
 							{
@@ -541,7 +548,7 @@ namespace wc
 
 							if (entity.Contacts != 0)
 							{
-								Explode(entity.Position, 4.f, 55.f);
+								Explode(entity.Position, 10.f, 55.f);
 							}
 
 							//Destroy
