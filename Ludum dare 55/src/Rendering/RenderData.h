@@ -9,6 +9,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <wc/Utils/CPUImage.h>
+#include "Font.h"
 
 #undef LoadImage
 namespace wc
@@ -257,6 +258,127 @@ namespace wc
 		void DrawLine(glm::vec2 start, glm::vec2 end, const glm::vec4& color = glm::vec4(1.f)) { DrawLine(glm::vec3(start, 0.f), glm::vec3(end, 0.f), color, color); }
 		void DrawLine(glm::vec2 start, glm::vec2 end, const glm::vec3& startColor, const glm::vec3& endColor) { DrawLine(glm::vec3(start, 0.f), glm::vec3(end, 0.f), glm::vec4(startColor, 1.f), glm::vec4(endColor, 1.f)); }
 		void DrawLine(glm::vec2 start, glm::vec2 end, const glm::vec3& color) { DrawLine(glm::vec3(start, 0.f), glm::vec3(end, 0.f), color, color); }
+
+		void DrawString(const std::string& string, const Font& font, const glm::mat4& transform, const glm::vec4& color = glm::vec4(1.f))
+		{
+			const auto& fontGeometry = font.FontGeometry;
+			const auto& metrics = fontGeometry.getMetrics();
+			uint32_t texID = font.textureID;
+			auto& fontAtlas = Textures[texID];
+
+			double x = 0.0;
+			double fsScale = 1.0 / (metrics.ascenderY - metrics.descenderY);
+			double y = 0.0;
+
+			Vertex* vertices = m_VertexBuffer;
+			auto& vertCount = m_VertexBuffer.Counter;
+
+			uint32_t* indices = m_IndexBuffer;
+			auto& indexCount = m_IndexBuffer.Counter;
+						
+			const float spaceGlyphAdvance = fontGeometry.getGlyph(' ')->getAdvance();
+
+			for (uint32_t i = 0; i < string.size(); i++)
+			{
+				char character = string[i];
+
+				if (character == '\r')
+					continue;
+
+				if (character == '\n')
+				{
+					x = 0;
+					y -= fsScale * metrics.lineHeight + font.LineSpacing;
+					continue;
+				}
+
+				if (character == ' ')
+				{
+					float advance = spaceGlyphAdvance;
+					if (i < string.size() - 1)
+					{
+						char nextCharacter = string[i + 1];
+						double dAdvance;
+						fontGeometry.getAdvance(dAdvance, character, nextCharacter);
+						advance = (float)dAdvance;
+					}
+
+					x += fsScale * advance + font.Kerning;
+					continue;
+				}
+
+				if (character == '\t')
+				{
+					x += 4.f * (fsScale * spaceGlyphAdvance + font.Kerning);
+					continue;
+				}
+
+				auto glyph = fontGeometry.getGlyph(character);
+
+				if (!glyph)
+					glyph = fontGeometry.getGlyph('?');
+
+				if (!glyph) return;
+
+				double al, ab, ar, at;
+				glyph->getQuadAtlasBounds(al, ab, ar, at);
+				glm::vec2 texCoordMin((float)al, (float)ab);
+				glm::vec2 texCoordMax((float)ar, (float)at);
+
+				double pl, pb, pr, pt;
+				glyph->getQuadPlaneBounds(pl, pb, pr, pt);
+				glm::vec2 quadMin((float)pl, (float)pb);
+				glm::vec2 quadMax((float)pr, (float)pt);
+
+				quadMin *= fsScale, quadMax *= fsScale;
+				quadMin += glm::vec2(x, y);
+				quadMax += glm::vec2(x, y);
+
+				float texelWidth = 1.f / fontAtlas.GetImage().GetSize().x;
+				float texelHeight = 1.f / fontAtlas.GetImage().GetSize().y;
+				texCoordMin *= glm::vec2(texelWidth, texelHeight);
+				texCoordMax *= glm::vec2(texelWidth, texelHeight);
+
+				vertices[vertCount + 0] = Vertex(transform * glm::vec4(quadMax, 0.f, 1.f), texCoordMax, texID, color);
+				vertices[vertCount + 1] = Vertex(transform * glm::vec4(quadMin.x, quadMax.y, 0.f, 1.f), { texCoordMin.x, texCoordMax.y }, texID, color);
+				vertices[vertCount + 2] = Vertex(transform * glm::vec4(quadMin, 0.f, 1.f), texCoordMin, texID, color);
+				vertices[vertCount + 3] = Vertex(transform * glm::vec4(quadMax.x, quadMin.y, 0.f, 1.f), { texCoordMax.x, texCoordMin.y }, texID, color);
+
+				for (uint32_t i = 0; i < 4; i++) vertices[vertCount + i].Thickness = -1.f;
+
+				indices[indexCount + 0] = vertCount;
+				indices[indexCount + 1] = 1 + vertCount;
+				indices[indexCount + 2] = 2 + vertCount;
+
+				indices[indexCount + 3] = 2 + vertCount;
+				indices[indexCount + 4] = 3 + vertCount;
+				indices[indexCount + 5] = vertCount;
+
+				vertCount += 4;
+				indexCount += 6;
+
+				if (i < string.size() - 1)
+				{
+					double advance = glyph->getAdvance();
+					char nextCharacter = string[i + 1];
+					fontGeometry.getAdvance(advance, character, nextCharacter);
+
+					x += fsScale * advance + font.Kerning;
+				}
+			}
+		}
+
+		void DrawString(const std::string& string, const Font& font, const glm::vec3& position, glm::vec2 scale, float rotation, const glm::vec4& color = glm::vec4(1.f))
+		{
+			glm::mat4 transform = glm::translate(glm::mat4(1.f), position) * glm::rotate(glm::mat4(1.f), rotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f), { scale.x, scale.y, 1.f });
+			DrawString(string, font, transform, color);
+		}
+
+		void DrawString(const std::string& string, const Font& font, const glm::vec3& position, const glm::vec4& color = glm::vec4(1.f))
+		{
+			glm::mat4 transform = glm::translate(glm::mat4(1.f), position);
+			DrawString(string, font, transform, color);
+		}
 
 		void Reset()
 		{

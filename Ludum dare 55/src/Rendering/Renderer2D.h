@@ -8,6 +8,8 @@
 #include "RenderData.h"
 #include <imgui/imgui_impl_vulkan.h>
 
+#include "Font.h"
+
 namespace wc
 {
 	class Renderer2D

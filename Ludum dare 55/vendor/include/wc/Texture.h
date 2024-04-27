@@ -8,6 +8,10 @@
 
 namespace wc 
 {
+    struct TextureCreateInfo
+    {
+
+    };
     class Texture 
     {
         Image image;
@@ -15,6 +19,8 @@ namespace wc
         Sampler sampler;
         VkDescriptorSet imageID = VK_NULL_HANDLE;
     public:
+
+        Texture() = default;
 
         void Allocate(uint32_t width, uint32_t height, bool mipMaping = false)
         {

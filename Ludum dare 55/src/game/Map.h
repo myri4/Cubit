@@ -398,9 +398,9 @@ namespace wc
 				{
 					EyeballEnemy& entity = *reinterpret_cast<EyeballEnemy*>(e);
 					//timer
-					if (entity.attackTimer > 0)entity.attackTimer -= Globals.deltaTime;
+					if (entity.attackTimer > 0.f) entity.attackTimer -= Globals.deltaTime;
 
-					if (player.swordAttack && player.swordCD <=0 && glm::distance(entity.Position, player.Position) < 8.f) 
+					if (player.swordAttack && player.swordCD <= 0 && glm::distance(entity.Position, player.Position) < 8.f) 
 					{
 						glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0, player.Size.y * 0.5f)) - entity.Position);
 						entity.body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
@@ -418,7 +418,8 @@ namespace wc
 
 
 					//movement
-					if (glm::distance(player.Position, entity.Position) < entity.detectRange) {
+					if (glm::distance(player.Position, entity.Position) < entity.detectRange) 
+					{
 						if (entity.Position.x > player.Position.x)entity.body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
 					}
@@ -449,26 +450,24 @@ namespace wc
 
 				case EntityType::Bullet:
 				{
-					Bullet& entity = *reinterpret_cast<Bullet*>(e);
+					Bullet& bullet = *reinterpret_cast<Bullet*>(e);
 
 					//Eyeball Bullet Behavior
-					if (entity.bulletType == BulletType::Eyeball)
+					if (bullet.bulletType == BulletType::Eyeball)
 					{
-						glm::vec2 directionToPlayer;
-						if (!entity.Shot)
+						if (!bullet.Shot)
 						{
-							directionToPlayer = glm::normalize(player.Position + glm::vec2(0.f, 0.5f) - entity.Position);
+							glm::vec2 directionToPlayer = glm::normalize(player.Position + glm::vec2(0.f, 0.5f) - bullet.Position);
 
 							//make it true so it only does it once
-							entity.Shot = true;
+							bullet.Shot = true;
+							bullet.body->ApplyLinearImpulseToCenter(bullet.Speed * b2Vec2(directionToPlayer.x, directionToPlayer.y), true);
 						}
 
-						entity.body->ApplyLinearImpulseToCenter(entity.Speed * b2Vec2(directionToPlayer.x, directionToPlayer.y), true);
-
-						if (entity.Contacts != 0 || glm::distance(player.Position, entity.Position) > 50 || entity.playerTouch)
+						if (bullet.Contacts > 0 || glm::distance(player.Position, bullet.Position) > 50.f || bullet.playerTouch)
 						{
-							if (entity.playerTouch) {
-
+							if (bullet.playerTouch)
+							{
 								std::random_device rd;
 								std::mt19937 gen(rd());
 								std::uniform_int_distribution<> dis(0, 1); // Define the range
@@ -476,7 +475,7 @@ namespace wc
 								if (dis(gen) == 0)
 								{
 									EyeballEnemy* em = new EyeballEnemy();
-									em->Position = entity.Position + glm::vec2(0.f, 1.f);
+									em->Position = bullet.Position + glm::vec2(0.f, 1.f);
 									em->CreateBody(PhysicsWorld);
 
 									m_SummonParticle.Position = em->Position;
@@ -491,13 +490,13 @@ namespace wc
 									Entities.push_back(em);
 								}
 
-								Globals.result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
-								player.Health -= entity.Damage;
+								ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
+								player.Health -= bullet.Damage;
 							}
 
 							//Destroy
-							entity.body->DestroyFixture(entity.body->GetFixtureList());
-							PhysicsWorld->DestroyBody(entity.body);
+							bullet.body->DestroyFixture(bullet.body->GetFixtureList());
+							PhysicsWorld->DestroyBody(bullet.body);
 							Entities.erase(Entities.begin() + i);
 						}
 					}
@@ -505,55 +504,52 @@ namespace wc
 
 
 					//BFG Bullet Behavior
-					if (entity.bulletType == BulletType::BFG)
+					if (bullet.bulletType == BulletType::BFG)
 					{
+						bullet.body->SetLinearVelocity(b2Vec2(bullet.direction.x * bullet.Speed, bullet.direction.y * bullet.Speed));
 
-						entity.body->SetLinearVelocity(b2Vec2(entity.direction.x * entity.Speed, entity.direction.y * entity.Speed));
-
-						if (entity.Contacts != 0 || glm::distance(player.Position, entity.Position) > 50 || entity.shotEnemy)
+						if (bullet.Contacts != 0 || glm::distance(player.Position, bullet.Position) > 50.f || bullet.shotEnemy)
 						{
-							if (entity.shotEnemy)
+							if (bullet.shotEnemy)
 							{
-								//WC_CORE_INFO("Shot Enemy");
-								Globals.result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
-								Entities[entity.EnemyID]->Health -= entity.Damage;
+								ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
+								Entities[bullet.EnemyID]->Health -= bullet.Damage;
 							}
 
 							//Destroy
-							entity.body->DestroyFixture(entity.body->GetFixtureList());
-							PhysicsWorld->DestroyBody(entity.body);
+							bullet.body->DestroyFixture(bullet.body->GetFixtureList());
+							PhysicsWorld->DestroyBody(bullet.body);
 							Entities.erase(Entities.begin() + i);
 						}
 					}
 					
 					//Shotgun Bullet Behavior
-					if (entity.bulletType == BulletType::Shotgun)
+					if (bullet.bulletType == BulletType::Shotgun)
 					{
-						entity.body->SetLinearVelocity(b2Vec2(entity.direction.x * entity.Speed, entity.direction.y * entity.Speed));
+						bullet.body->SetLinearVelocity(b2Vec2(bullet.direction.x * bullet.Speed, bullet.direction.y * bullet.Speed));
 
-						if (!entity.Shot)
+						if (!bullet.Shot)
 						{
-							entity.shotPos = entity.Position;
-							entity.Shot = true;
+							bullet.shotPos = bullet.Position;
+							bullet.Shot = true;
 							//make it true so it only does it once
 						}
 
-						if (entity.Contacts != 0 || glm::distance(entity.shotPos, entity.Position) > 5 || entity.shotEnemy)
+						if (bullet.Contacts != 0 || glm::distance(bullet.shotPos, bullet.Position) > 5 || bullet.shotEnemy)
 						{
-							if (entity.shotEnemy)
+							if (bullet.shotEnemy)
 							{
-								//WC_CORE_INFO("Shot Enemy");
-								Entities[entity.EnemyID]->Health -= entity.Damage;
+								Entities[bullet.EnemyID]->Health -= bullet.Damage;
 							}
 
-							if (entity.Contacts != 0)
+							if (bullet.Contacts != 0)
 							{
-								Explode(entity.Position, 10.f, 55.f);
+								Explode(bullet.Position, 10.f, 55.f);
 							}
 
 							//Destroy
-							entity.body->DestroyFixture(entity.body->GetFixtureList());
-							PhysicsWorld->DestroyBody(entity.body);
+							bullet.body->DestroyFixture(bullet.body->GetFixtureList());
+							PhysicsWorld->DestroyBody(bullet.body);
 							Entities.erase(Entities.begin() + i);
 						}
 					}
@@ -570,13 +566,19 @@ namespace wc
 		{
 			UpdateAI();
 
-			const int32_t velocityIterations = 6;
-			const int32_t positionIterations = 2;
 
-			PhysicsWorld->Step(Globals.deltaTime, velocityIterations, positionIterations);
+			//AccumulatedTime += Globals.deltaTime;
+			//while (AccumulatedTime >= 0.f)
+			//{
+				const int32_t velocityIterations = 6;
+				const int32_t positionIterations = 2;
 
-			for (auto& entity : Entities)
-				entity->UpdatePosition();
+				PhysicsWorld->Step(/*SimulationTime*/Globals.deltaTime, velocityIterations, positionIterations);
+			//	AccumulatedTime -= SimulationTime;
+			//}
+
+				for (auto& entity : Entities)
+					entity->UpdatePosition();
 		}
 
 		uint32_t Get1DSize() { return m_Size; }
@@ -596,6 +598,9 @@ namespace wc
 	private:
 		TileID* m_Data = nullptr;
 		uint32_t m_Size = 1;
+
+		float AccumulatedTime = 0.f;
+		const float SimulationTime = 1.f / 60.f;
 
 	private:
 

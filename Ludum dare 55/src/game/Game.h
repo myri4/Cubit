@@ -192,14 +192,7 @@ namespace wc
 		uint32_t PlasmaGunTexture = 0;
 		uint32_t SawedOffTexture = 0;
 		uint32_t SwordTexture = 0;
-
-		////sound
-
-		//float sfx_volume = 0.6f;
-
-		//ma_result result;
-
-		//ma_engine sfx_engine;
+		Font font;
 
 		bool m_RotateSword = false;
 		float m_SwordRotation = 0.f;
@@ -214,24 +207,22 @@ namespace wc
 
 		void Create(glm::vec2 renderSize)
 		{
-
 			//sound
-			Globals.result = ma_engine_init(NULL, &Globals.sfx_engine);
-			if (Globals.result != MA_SUCCESS) {
-				std::cout << "sound engine fail\n";
-				std::cout << Globals.result;
-			}
+			auto result = ma_engine_init(NULL, &Globals.sfx_engine);
+			if (result != MA_SUCCESS)
+				WC_CORE_ERROR("sound engine fail {}", result);
+
 			ma_engine_set_volume(&Globals.sfx_engine, Globals.sfx_volume);
 
 			m_RenderData.Create();
 			m_Renderer.Init(camera);
+			font.Load("assets/fonts/Masterpiece.ttf", m_RenderData);
+
 			m_Tileset.Load();
 
 			PlasmaGunTexture = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			SawedOffTexture = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
 			SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
-
-			//LoadMap("levels/level2.malen");
 
 			m_Renderer.CreateScreen(renderSize, m_RenderData);
 			m_ParticleEmitter.Init();
@@ -253,7 +244,6 @@ namespace wc
 
 			//m_SummonParticle.VelocityVariation = glm::normalize(entity.Position - m_Map.player.Position) * 2.5f;
 		}
-
 		
 		void InputGame()
 		{
@@ -273,13 +263,8 @@ namespace wc
 				player.attackCD = 0.2f;
 			}
 
-			if (ImGui::IsKeyPressed(ImGuiKey_Space))
-			{
-				if (player.DownContacts != 0)
-				{
-					player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true); //normal jump
-				}
-			}
+			if (ImGui::IsKeyPressed(ImGuiKey_Space) && player.DownContacts != 0)
+				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
 
 			if (moveDir != glm::vec2(0.f))
 			{
@@ -325,11 +310,11 @@ namespace wc
 					std::mt19937 gen(rd());
 					std::uniform_real_distribution<float> dis(-0.08f, 0.12f);
 
-					Globals.result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/gun.wav", NULL);
-					if (Globals.result != MA_SUCCESS) {
-						std::cout << "sound play fail\n";
-						std::cout << Globals.result;
-					}
+					auto result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/gun.wav", NULL);
+
+					if (result != MA_SUCCESS)
+						WC_CORE_ERROR("sound play fail {}", result);
+					
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - m_Map.player.Position);
 					m_Map.SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 3.f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
 					player.attackCD = 0.3f;
@@ -377,10 +362,10 @@ namespace wc
 			{
 				if (player.swordCD <= 0.f)
 				{
-				//play sound
-				ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/sword_swing.wav", NULL);
-				m_RotateSword = true;
-				player.swordCD = 2.5f;
+					//play sound
+					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/sword_swing.wav", NULL);
+					m_RotateSword = true;
+					player.swordCD = 2.5f;
 				}
 				player.swordAttack = false;
 			}
@@ -391,8 +376,7 @@ namespace wc
 		}
 
 		void RenderGame()
-		{
-			
+		{			
 			for (uint32_t x = 0; x < m_Map.Size.x; x++)
 				for (uint32_t y = 0; y < m_Map.Size.y; y++)
 				{
@@ -423,6 +407,10 @@ namespace wc
 				else
 					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::EyeballEnemy ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
 			}
+
+			m_RenderData.DrawString("myri4", font, glm::translate(glm::mat4(1.f), glm::vec3(m_Map.player.Position + glm::vec2(0.f, 1.f), 0.f))
+				*
+				glm::rotate(glm::mat4(1.f), glm::radians(45.f), {0.f, 0.f, 1.f}), glm::vec4(1.f));
 
 			if (m_RotateSword)
 			{
@@ -467,8 +455,6 @@ namespace wc
 
 		void MENU()
 		{
-
-
 			const ImGuiViewport* viewport = ImGui::GetMainViewport();
 			ImGui::SetNextWindowPos(viewport->WorkPos);
 			ImGui::SetNextWindowSize(viewport->WorkSize);

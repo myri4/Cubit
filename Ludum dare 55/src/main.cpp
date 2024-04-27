@@ -9,6 +9,9 @@
 //#define GLM_FORCE_PURE
 #define GLM_FORCE_CTOR_INIT
 #define GLM_FORCE_SILENT_WARNINGS
+
+#define MSDFGEN_PUBLIC // ???
+
 #include "Application.h"
 
 //DANGEROUS!
@@ -91,7 +94,7 @@ namespace wc
 
 int main()
 {
-	float music_volume = 0.8;
+	float music_volume = 0.f;
 
 	ma_result result;
 	ma_engine engine;

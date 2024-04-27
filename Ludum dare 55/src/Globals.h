@@ -24,8 +24,6 @@ namespace wc
 
 		float sfx_volume = 0.6f;
 
-		ma_result result;
-
 		ma_engine sfx_engine;
 
 		Window window; // @TODO: maybe rename to main window

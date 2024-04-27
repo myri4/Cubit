@@ -136,7 +136,6 @@ namespace wc
             Type = EntityType::Player;
             Density = 100.f;
         }
-
     };
 
     struct EyeballEnemy : public GameEntity

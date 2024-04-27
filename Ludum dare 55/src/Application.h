@@ -38,7 +38,7 @@ namespace wc
 			windowInfo.Height = 1080;
 			windowInfo.Resizeable = false;
 			windowInfo.AppName = "Cube's Calling";
-			windowInfo.StartMode = WindowMode::Fullscreen;
+			windowInfo.StartMode = WindowMode::Normal;
 			Globals.window.Create(windowInfo);
 
 			SyncContext::Create();
@@ -122,7 +122,11 @@ namespace wc
 				return;
 			}
 
-			if (Globals.gameState == GameState::PLAY)game.Update();
+			if (Globals.gameState == GameState::PLAY)
+			{
+				game.Update();
+				//std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			}
 
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
