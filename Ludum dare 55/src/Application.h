@@ -34,8 +34,8 @@ namespace wc
 			VulkanContext::Create();
 
 			WindowCreateInfo windowInfo;
-			windowInfo.Width = 1920;
-			windowInfo.Height = 1080;
+			windowInfo.Width = 1280; // 1920
+			windowInfo.Height = 720; // 1080
 			windowInfo.Resizeable = false;
 			windowInfo.AppName = "Cube's Calling";
 			windowInfo.StartMode = WindowMode::Normal;

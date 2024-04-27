@@ -263,8 +263,10 @@ namespace wc
 				player.attackCD = 0.2f;
 			}
 
-			if (ImGui::IsKeyPressed(ImGuiKey_Space) && player.DownContacts != 0)
+			//jump
+			if (ImGui::IsKeyPressed(ImGuiKey_Space) && player.DownContacts != 0) 
 				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
+			
 
 			if (moveDir != glm::vec2(0.f))
 			{
@@ -304,6 +306,7 @@ namespace wc
 
 			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.attackCD <= 0)
 			{
+				//plasma gun
 				if (player.weapon)
 				{
 					std::random_device rd;
@@ -319,6 +322,8 @@ namespace wc
 					m_Map.SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 3.f, { 0.25f, 0.25f }, glm::vec4(0, 1.f, 0, 1.f), BulletType::BFG);
 					player.attackCD = 0.3f;
 				}
+
+				//shotgun
 				else
 				{
 					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/shotgun.wav", NULL);
@@ -346,12 +351,13 @@ namespace wc
 
 			if (player.dash && player.dashCD <= 0)
 			{
-				ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
-				if (player.body->GetLinearVelocity().x > 0.1f) {
+				if (player.body->GetLinearVelocity().x > 0.07f) {
+					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
 					player.body->ApplyLinearImpulseToCenter({ 5000.f, 0.f }, true);
 					player.dash = false;
 				}
-				else if (player.body->GetLinearVelocity().x < -0.1f) {
+				else if (player.body->GetLinearVelocity().x < -0.07f) {
+					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
 					player.body->ApplyLinearImpulseToCenter({ -5000.f, 0.f }, true);
 					player.dash = false;
 				}
@@ -467,7 +473,7 @@ namespace wc
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.7f));
 
-			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::Begin("MENU", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 200) * 0.5f, (ImGui::GetWindowSize().y - 350) * 0.5f));
 			if (ImGui::Button("Play", ImVec2(200, 100))) {
 				Globals.gameState = GameState::PLAY;
@@ -499,7 +505,7 @@ namespace wc
 
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
-			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::Begin("DEATH", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetWindowFontScale(1.8f);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("You Died").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("You Died").y) * 0.5f));
 			ImGui::TextColored(ImVec4(1.f, 0, 0, 1.f), "You Died");
@@ -523,7 +529,7 @@ namespace wc
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
  
-			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::Begin("WIN", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("CONGRATS You Won!").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("CONGRATS You Won!").y) * 0.5f));
 			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "CONGRATS! You Won!");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 270) * 0.5f, (ImGui::GetWindowSize().y + 300) * 0.5f));
@@ -542,14 +548,18 @@ namespace wc
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 
+			
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			//ImGui::SetNextWindowPos({ 0, 0 });
+			ImGui::SetNextWindowSize({ (float)Globals.window.GetSize().x, (float)Globals.window.GetSize().y });
+			ImGui::Begin("MAIN", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetWindowFontScale(0.8f);
 			ImGui::SetCursorPos(ImVec2(10, 10));
 			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("FPS: {}",  int(1.f / Globals.deltaTime)).c_str());
 			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("HP: {}", m_Map.player.Health).c_str());
-			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("Enemy count: {}", m_Map.EnemyCount).c_str());
-			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(0, 0), ImVec2((float)Globals.window.GetSize().x, (float)Globals.window.GetSize().y));
+			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("Enemy count: {}", m_Map.EnemyCount).c_str()); 
+			auto windowPos = (glm::vec2)Globals.window.GetPos();
+			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(windowPos.x, windowPos.y), ImVec2((float)Globals.window.GetSize().x + windowPos.x, (float)Globals.window.GetSize().y + windowPos.y));
 			ImGui::End();
 			ImGui::PopStyleVar(3);
 		}

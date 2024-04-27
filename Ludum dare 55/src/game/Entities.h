@@ -69,7 +69,7 @@ namespace wc
         uint32_t ID;
 
         float Health = 10.f;
-        float linearDamping = 1.8f;
+        float linearDamping = 1.4f;
 
         uint32_t UpContacts = 0;
         uint32_t DownContacts = 0;
@@ -120,7 +120,7 @@ namespace wc
     {
         bool weapon = true;
 
-        float JumpForce = 2200.f;
+        float JumpForce = 1900.f;
 
         bool dash = false;
         float dashCD = 0.f;

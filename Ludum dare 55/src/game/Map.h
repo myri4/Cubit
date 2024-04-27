@@ -544,7 +544,7 @@ namespace wc
 
 							if (bullet.Contacts != 0)
 							{
-								Explode(bullet.Position, 10.f, 55.f);
+								Explode(bullet.Position, 10.f, 130.f);
 							}
 
 							//Destroy
