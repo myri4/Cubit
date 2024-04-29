@@ -76,7 +76,7 @@ namespace wc
         // Properties
         float StartHealth = 10.f;
         float Damage = 0.5f;
-        float Speed = 20.5f;
+        float Speed = 8.5f;
         float Density = 55.f;
 
         float Health = 10.f;
