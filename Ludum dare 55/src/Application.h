@@ -200,13 +200,18 @@ namespace wc
 
 		void OnUpdate()
 		{
+			if (SyncContext::GetRenderFence().GetStatus() != VK_NOT_READY)
+			{
+				SyncContext::GetRenderFence().Wait();
+				SyncContext::GetRenderFence().Reset();
+			}
 			Globals.UpdateTime();
 
 			UpdateMusic();
 
 			uint32_t swapchainImageIndex = 0;
 
-			VkResult result = Globals.window.AcquireNextImage(swapchainImageIndex, SyncContext::PresentSemaphore);
+			VkResult result = Globals.window.AcquireNextImage(swapchainImageIndex, SyncContext::GetPresentSemaphore());
 
 			if (result == VK_ERROR_OUT_OF_DATE_KHR)
 			{
@@ -231,7 +236,7 @@ namespace wc
 			else if (Globals.gameState == GameState::CREDITS) Credits();
 			ImGui::Render();			
 
-			CommandBuffer& cmd = SyncContext::MainCommandBuffer;
+			CommandBuffer& cmd = SyncContext::GetMainCommandBuffer();
 			
 			VkRenderPassBeginInfo rpInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 
@@ -267,21 +272,20 @@ namespace wc
 
 			submit.pWaitDstStageMask = &waitStage;
 
-			submit.waitSemaphoreCount = 1;
-			submit.pWaitSemaphores = SyncContext::PresentSemaphore.GetPointer();
+			Semaphore waitSemaphores[] = { SyncContext::GetPresentSemaphore(), m_Renderer.RenderSemaphore, };
+
+			submit.waitSemaphoreCount = ARRAYSIZE(waitSemaphores);
+			submit.pWaitSemaphores = (VkSemaphore*)waitSemaphores;
 
 			submit.signalSemaphoreCount = 1;
-			submit.pSignalSemaphores = SyncContext::RenderSemaphore.GetPointer();
+			submit.pSignalSemaphores = SyncContext::GetRenderSemaphore().GetPointer();
 
 			//submit command buffer to the queue and execute it.
 			// renderFence will now block until the graphic commands finish execution
-			VulkanContext::graphicsQueue.Submit(submit, SyncContext::RenderFence);
-
-			SyncContext::RenderFence.Wait();
-			SyncContext::RenderFence.Reset();
+			VulkanContext::graphicsQueue.Submit(submit, SyncContext::GetRenderFence());
+			
 			cmd.Reset();
-			VkResult presentationResult = Globals.window.Present(swapchainImageIndex, SyncContext::RenderSemaphore, SyncContext::GetPresentQueue());
-
+			VkResult presentationResult = Globals.window.Present(swapchainImageIndex, SyncContext::GetRenderSemaphore(), SyncContext::GetPresentQueue());
 
 			if (presentationResult == VK_ERROR_OUT_OF_DATE_KHR || presentationResult == VK_SUBOPTIMAL_KHR || Globals.window.resized)
 			{
@@ -289,6 +293,8 @@ namespace wc
 				Globals.window.resized = false;
 				Resize();
 			}
+
+			SyncContext::UpdateFrame();
 		}
 		//----------------------------------------------------------------------------------------------------------------------
 		void OnDelete()

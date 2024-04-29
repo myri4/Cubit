@@ -698,7 +698,7 @@ namespace wc
 
 #define PHYSICS_MODE_SEMI_FIXED 0
 #define PHYSICS_MODE_CONSTANT 1
-#define PHYSICS_MODE 0
+#define PHYSICS_MODE 1
 		void Update()
 		{
 			UpdateAI();

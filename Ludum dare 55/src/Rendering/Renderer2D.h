@@ -44,9 +44,11 @@ namespace wc
 		Image m_FinalImage[2];
 		ImageView m_FinalImageView[2];
 
-		Semaphore m_RenderSemaphore;
+		Semaphore m_RtoPPSemaphore; // Semaphore for synchronizing between main rendering and post proccesing
 	public:
+		Semaphore RenderSemaphore; // Semaphore for signaling the end of the frame rendering
 
+	public:
 		auto GetRenderImageID() { return m_ImageID; }
 		auto GetRenderImage() { return m_Framebuffer.attachments[0].image; }
 		auto GetRenderAttachment() { return m_Framebuffer.attachments[0]; }
@@ -228,8 +230,8 @@ namespace wc
 		void Init(OrthographicCamera& cameraptr)
 		{			
 			camera = &cameraptr;
-			m_RenderSemaphore.Create();
-
+			m_RtoPPSemaphore.Create();
+			RenderSemaphore.Create();
 			
 		}
 
@@ -243,7 +245,7 @@ namespace wc
 		{
 			//if (!m_IndexCount && !m_LineVertexCount) return;
 			{
-				CommandBuffer& cmd = SyncContext::MainCommandBuffer;
+				CommandBuffer& cmd = SyncContext::GetMainCommandBuffer();
 
 				cmd.Begin();
 				VkRenderPassBeginInfo rpInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
@@ -293,7 +295,7 @@ namespace wc
 
 				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-				submit.pSignalSemaphores = m_RenderSemaphore.GetPointer();
+				submit.pSignalSemaphores = m_RtoPPSemaphore.GetPointer();
 				submit.signalSemaphoreCount = 1;
 
 				submit.pWaitDstStageMask = &waitStage;
@@ -303,7 +305,7 @@ namespace wc
 			}
 
 			{				
-				CommandBuffer& cmd = SyncContext::ComputeCommandBuffer;
+				CommandBuffer& cmd = SyncContext::GetComputeCommandBuffer();
 				cmd.Begin();
 				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_BloomShader.GetPipeline());
 				uint32_t counter = 0;
@@ -382,14 +384,15 @@ namespace wc
 
 				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-				submit.pWaitSemaphores = m_RenderSemaphore.GetPointer();
+				submit.pWaitSemaphores = m_RtoPPSemaphore.GetPointer();
 				submit.waitSemaphoreCount = 1;
+
+				submit.pSignalSemaphores = RenderSemaphore.GetPointer();
+				submit.signalSemaphoreCount = 1;
 
 				submit.pWaitDstStageMask = &waitStage;
 
-				VulkanContext::graphicsQueue.Submit(submit, SyncContext::ComputeFence);
-				SyncContext::ComputeFence.Wait();
-				SyncContext::ComputeFence.Reset();
+				VulkanContext::graphicsQueue.Submit(submit);
 				cmd.Reset();
 			}			
 		}
@@ -415,7 +418,8 @@ namespace wc
 			DeinitBloom();
 			m_CompositeShader.Destroy();
 			m_CRTShader.Destroy();
-			m_RenderSemaphore.Destroy();
+			m_RtoPPSemaphore.Destroy();
+			RenderSemaphore.Destroy();
 
 			DestroyScreen();
 		}
