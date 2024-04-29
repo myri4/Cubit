@@ -293,6 +293,9 @@
     <ClInclude Include="src\Rendering\Font.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\BloomEffect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\shaders\bloom.comp" />

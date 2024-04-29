@@ -266,6 +266,7 @@
     <ClInclude Include="src\game\ParticleSystem.h" />
     <ClInclude Include="src\game\Tile.h" />
     <ClInclude Include="src\Globals.h" />
+    <ClInclude Include="src\Rendering\BloomEffect.h" />
     <ClInclude Include="src\Rendering\Font.h" />
     <ClInclude Include="src\Rendering\RenderData.h" />
     <ClInclude Include="src\Rendering\Renderer2D.h" />

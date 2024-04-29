@@ -8,38 +8,38 @@ Entities:
   - Position: [1.95704353, 1.55223978]
     Type: Player
   - Position: [15.09375, 4.48383713]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [3.390625, 33.368103]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [21.6562386, 61.2096138]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [37.296875, 23.4619427]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [4.265625, 52.8675842]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [6.890625, 52.7633133]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [43.0937462, 7.71637106]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [48.234375, 15.1199198]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [62.4531136, 15.2241917]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [29.3125038, 52.7633057]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [37.9531174, 45.7768555]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [80.1718674, 37.5391045]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [134.09375, 46.4025192]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [113.093758, 47.4452667]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [123.046883, 46.5067978]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [137.265625, 46.9238892]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [80.3906174, 1.45985222]
-    Type: EyeballEnemy
+    Type: RedCube
   - Position: [110.687492, 9.28050804]
-    Type: EyeballEnemy
+    Type: RedCube

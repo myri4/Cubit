@@ -26,7 +26,7 @@ namespace wc
 		glm::vec2 Velocity, VelocityVariation;
 		glm::vec4 ColorBegin, ColorEnd;
 		float SizeBegin, SizeEnd, SizeVariation;
-		float LifeTime = 1.0f;
+		float LifeTime = 1.f;
 	};
 
 	struct ParticleSystem
@@ -96,6 +96,11 @@ namespace wc
 			particle.SizeEnd = particleProps.SizeEnd;
 
 			m_PoolIndex = --m_PoolIndex % m_ParticlePool.size();
+		}
+
+		void Emit(const ParticleProps& particleProps, uint32_t amount)
+		{
+			for (uint32_t i = 0; i < amount; i++) Emit(particleProps);
 		}
 	private:
 		struct Particle

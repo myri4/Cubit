@@ -15,7 +15,7 @@
 #include <glm/glm.hpp>
 #include "../Utils/Log.h"
 
-#define WC_GRAPHICS_DEBUGGER 1
+#define WC_GRAPHICS_DEBUGGER 0
 #define WC_SHADER_DEBUG_PRINT 0
 
 #define VK_CHECK(x)                                                 \

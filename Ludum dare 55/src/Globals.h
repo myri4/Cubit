@@ -22,9 +22,17 @@ namespace wc
 	{
 		//sound
 
+		const int music_fade_time_mls = 500;
+
 		float sfx_volume = 0.6f;
 
+		ma_sound music_menu;
+		ma_sound music_main;
+		ma_sound music_GameOver;
+		ma_sound music_win;
+
 		ma_engine sfx_engine;
+		ma_engine music_engine;
 
 		Window window; // @TODO: maybe rename to main window
 

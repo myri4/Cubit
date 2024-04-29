@@ -105,4 +105,117 @@ namespace wc
         destroyFont(font);
         deinitializeFreetype(ft);
     }
+
+    glm::vec2 Font::CalculateTextSize(const std::string& string)
+    {
+		const auto& fontGeometry = FontGeometry;
+		const auto& metrics = fontGeometry.getMetrics();
+
+		double x = 0.0;
+		double y = 0.0;
+        glm::vec2 end;
+		double fsScale = 1.0 / (metrics.ascenderY - metrics.descenderY);
+
+		const float spaceGlyphAdvance = fontGeometry.getGlyph(' ')->getAdvance();
+
+		for (uint32_t i = 0; i < string.size(); i++)
+		{
+			char character = string[i];
+
+			if (character == '\r')
+				continue;
+
+			if (character == '\n')
+			{
+				x = 0;
+				y -= fsScale * metrics.lineHeight + LineSpacing;
+				continue;
+			}
+
+			if (character == ' ')
+			{
+				float advance = spaceGlyphAdvance;
+				if (i < string.size() - 1)
+				{
+					char nextCharacter = string[i + 1];
+					double dAdvance;
+					fontGeometry.getAdvance(dAdvance, character, nextCharacter);
+					advance = (float)dAdvance;
+				}
+
+				x += fsScale * advance + Kerning;
+                end.x += fsScale * advance + Kerning;
+				continue;
+			}
+
+			if (character == '\t')
+			{
+				x += 4.f * (fsScale * spaceGlyphAdvance + Kerning);
+                end.x += 4.f * (fsScale * spaceGlyphAdvance + Kerning);
+				continue;
+			}
+
+			auto glyph = fontGeometry.getGlyph(character);
+
+			if (!glyph)
+				glyph = fontGeometry.getGlyph('?');
+
+			if (!glyph) return glm::vec2(0.f);
+
+			double pl, pb, pr, pt;
+			glyph->getQuadPlaneBounds(pl, pb, pr, pt);
+			glm::vec2 quadMin((float)pl, (float)pb);
+			glm::vec2 quadMax((float)pr, (float)pt);
+
+			quadMin *= fsScale, quadMax *= fsScale;
+			quadMin += glm::vec2(x, y);
+			quadMax += glm::vec2(x, y);
+
+			if (i < string.size() - 1)
+			{
+				double advance = glyph->getAdvance();
+				char nextCharacter = string[i + 1];
+				fontGeometry.getAdvance(advance, character, nextCharacter);
+
+				x += fsScale * advance + Kerning;
+                end.x += fsScale * advance + Kerning;
+			}
+		}
+
+        return {x, y};
+    }
+
+    void SvgImage::Load(const std::string& filepath, RenderData& renderData)
+    {
+        bool loaded = msdfgen::loadSvgShape(shape, filepath.c_str());
+        if (loaded)
+        {
+            shape.normalize();
+            //                      max. angle
+            edgeColoringSimple(shape, 3.0);
+            //           image width, height
+            msdfgen::Bitmap<float, 3> bitmap(800, 400);
+            //                     range, scale, translation
+            msdfgen::generateMSDF(bitmap, shape, 4.0, 1.0, 0.0);
+
+
+            auto bytes_per_scanline = bitmap.width() * 3;
+            CPUImage newBitmap;
+            newBitmap.Allocate(bitmap.width(), bitmap.height(), 4);
+
+            for (uint32_t x = 0; x < bitmap.width(); x++)
+                for (uint32_t y = 0; y < bitmap.height(); y++)
+                {
+                    glm::vec3 col;
+                    col.r = bitmap[y * bytes_per_scanline + x * 3 + 0];
+                    col.g = bitmap[y * bytes_per_scanline + x * 3 + 1];
+                    col.b = bitmap[y * bytes_per_scanline + x * 3 + 2];
+                    newBitmap.Set(x, y, glm::vec4(col, 255.f));
+                }
+
+            textureID = renderData.LoadTextureFromMemory(newBitmap);
+            renderData.Textures[textureID].SetName("svg");
+            newBitmap.Free();
+        }
+    }
 }

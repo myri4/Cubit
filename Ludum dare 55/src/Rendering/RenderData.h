@@ -154,6 +154,35 @@ namespace wc
 			indexCount += 6;
 		}
 
+		void DrawQuadSvg(const glm::mat4& transform, uint32_t texID, const glm::vec4& color = glm::vec4(1.f))
+		{
+			if (m_IndexBuffer.Counter >= MaxQuadIndexCount) WC_CORE_ERROR("Not enough memory");// Flush();
+
+			Vertex* vertices = m_VertexBuffer;
+			auto& vertCount = m_VertexBuffer.Counter;
+
+			uint32_t* indices = m_IndexBuffer;
+			auto& indexCount = m_IndexBuffer.Counter;
+
+			vertices[vertCount + 0] = Vertex(transform * glm::vec4(0.5f, 0.5f, 0.f, 1.f), { 1.f, 0.f }, texID, color);
+			vertices[vertCount + 1] = Vertex(transform * glm::vec4(-0.5f, 0.5f, 0.f, 1.f), { 0.f, 0.f }, texID, color);
+			vertices[vertCount + 2] = Vertex(transform * glm::vec4(-0.5f, -0.5f, 0.f, 1.f), { 0.f, 1.f }, texID, color);
+			vertices[vertCount + 3] = Vertex(transform * glm::vec4(0.5f, -0.5f, 0.f, 1.f), { 1.f, 1.f }, texID, color);
+
+			for (uint32_t i = 0; i < 4; i++) vertices[vertCount + i].Thickness = -1.f;
+
+			indices[indexCount + 0] = vertCount;
+			indices[indexCount + 1] = 1 + vertCount;
+			indices[indexCount + 2] = 2 + vertCount;
+
+			indices[indexCount + 3] = 2 + vertCount;
+			indices[indexCount + 4] = 3 + vertCount;
+			indices[indexCount + 5] = vertCount;
+
+			vertCount += 4;
+			indexCount += 6;
+		}
+
 		void DrawLineQuad(const glm::mat4& transform, const glm::vec4& color = glm::vec4(1.f))
 		{
 			glm::vec3 vertices[4];
@@ -368,15 +397,15 @@ namespace wc
 			}
 		}
 
-		void DrawString(const std::string& string, const Font& font, const glm::vec3& position, glm::vec2 scale, float rotation, const glm::vec4& color = glm::vec4(1.f))
+		void DrawString(const std::string& string, const Font& font, const glm::vec2& position, glm::vec2 scale, float rotation, const glm::vec4& color = glm::vec4(1.f))
 		{
-			glm::mat4 transform = glm::translate(glm::mat4(1.f), position) * glm::rotate(glm::mat4(1.f), rotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f), { scale.x, scale.y, 1.f });
+			glm::mat4 transform = glm::translate(glm::mat4(1.f), { position.x, position.y, 0.f }) * glm::rotate(glm::mat4(1.f), rotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f), { scale.x, scale.y, 1.f });
 			DrawString(string, font, transform, color);
 		}
 
-		void DrawString(const std::string& string, const Font& font, const glm::vec3& position, const glm::vec4& color = glm::vec4(1.f))
+		void DrawString(const std::string& string, const Font& font, const glm::vec2& position, const glm::vec4& color = glm::vec4(1.f))
 		{
-			glm::mat4 transform = glm::translate(glm::mat4(1.f), position);
+			glm::mat4 transform = glm::translate(glm::mat4(1.f), { position.x, position.y, 0.f });
 			DrawString(string, font, transform, color);
 		}
 

@@ -265,10 +265,10 @@ namespace wc
                 ImGui_ImplGlfw_WindowFocusCallback(window, focused);
                 });
 
-            CreateSwapchain(VulkanContext::GetPhysicalDevice(), VulkanContext::GetLogicalDevice(), VulkanContext::GetInstance());
+            CreateSwapchain(VulkanContext::GetPhysicalDevice(), VulkanContext::GetLogicalDevice(), VulkanContext::GetInstance(), info.VSync);
         }
 
-        void CreateSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkInstance instance) 
+        void CreateSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkInstance instance, bool vsync) 
         {
             if (glfwCreateWindowSurface(instance, m_Window, VulkanContext::GetAllocator(), &surface) != VK_SUCCESS) WC_CORE_ERROR("Failed to create window surface!");
 
@@ -312,6 +312,7 @@ namespace wc
                     }
             }
             VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+            if (!vsync)
             {
                 for (const auto& availablePresentMode : swapChainSupport.presentModes)
                     if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) 

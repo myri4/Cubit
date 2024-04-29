@@ -8,7 +8,7 @@
 #define INFINITE            0xFFFFFFFF
 
 #include <vector>
-
+#include <glm/glm.hpp>
 namespace wc
 {
     struct RenderData;
@@ -16,6 +16,7 @@ namespace wc
 	struct Font
 	{
         void Load(const std::string filepath, RenderData& renderData);
+        glm::vec2 CalculateTextSize(const std::string& text);
 
         float Kerning = 0.f;
         float LineSpacing = 0.f;
@@ -24,4 +25,12 @@ namespace wc
     private:
         std::vector<msdf_atlas::GlyphGeometry> m_Glyphs;
 	};
+
+    struct SvgImage
+    {
+        void Load(const std::string& filepath, RenderData& renderData);
+
+        uint32_t textureID = 0;
+        msdfgen::Shape shape;
+    };
 }

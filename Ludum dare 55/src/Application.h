@@ -25,8 +25,8 @@ namespace wc
 			}
 
 			VulkanContext::GetLogicalDevice().WaitIdle();
-			Globals.window.DestoySwapchain();
-			Globals.window.CreateSwapchain(VulkanContext::GetPhysicalDevice(), VulkanContext::GetLogicalDevice(), VulkanContext::GetInstance());
+			//Globals.window.DestoySwapchain();
+			//Globals.window.CreateSwapchain(VulkanContext::GetPhysicalDevice(), VulkanContext::GetLogicalDevice(), VulkanContext::GetInstance());
 		}
 		//----------------------------------------------------------------------------------------------------------------------
 		void OnCreate() 
@@ -36,9 +36,10 @@ namespace wc
 			WindowCreateInfo windowInfo;
 			windowInfo.Width = 1920;
 			windowInfo.Height = 1080;
+			windowInfo.VSync = false;
 			windowInfo.Resizeable = false;
 			windowInfo.AppName = "Cube's Calling";
-			windowInfo.StartMode = WindowMode::Normal;
+			windowInfo.StartMode = WindowMode::Fullscreen;
 			Globals.window.Create(windowInfo);
 
 			SyncContext::Create();
@@ -51,12 +52,14 @@ namespace wc
 			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 			io.IniFilename = nullptr;
 			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-			io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/Masterpiece.ttf", 50.f);
+			io.FontDefault = io.Fonts->AddFontFromFileTTF("assets/fonts/ST-SimpleSquare.ttf", 50.f);
 
 			ImGui_ImplGlfw_Init(Globals.window, false);
 
 			ImGui_ImplVulkan_Init(Globals.window.DefaultRenderPass);
 			ImGui_ImplVulkan_CreateFontsTexture();
+
+			CreateAudio();
 
 			auto& style = ImGui::GetStyle();
 			style.WindowMenuButtonPosition = ImGuiDir_None;
@@ -84,12 +87,9 @@ namespace wc
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
- 
-			 
-			 
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);			 
 
-			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::Begin("Credits", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetWindowFontScale(0.65f);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer").y) * 0.5f - 200));
 			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer");
@@ -107,9 +107,102 @@ namespace wc
 			ImGui::PopStyleVar(5);
 		}
 
+		void CreateAudio()
+		{
+			ma_engine_init(NULL, &Globals.sfx_engine);
+			ma_engine_init(NULL, &Globals.music_engine);
+			ma_engine_set_volume(&Globals.sfx_engine, Globals.sfx_volume);
+			ma_engine_set_volume(&Globals.music_engine, 0.f);
+			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/menu.wav", 0, 0, 0, &Globals.music_menu);
+			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/main_new.wav", 0, 0, 0, &Globals.music_main);
+			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/GameOver.wav", 0, 0, 0, &Globals.music_GameOver);
+			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/win.wav", 0, 0, 0, &Globals.music_win);
+			ma_sound_set_looping(&Globals.music_menu, true);
+			ma_sound_set_looping(&Globals.music_main, true);
+		}
+
+		bool main_menu = false;
+		bool play = false;
+		bool death = false;
+		bool win = false;
+
+		void UpdateMusic()
+		{
+			if (Globals.gameState == GameState::MENU && !main_menu)
+			{
+				main_menu = true;
+				play = false;
+				death = false;
+				win = false;
+
+				ma_sound_set_fade_in_milliseconds(&Globals.music_main, -1, 0, Globals.music_fade_time_mls);
+				ma_sound_set_fade_in_milliseconds(&Globals.music_GameOver, -1, 0, Globals.music_fade_time_mls);
+				ma_sound_set_fade_in_milliseconds(&Globals.music_win, -1, 0, Globals.music_fade_time_mls);
+
+				ma_sound_seek_to_pcm_frame(&Globals.music_menu, 0);
+				ma_sound_set_fade_in_milliseconds(&Globals.music_menu, 0, 1, Globals.music_fade_time_mls);
+				ma_sound_start(&Globals.music_menu);
+			}
+
+			if (Globals.gameState == GameState::PLAY && !play)
+			{
+				play = true;
+				main_menu = false;
+				death = false;
+				win = false;
+
+				ma_sound_set_fade_in_milliseconds(&Globals.music_menu, -1, 0, Globals.music_fade_time_mls);
+
+				ma_sound_seek_to_pcm_frame(&Globals.music_main, 0);
+				ma_sound_set_fade_in_milliseconds(&Globals.music_main, 0, 1, Globals.music_fade_time_mls);
+				ma_sound_start(&Globals.music_main);
+			}
+
+			if (Globals.gameState == GameState::DEATH && !death)
+			{
+				death = true;
+				main_menu = false;
+				play = false;
+				win = false;
+
+				ma_sound_set_fade_in_milliseconds(&Globals.music_main, -1, 0, Globals.music_fade_time_mls);
+
+				ma_sound_seek_to_pcm_frame(&Globals.music_GameOver, 0);
+				ma_sound_set_fade_in_milliseconds(&Globals.music_GameOver, 0, 1, Globals.music_fade_time_mls);
+				ma_sound_start(&Globals.music_GameOver);
+			}
+
+			if (Globals.gameState == GameState::WIN && !win)
+			{
+				win = true;
+				main_menu = false;
+				death = false;
+				play = false;
+
+				ma_sound_set_fade_in_milliseconds(&Globals.music_main, -1, 0, Globals.music_fade_time_mls);
+
+				ma_sound_seek_to_pcm_frame(&Globals.music_win, 0);
+				ma_sound_set_fade_in_milliseconds(&Globals.music_win, 0, 1, Globals.music_fade_time_mls);
+				ma_sound_start(&Globals.music_win);
+			}
+		}
+
+		void DestroySound()
+		{
+			ma_sound_uninit(&Globals.music_menu);
+			ma_sound_uninit(&Globals.music_main);
+			ma_sound_uninit(&Globals.music_GameOver);
+			ma_sound_uninit(&Globals.music_win);
+
+			ma_engine_uninit(&Globals.music_engine);
+			ma_engine_uninit(&Globals.sfx_engine);
+		}
+
 		void OnUpdate()
 		{
 			Globals.UpdateTime();
+
+			UpdateMusic();
 
 			uint32_t swapchainImageIndex = 0;
 
@@ -203,6 +296,8 @@ namespace wc
 			VulkanContext::GetLogicalDevice().WaitIdle();
 			ImGui_ImplVulkan_Shutdown();
 			ImGui_ImplGlfw_Shutdown();
+
+			DestroySound();
 
 			game.DestroyGame();
 

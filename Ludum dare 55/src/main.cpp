@@ -40,7 +40,7 @@ namespace wc
 
 	int main()
 	{
-		wc::Log::Init();
+		Log::Init();
 		glfwSetErrorCallback([](int error, const char* description)
 			{
 				switch (error)
@@ -86,43 +86,11 @@ namespace wc
 
 		glfwTerminate();
 
-		//getchar();
-
 		return 0;
 	}
 }
 
 int main()
 {
-	float music_volume = 0.f;
-
-	ma_result result;
-	ma_engine engine;
-	ma_sound music_main;
-
-	std::string m_main = "assets/sound/music/main_new.wav";
-
-	result = ma_engine_init(NULL, &engine);
-	if (result != MA_SUCCESS) {
-		std::cout << "Failed to initialize the engine.\n";
-		//return result;
-	}
-
-	result = ma_sound_init_from_file(&engine, m_main.c_str(), 0, NULL, NULL, &music_main);
-
-	if (result != MA_SUCCESS) {
-		std::cout << "Failed to initialize the sound.\n";
-		//return result;
-	}
-
-	ma_sound_set_volume(&music_main, music_volume);
-	ma_sound_set_looping(&music_main, true);
-
-	result = ma_sound_start(&music_main);
-	if (result != MA_SUCCESS) {
-		std::cout << "Failed to play sound.\n";
-		//return result;
-	}
-
 	return wc::main();
 }

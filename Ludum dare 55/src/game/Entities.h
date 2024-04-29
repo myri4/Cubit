@@ -14,7 +14,7 @@ namespace wc
         // Entities
         Entity,
         Bullet,
-        EyeballEnemy,
+        RedCube,
 
         Player,
     };
@@ -48,6 +48,14 @@ namespace wc
     struct DynamicEntity : public BaseEntity, public TransformComponent
     {
         b2Body* body = nullptr;
+        // @TODO: Improve on contacts
+        uint32_t UpContacts = 0;
+        uint32_t DownContacts = 0;
+        uint32_t LeftContacts = 0;
+        uint32_t RightContacts = 0;
+        uint32_t Contacts = 0;
+
+        uint32_t ID = 0;
 
         inline void SetPosition() { body->SetTransform({ Position.x, Position.y }, 0.f); }
 
@@ -55,6 +63,11 @@ namespace wc
         {
             auto& bPos = body->GetPosition();
             Position = { bPos.x, bPos.y };
+        }
+
+        void LoadMapBase(const YAML::Node& node)
+        {
+            YAML_LOAD_VAR(node, Position);
         }
     };
 
@@ -66,29 +79,16 @@ namespace wc
         float Speed = 8.5f;
         float Density = 55.f;
 
-        uint32_t ID;
-
         float Health = 10.f;
-        float linearDamping = 1.8f;
+        float LinearDamping = 1.4f;        
 
-        uint32_t UpContacts = 0;
-        uint32_t DownContacts = 0;
-        uint32_t LeftContacts = 0;
-        uint32_t RightContacts = 0;
-        uint32_t Contacts = 0;
-
-        bool playerTouch = false;
-        bool shotEnemy = false;
+        bool PlayerTouch = false;
+        bool ShotEnemy = false;
         uint32_t EnemyID;
 
         glm::vec2 HitBoxSize = glm::vec2(0.5f);
 
-        bool Alive() { return Health > 0.f; }
-
-        void LoadMapBase(const YAML::Node& node)
-        {
-            YAML_LOAD_VAR(node, Position);
-        }
+        bool Alive() { return Health > 0.f; }        
 
         virtual void CreateBody(b2World* PhysicsWorld)
         {
@@ -110,7 +110,7 @@ namespace wc
 
             fixtureDef.shape = &shape;
             body->CreateFixture(&fixtureDef);
-            body->SetLinearDamping(linearDamping);
+            body->SetLinearDamping(LinearDamping);
         }
 
         GameEntity() = default;
@@ -120,16 +120,16 @@ namespace wc
     {
         bool weapon = true;
 
-        float JumpForce = 2200.f;
+        float JumpForce = 1900.f;
 
-        bool dash = false;
-        float dashCD = 0.f;
+        bool Dash = false;
+        float DashCD = 0.f;
 
-        float swordCD = 1.5f;
-        bool swordAttack = false;
+        float SwordCD = 1.5f;
+        bool SwordAttack = false;
         float SwordDamage = 5.5f;
 
-        float attackCD = 0.5f;
+        float AttackCD = 0.5f;
 
         Player()
         {
@@ -138,23 +138,38 @@ namespace wc
         }
     };
 
-    struct EyeballEnemy : public GameEntity
+    struct RedCube : public GameEntity
     {
-        float attackTimer = 2.f; 
-        float shootRange = 8.f;
-        float detectRange = 15.f;
+        float AttackTimer = 2.f; 
+        float ShootRange = 8.f;
+        float DetectRange = 15.f;
 
-        EyeballEnemy() { Type = EntityType::EyeballEnemy; Health = 15.f;  Speed = 1.1f; Damage = 1.f; }
+        RedCube() { Type = EntityType::RedCube; Health = 15.f;  Speed = 1.1f; Damage = 1.f; }
     };
 
-    enum class BulletType { BFG, Eyeball, Shotgun };
+    enum class BulletType { Blaster, Shotgun, RedCircle };
+    enum class WeaponType { Blaster, Shotgun, Sword };
+
+
+    struct WeaponStats
+    {
+        bool CloseRange = false;
+        BulletType BulletType = BulletType::Blaster;
+        float Damage = 0.f;
+        union
+        {
+            float FireRate;
+            float Range;
+        };
+
+        uint32 TextureID = 0;
+    };
+
     struct Bullet : public GameEntity
     {
-        glm::vec2 direction;
-        glm::vec4 Color;
-        BulletType bulletType;
-        bool Shot = false; // bool for one time change at the start
-        glm::vec2 shotPos;
+        glm::vec2 Direction;
+        BulletType BulletType;
+        glm::vec2 ShotPos;
 
         Bullet() { Type = EntityType::Bullet; }
 
@@ -181,5 +196,5 @@ namespace wc
 			body->CreateFixture(&fixtureDef);
 			body->SetLinearDamping(2.f);
 		}
-    };
+    };    
 }
