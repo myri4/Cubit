@@ -169,7 +169,7 @@ namespace wc
 
 				fixtureDef.shape = &shape;
 				e->body->CreateFixture(&fixtureDef);
-				e->body->SetLinearDamping(1.8f);
+				e->body->SetLinearDamping(e->LinearDamping);
 			}
 			uint32_t faceCount = 0;
 			auto addFace = [&](const b2Vec2* face)
@@ -372,6 +372,7 @@ namespace wc
 			bullet->Speed = speed;
 			bullet->direction = direction;
 			bullet->bulletType = bulletType;
+			bullet->Density = 20.f;
 			bullet->CreateBody(PhysicsWorld);
 			bullet->body->SetBullet(true);
 			bullet->body->GetFixtureList()->SetSensor(true);
@@ -422,6 +423,9 @@ namespace wc
 					{
 						if (entity.Position.x > player.Position.x)entity.body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
+
+						/*if (entity.Position.x > player.Position.x)entity.body->SetLinearVelocity(b2Vec2(-entity.Speed, 0));
+						else entity.body->SetLinearVelocity(b2Vec2(entity.Speed, 0));*/
 					}
 					//attack behavior
 					if (glm::distance(player.Position, entity.Position) < entity.shootRange)
@@ -434,9 +438,10 @@ namespace wc
 							bullet->Damage = 0.5f;
 							bullet->Color = { 1.f, 0.f, 0.f, 1.f };
 							bullet->Size = { 0.25f, 0.25f };
-							bullet->Speed = 435.f;
+							bullet->Speed = 300.f;
 							bullet->Density = 75.f;
 							bullet->bulletType = BulletType::Eyeball;
+							bullet->LinearDamping = 0.f;
 							bullet->CreateBody(PhysicsWorld);
 							bullet->body->SetBullet(true);
 							bullet->body->GetFixtureList()->SetSensor(true);
@@ -506,7 +511,8 @@ namespace wc
 					//BFG Bullet Behavior
 					if (bullet.bulletType == BulletType::BFG)
 					{
-						bullet.body->SetLinearVelocity(b2Vec2(bullet.direction.x * bullet.Speed, bullet.direction.y * bullet.Speed));
+						//bullet.body->SetLinearVelocity(b2Vec2(bullet.direction.x * bullet.Speed, bullet.direction.y * bullet.Speed));
+						bullet.body->ApplyForceToCenter(b2Vec2(bullet.direction.x* bullet.Speed, bullet.direction.y* bullet.Speed), true);
 
 						if (bullet.Contacts != 0 || glm::distance(player.Position, bullet.Position) > 50.f || bullet.shotEnemy)
 						{

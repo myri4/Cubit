@@ -63,13 +63,13 @@ namespace wc
         // Properties
         float StartHealth = 10.f;
         float Damage = 0.5f;
-        float Speed = 8.5f;
+        float Speed = 20.5f;
         float Density = 55.f;
 
         uint32_t ID;
 
         float Health = 10.f;
-        float linearDamping = 1.4f;
+        float LinearDamping = 1.4f;
 
         uint32_t UpContacts = 0;
         uint32_t DownContacts = 0;
@@ -110,7 +110,7 @@ namespace wc
 
             fixtureDef.shape = &shape;
             body->CreateFixture(&fixtureDef);
-            body->SetLinearDamping(linearDamping);
+            body->SetLinearDamping(LinearDamping);
         }
 
         GameEntity() = default;
@@ -179,7 +179,7 @@ namespace wc
 
 			fixtureDef.shape = &shape;
 			body->CreateFixture(&fixtureDef);
-			body->SetLinearDamping(2.f);
+			body->SetLinearDamping(LinearDamping);
 		}
     };
 }
