@@ -97,8 +97,10 @@ namespace wc
 				player.AttackCD = 0.2f;
 			}
 
-			if (ImGui::IsKeyPressed(ImGuiKey_Space) && player.DownContacts != 0)
+			//jump
+			if (ImGui::IsKeyPressed(ImGuiKey_Space) && player.DownContacts != 0) 
 				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
+			
 
 			if (moveDir != glm::vec2(0.f))
 			{
@@ -170,6 +172,7 @@ namespace wc
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
 			ImGui::Begin("DEATH", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::SetWindowFontScale(1.8f);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("You Died").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("You Died").y) * 0.5f));
 			ImGui::TextColored(ImVec4(1.f, 0, 0, 1.f), "You Died");
 			ImGui::SetWindowFontScale(1.f);
@@ -211,6 +214,7 @@ namespace wc
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 
+			
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetWindowFontScale(0.5f);

@@ -524,7 +524,8 @@ namespace wc
 			bullet->Damage = damage;
 			bullet->Speed = speed;
 			bullet->Direction = direction;
-			bullet->BulletType = bulletType;
+			bullet->BulletType = bulletType;			
+			bullet->Density = 20.f;
 			bullet->LinearDamping = 0.f;
 			bullet->CreateBody(PhysicsWorld);
 			bullet->body->SetBullet(true);
@@ -577,6 +578,9 @@ namespace wc
 					{
 						if (entity.Position.x > player.Position.x)entity.body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
+
+						/*if (entity.Position.x > player.Position.x)entity.body->SetLinearVelocity(b2Vec2(-entity.Speed, 0));
+						else entity.body->SetLinearVelocity(b2Vec2(entity.Speed, 0));*/
 					}
 					//attack behavior
 					if (distToPlayer < entity.ShootRange)
