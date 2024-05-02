@@ -44,6 +44,12 @@ namespace wc
 			Create(semaphoreCreateInfo);
 		}
 
+		void Create(const std::string& name, VkSemaphoreCreateFlags flags = 0)
+		{
+			Create(flags);
+			SetName(name);
+		}
+
 		void Destroy() 
 		{ 
 			vkDestroySemaphore(VulkanContext::GetLogicalDevice(), m_RendererID, VulkanContext::GetAllocator());

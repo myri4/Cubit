@@ -84,7 +84,6 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, wc::CommandBuffer cm
         wrb->FrameRenderBuffers = (ImGui_ImplVulkan_FrameRenderBuffers*)IM_ALLOC(sizeof(ImGui_ImplVulkan_FrameRenderBuffers) * wrb->Count);
         memset(wrb->FrameRenderBuffers, 0, sizeof(ImGui_ImplVulkan_FrameRenderBuffers) * wrb->Count);
     }
-    IM_ASSERT(wrb->Count == v->ImageCount);
     wrb->Index = (wrb->Index + 1) % wrb->Count;
     ImGui_ImplVulkan_FrameRenderBuffers* rb = &wrb->FrameRenderBuffers[wrb->Index];
 
@@ -707,9 +706,6 @@ bool ImGui_ImplVulkan_Init(VkRenderPass rp)
     io.BackendRendererName = "imgui_impl_vulkan";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
-
-    IM_ASSERT(info->MinImageCount >= 2);
-    IM_ASSERT(info->ImageCount >= info->MinImageCount);
 
     bd->RenderPass = rp;
 

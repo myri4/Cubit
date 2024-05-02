@@ -8,7 +8,7 @@ inline uint8_t CURRENT_FRAME = 0;
 
 namespace SyncContext
 {
-	inline wc::Semaphore RenderSemaphores[FRAME_OVERLAP], PresentSemaphores[FRAME_OVERLAP];
+	inline wc::Semaphore RenderSemaphores[FRAME_OVERLAP], PresentSemaphores[FRAME_OVERLAP], ImageAvaibleSemaphores[FRAME_OVERLAP];
 
 	inline wc::Fence RenderFences[FRAME_OVERLAP];
 	inline wc::Fence ComputeFences[FRAME_OVERLAP];
@@ -33,21 +33,24 @@ namespace SyncContext
 		
 		for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
 		{
-			RenderSemaphores[i].Create();
-			PresentSemaphores[i].Create();
+			RenderSemaphores[i].Create(std::format("RenderSemaphore[{}]", i));
+			PresentSemaphores[i].Create(std::format("PresentSemaphore[{}]", i));
+			ImageAvaibleSemaphores[i].Create(std::format("ImageAvaibleSemaphore[{}]", i));
+
 			CommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, MainCommandBuffers[i]);
 			ComputeCommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, ComputeCommandBuffers[i]);
 
 			MainCommandBuffers[i].SetName(std::format("MainCommandBuffer[{}]", i));
 			ComputeCommandBuffers[i].SetName(std::format("ComputeCommandBuffer[{}]", i));
 
-			RenderFences[i].Create();
-			ComputeFences[i].Create();
+			RenderFences[i].Create(VK_FENCE_CREATE_SIGNALED_BIT);
+			ComputeFences[i].Create(/*VK_FENCE_CREATE_SIGNALED_BIT?*/);
 		}
 	}
 
 	inline auto& GetRenderSemaphore() { return RenderSemaphores[CURRENT_FRAME]; }
 	inline auto& GetPresentSemaphore() { return PresentSemaphores[CURRENT_FRAME]; }
+	inline auto& GetImageAvaibleSemaphore() { return ImageAvaibleSemaphores[CURRENT_FRAME]; }
 
 	inline auto& GetRenderFence() { return RenderFences[CURRENT_FRAME]; }
 	inline auto& GetPresentFence() { return ComputeFences[CURRENT_FRAME]; }
@@ -91,6 +94,7 @@ namespace SyncContext
 		{
 			RenderSemaphores[i].Destroy();
 			PresentSemaphores[i].Destroy();
+			ImageAvaibleSemaphores[i].Destroy();
 
 			RenderFences[i].Destroy();
 			ComputeFences[i].Destroy();

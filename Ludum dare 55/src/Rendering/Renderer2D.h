@@ -44,9 +44,12 @@ namespace wc
 		Image m_FinalImage[2];
 		ImageView m_FinalImageView[2];
 
-		Semaphore m_RtoPPSemaphore; // Semaphore for synchronizing between main rendering and post proccesing
+		Semaphore m_RtoPPSemaphore[FRAME_OVERLAP]; // Semaphore for synchronizing between main rendering and post proccesing
+
+		CommandBuffer m_Cmd[FRAME_OVERLAP];
+		CommandBuffer m_ComputeCmd[FRAME_OVERLAP];
 	public:
-		Semaphore RenderSemaphore; // Semaphore for signaling the end of the frame rendering
+		Semaphore RenderSemaphore[FRAME_OVERLAP]; // Semaphore for signaling the end of the frame rendering
 
 	public:
 		auto GetRenderImageID() { return m_ImageID; }
@@ -230,9 +233,18 @@ namespace wc
 		void Init(OrthographicCamera& cameraptr)
 		{			
 			camera = &cameraptr;
-			m_RtoPPSemaphore.Create();
-			RenderSemaphore.Create();
-			
+
+			for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
+			{
+				m_RtoPPSemaphore[i].Create();
+				RenderSemaphore[i].Create();
+
+				SyncContext::CommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, m_Cmd[i]);
+				SyncContext::ComputeCommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, m_ComputeCmd[i]);
+
+				m_RtoPPSemaphore[i].SetName(std::format("Renderer2D::m_RtoPPSemaphore[{}]", i));
+				RenderSemaphore[i].SetName(std::format("Renderer2D::RenderSemaphore[{}]", i));
+			}
 		}
 
 		void Resize(glm::vec2 newSize, RenderData& renderData)
@@ -245,8 +257,8 @@ namespace wc
 		{
 			//if (!m_IndexCount && !m_LineVertexCount) return;
 			{
-				CommandBuffer& cmd = SyncContext::GetMainCommandBuffer();
-
+				CommandBuffer& cmd = m_Cmd[CURRENT_FRAME];
+				cmd.Reset();
 				cmd.Begin();
 				VkRenderPassBeginInfo rpInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 
@@ -295,17 +307,17 @@ namespace wc
 
 				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-				submit.pSignalSemaphores = m_RtoPPSemaphore.GetPointer();
+				submit.pSignalSemaphores = m_RtoPPSemaphore[CURRENT_FRAME].GetPointer();
 				submit.signalSemaphoreCount = 1;
 
 				submit.pWaitDstStageMask = &waitStage;
 
 				VulkanContext::graphicsQueue.Submit(submit);
-				cmd.Reset();
 			}
 
 			{				
-				CommandBuffer& cmd = SyncContext::GetComputeCommandBuffer();
+				CommandBuffer& cmd = m_ComputeCmd[CURRENT_FRAME];
+				cmd.Reset();
 				cmd.Begin();
 				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_BloomShader.GetPipeline());
 				uint32_t counter = 0;
@@ -384,16 +396,15 @@ namespace wc
 
 				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-				submit.pWaitSemaphores = m_RtoPPSemaphore.GetPointer();
+				submit.pWaitSemaphores = m_RtoPPSemaphore[CURRENT_FRAME].GetPointer();
 				submit.waitSemaphoreCount = 1;
 
-				submit.pSignalSemaphores = RenderSemaphore.GetPointer();
+				submit.pSignalSemaphores = RenderSemaphore[CURRENT_FRAME].GetPointer();
 				submit.signalSemaphoreCount = 1;
 
 				submit.pWaitDstStageMask = &waitStage;
 
-				VulkanContext::graphicsQueue.Submit(submit);
-				cmd.Reset();
+				VulkanContext::computeQueue.Submit(submit);
 			}			
 		}
 
@@ -418,8 +429,12 @@ namespace wc
 			DeinitBloom();
 			m_CompositeShader.Destroy();
 			m_CRTShader.Destroy();
-			m_RtoPPSemaphore.Destroy();
-			RenderSemaphore.Destroy();
+
+			for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
+			{
+				m_RtoPPSemaphore[i].Destroy();
+				RenderSemaphore[i].Destroy();
+			}
 
 			DestroyScreen();
 		}

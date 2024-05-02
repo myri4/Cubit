@@ -10,15 +10,10 @@
 #include <vector>
 #include <unordered_map>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include <wc/vk/SyncContext.h>
 
 #include <wc/Utils/Time.h>
 
-#include <wc/Math/Camera.h>
 #include <wc/Utils/List.h>
 #include <wc/Utils/Window.h>
 #include <wc/Utils/YAML.h>
@@ -91,17 +86,24 @@ namespace wc
 
 			if (ImGui::IsKeyPressed(ImGuiKey_E)) player.SwordAttack = true;
 			player.Dash = Key::GetKey(Key::LeftShift) == GLFW_PRESS;
-			if (ImGui::IsKeyReleased(ImGuiKey_Q)) 
+
+			if (ImGui::IsKeyReleased(ImGuiKey_1))
 			{
-				player.weapon = !player.weapon;
+				player.weapon = WeaponType::Blaster;
+				player.AttackCD = 0.2f;
+			}
+			
+			else if (ImGui::IsKeyReleased(ImGuiKey_2)) 
+			{
+				player.weapon = WeaponType::Shotgun;
 				player.AttackCD = 0.2f;
 			}
 
 			//jump
+
 			if (ImGui::IsKeyPressed(ImGuiKey_Space) && player.DownContacts != 0) 
 				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
-			
-
+						
 			if (moveDir != glm::vec2(0.f))
 			{
 				moveDir = glm::normalize(moveDir) * player.Speed * (player.DownContacts > 0 ? 1.f : m_Map.AirSpeedFactor);
@@ -112,12 +114,16 @@ namespace wc
 			{
 				auto vel = player.body->GetLinearVelocity();
 
+				player.body->SetGravityScale(1.f);
+
 				vel.x -= m_Map.DragStrength * vel.x * Globals.deltaTime;
 
 				if (abs(vel.x) < 0.01f) vel.x = 0.f;
 
 				player.body->SetLinearVelocity(vel);
 			}
+				
+			if (player.body->GetLinearVelocity().y < 0.f) player.body->SetGravityScale(2.5f);
 		}		
 
 		void Update()
@@ -147,7 +153,7 @@ namespace wc
 				Globals.gameState = GameState::PLAY;
 				m_Map.EnemyCount = 0;
 				m_Map.LoadFull("levels/level2.malen");
-				m_Map.player.Health = 10;
+				m_Map.player.Health = m_Map.player.StartHealth;
 			}
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- Cube's Calling -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- Cube's Calling -").y) * 0.5f));
 			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "- Cube's Calling -");

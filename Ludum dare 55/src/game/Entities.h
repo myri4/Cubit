@@ -1,6 +1,7 @@
 #pragma once
 #include <box2d/box2d.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <vector>
 #include <wc/Utils/Time.h>
 #include <wc/Utils/YAML.h>
@@ -74,13 +75,13 @@ namespace wc
     struct GameEntity : public DynamicEntity
     {
         // Properties
-        float StartHealth = 10.f;
-        float Damage = 0.5f;
-        float Speed = 8.5f;
         float Density = 55.f;
-
-        float Health = 10.f;
         float LinearDamping = 1.4f;        
+        float Speed = 8.5f;
+
+        float StartHealth = 100.f;
+        float Health = 100.f;
+        float Damage = 5.f;
 
         bool PlayerTouch = false;
         bool ShotEnemy = false;
@@ -116,18 +117,35 @@ namespace wc
         GameEntity() = default;
     };
 
+    enum class BulletType { UNKNOWN = -1, Blaster, Shotgun, RedCircle };
+    enum class WeaponType { UNKNOWN = -1, Blaster, Shotgun, Sword };
+
+    struct WeaponStats
+    {
+        bool CloseRange = false;
+        BulletType BulletType = BulletType::Blaster;
+        float Damage = 0.f;
+        union
+        {
+            float FireRate;
+            float Range;
+        };
+
+        uint32 TextureID = 0;
+    };
+
     struct Player : public GameEntity
     {
-        bool weapon = true;
+        WeaponType weapon = WeaponType::Blaster;
 
-        float JumpForce = 1900.f;
+        float JumpForce = 0.f;
 
         bool Dash = false;
         float DashCD = 0.f;
 
         float SwordCD = 1.5f;
         bool SwordAttack = false;
-        float SwordDamage = 5.5f;
+        float SwordDamage = 55.f;
 
         float AttackCD = 0.5f;
 
@@ -144,26 +162,8 @@ namespace wc
         float ShootRange = 8.f;
         float DetectRange = 15.f;
 
-        RedCube() { Type = EntityType::RedCube; Health = 15.f;  Speed = 1.1f; Damage = 1.f; }
-    };
-
-    enum class BulletType { Blaster, Shotgun, RedCircle };
-    enum class WeaponType { Blaster, Shotgun, Sword };
-
-
-    struct WeaponStats
-    {
-        bool CloseRange = false;
-        BulletType BulletType = BulletType::Blaster;
-        float Damage = 0.f;
-        union
-        {
-            float FireRate;
-            float Range;
-        };
-
-        uint32 TextureID = 0;
-    };
+        RedCube() { Type = EntityType::RedCube; Health = 150.f;  Speed = 1.1f; Damage = 10.f; }
+    };    
 
     struct Bullet : public GameEntity
     {
@@ -179,10 +179,9 @@ namespace wc
 			bodyDef.type = b2_dynamicBody;
 			bodyDef.position.Set(Position.x, Position.y);
 			bodyDef.fixedRotation = true;
+            bodyDef.bullet = true;
 			body = PhysicsWorld->CreateBody(&bodyDef);
 
-			//b2PolygonShape shape;
-			//shape.SetAsBox(HitBoxSize.x, HitBoxSize.y);
             b2CircleShape shape;
             shape.m_radius = Size.x;
 
@@ -194,7 +193,8 @@ namespace wc
 
 			fixtureDef.shape = &shape;
 			body->CreateFixture(&fixtureDef);
-			body->SetLinearDamping(LinearDamping);
+
+            body->GetFixtureList()->SetSensor(true);
 		}
     };    
 }

@@ -3,10 +3,16 @@
 #include "../include/wc/Utils/YAML.h"
 #include <filesystem>
 #include <fstream>
+
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <string>
 #include <vector>
 #include <random>
+
+#include <wc/Math/Camera.h>
 
 #include "ParticleSystem.h"
 #include "Entities.h"
@@ -218,7 +224,10 @@ namespace wc
 
 		void DestroyEntity(uint32_t i)
 		{
-			delete Entities[i];
+			auto e = Entities[i];
+			//PhysicsWorld->DestroyBody(e->body);
+
+			delete e;
 			Entities.erase(Entities.begin() + i);
 		}
 
@@ -295,9 +304,10 @@ namespace wc
 			camera.Position = glm::vec3(player.Position, 0.f);
 		}
 
+		float Gravity = -9.8f;
 		void CreatePhysicsWorld()
 		{
-			PhysicsWorld = new b2World({ 0.f, -9.8f });
+			PhysicsWorld = new b2World({ 0.f, Gravity });
 			PhysicsWorld->SetContactListener(&ContactListenerInstance);
 
 			b2Vec2 vs[4];
@@ -305,26 +315,9 @@ namespace wc
 			for (uint32_t i = 0; i < Entities.size(); i++)
 			{
 				GameEntity* e = (GameEntity*)Entities[i];
-				b2BodyDef bodyDef;
-				bodyDef.type = b2_dynamicBody;
-				bodyDef.position.Set(e->Position.x, e->Position.y);
-				bodyDef.fixedRotation = true;
-				e->body = PhysicsWorld->CreateBody(&bodyDef);
-
-				b2PolygonShape shape;
-				shape.SetAsBox(e->HitBoxSize.x, e->HitBoxSize.y);
-
-
-				b2FixtureDef fixtureDef;
-				fixtureDef.density = e->Density;
-				fixtureDef.friction = 0.f;
-				fixtureDef.userData.pointer = (uintptr_t)e;
-
-				fixtureDef.shape = &shape;
-				e->body->CreateFixture(&fixtureDef);
-				e->body->SetLinearDamping(e->LinearDamping);
+				e->CreateBody(PhysicsWorld);
 			}
-			uint32_t faceCount = 0;
+
 			auto addFace = [&](const b2Vec2* face)
 				{
 					if ((face[0].x == face[1].x && face[1].x == 0.f) && face[0].y == face[1].y && face[1].y == 0.f) return;
@@ -525,14 +518,11 @@ namespace wc
 			bullet->Speed = speed;
 			bullet->Direction = direction;
 			bullet->BulletType = bulletType;			
-			bullet->Density = 20.f;
+			bullet->Density = 0.f;
 			bullet->LinearDamping = 0.f;
 			bullet->CreateBody(PhysicsWorld);
-			bullet->body->SetBullet(true);
-			bullet->body->GetFixtureList()->SetSensor(true);
 			Entities.emplace_back(bullet);
 		}
-
 
 		void DestroyPhysicsWorld()
 		{
@@ -542,6 +532,9 @@ namespace wc
 
 		void UpdateAI()
 		{
+			float jumHeight = 8.f;
+			player.JumpForce = glm::sqrt(jumHeight * Gravity * player.body->GetGravityScale() * -(2.f + player.LinearDamping)) * player.body->GetMass();
+
 			for (uint32_t i = 0; i < Entities.size(); i++)
 			{
 				auto& e = Entities[i];
@@ -698,7 +691,7 @@ namespace wc
 
 #define PHYSICS_MODE_SEMI_FIXED 0
 #define PHYSICS_MODE_CONSTANT 1
-#define PHYSICS_MODE 1
+#define PHYSICS_MODE 0
 		void Update()
 		{
 			UpdateAI();
@@ -740,9 +733,9 @@ namespace wc
 			if (player.AttackCD > 0.f) player.AttackCD -= Globals.deltaTime;
 			if (player.DashCD > 0.f) player.DashCD -= Globals.deltaTime;
 
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.AttackCD <= 0)
+			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.AttackCD <= 0.f)
 			{
-				if (player.weapon)
+				if (player.weapon == WeaponType::Blaster)
 				{
 					std::random_device rd;
 					std::mt19937 gen(rd());
@@ -754,10 +747,10 @@ namespace wc
 						WC_CORE_ERROR("sound play fail {}", result);
 
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 3.f, { 0.25f, 0.25f }, BulletType::Blaster);
+					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 30.f, { 0.25f, 0.25f }, BulletType::Blaster);
 					player.AttackCD = 0.3f;
 				}
-				else
+				else if (player.weapon == WeaponType::Shotgun)
 				{
 					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/shotgun.wav", NULL);
 					std::random_device rd;
@@ -767,7 +760,7 @@ namespace wc
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 					for (uint32_t i = 0; i < 9; i++)
 					{
-						SpawnBullet(player.Position + dir * 0.45f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 1.75f, { 0.1f, 0.1f }, BulletType::Shotgun);
+						SpawnBullet(player.Position + dir * 0.45f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 17.5f, { 0.1f, 0.1f }, BulletType::Shotgun);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();
@@ -890,7 +883,7 @@ namespace wc
 					glm::translate(glm::mat4(1.f), glm::vec3(offset, 0.f)) * glm::scale(glm::mat4(1.f),
 						{ (dir.x < 0.f ? -1.f : 1.f) * 1.f, 0.45f, 1.f });
 
-				uint32_t tex = player.weapon ? PlasmaGunTexture : SawedOffTexture;
+				uint32_t tex = player.weapon == WeaponType::Blaster ? PlasmaGunTexture : SawedOffTexture;
 
 				m_RenderData.DrawQuad(transform, tex);
 			}

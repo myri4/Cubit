@@ -15,7 +15,7 @@
 #include <glm/glm.hpp>
 #include "../Utils/Log.h"
 
-#define WC_GRAPHICS_DEBUGGER 0
+#define WC_GRAPHICS_DEBUGGER 1
 #define WC_SHADER_DEBUG_PRINT 0
 
 #define VK_CHECK(x)                                                 \
@@ -187,7 +187,7 @@ namespace VulkanContext
 			{
 			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
 				WC_CORE_ERROR(pCallbackData->pMessage);
-				//WC_DEBUGBREAK();
+				WC_DEBUGBREAK();
 				//OutputDebugString(pCallbackData->pMessage);
 				break;
 

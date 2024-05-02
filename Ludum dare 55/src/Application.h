@@ -34,12 +34,12 @@ namespace wc
 			VulkanContext::Create();
 
 			WindowCreateInfo windowInfo;
-			windowInfo.Width = 1920;
-			windowInfo.Height = 1080;
+			windowInfo.Width = 1280;
+			windowInfo.Height = 720;
 			windowInfo.VSync = false;
 			windowInfo.Resizeable = false;
 			windowInfo.AppName = "Cube's Calling";
-			windowInfo.StartMode = WindowMode::Fullscreen;
+			windowInfo.StartMode = WindowMode::Normal;
 			Globals.window.Create(windowInfo);
 
 			SyncContext::Create();
@@ -200,18 +200,17 @@ namespace wc
 
 		void OnUpdate()
 		{
-			if (SyncContext::GetRenderFence().GetStatus() != VK_NOT_READY)
-			{
-				SyncContext::GetRenderFence().Wait();
-				SyncContext::GetRenderFence().Reset();
-			}
+			SyncContext::GetRenderFence().Wait();
+			SyncContext::GetRenderFence().Reset();
+			SyncContext::GetMainCommandBuffer().Reset();
+
 			Globals.UpdateTime();
 
 			UpdateMusic();
 
 			uint32_t swapchainImageIndex = 0;
 
-			VkResult result = Globals.window.AcquireNextImage(swapchainImageIndex, SyncContext::GetPresentSemaphore());
+			VkResult result = Globals.window.AcquireNextImage(swapchainImageIndex, SyncContext::GetImageAvaibleSemaphore());
 
 			if (result == VK_ERROR_OUT_OF_DATE_KHR)
 			{
@@ -220,11 +219,6 @@ namespace wc
 				return;
 			}
 
-			if (Globals.gameState == GameState::PLAY)
-			{
-				game.Update();
-				//std::this_thread::sleep_for(std::chrono::milliseconds(10));
-			}
 
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
@@ -236,6 +230,7 @@ namespace wc
 			else if (Globals.gameState == GameState::CREDITS) Credits();
 			ImGui::Render();			
 
+			if (Globals.gameState == GameState::PLAY) game.Update();
 			CommandBuffer& cmd = SyncContext::GetMainCommandBuffer();
 			
 			VkRenderPassBeginInfo rpInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
@@ -263,28 +258,30 @@ namespace wc
 			}
 
 
+
 			VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
 			submit.commandBufferCount = 1;
 			submit.pCommandBuffers = cmd.GetPointer();
 
-			VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			VkPipelineStageFlags waitStage[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
 
-			submit.pWaitDstStageMask = &waitStage;
+			submit.pWaitDstStageMask = waitStage;
 
-			Semaphore waitSemaphores[] = { SyncContext::GetPresentSemaphore(), m_Renderer.RenderSemaphore, };
+			Semaphore waitSemaphores[] = { SyncContext::GetImageAvaibleSemaphore(), m_Renderer.RenderSemaphore[CURRENT_FRAME],};
 
 			submit.waitSemaphoreCount = ARRAYSIZE(waitSemaphores);
 			submit.pWaitSemaphores = (VkSemaphore*)waitSemaphores;
 
+			if (Globals.gameState != GameState::PLAY) submit.waitSemaphoreCount = 1;
+
 			submit.signalSemaphoreCount = 1;
 			submit.pSignalSemaphores = SyncContext::GetRenderSemaphore().GetPointer();
 
-			//submit command buffer to the queue and execute it.
-			// renderFence will now block until the graphic commands finish execution
 			VulkanContext::graphicsQueue.Submit(submit, SyncContext::GetRenderFence());
+
+
 			
-			cmd.Reset();
 			VkResult presentationResult = Globals.window.Present(swapchainImageIndex, SyncContext::GetRenderSemaphore(), SyncContext::GetPresentQueue());
 
 			if (presentationResult == VK_ERROR_OUT_OF_DATE_KHR || presentationResult == VK_SUBOPTIMAL_KHR || Globals.window.resized)
