@@ -80,6 +80,7 @@ namespace wc
 
 			b2Vec2 bNormal = contact->GetManifold()->localNormal;
 			glm::vec2 normal = { glm::round(bNormal.x), glm::round(bNormal.y) };
+
 			if (entityA && entityA->Type > EntityType::Entity)
 			{
 				if (fixtureB->GetType() == b2Shape::e_chain)
@@ -144,7 +145,7 @@ namespace wc
 			}
 
 			b2Vec2 bNormal = contact->GetManifold()->localNormal;
-			glm::vec2 normal = { bNormal.x, bNormal.y };
+			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
 
 			if (entityA && entityA->Type > EntityType::Entity)
 			{
@@ -571,9 +572,6 @@ namespace wc
 					{
 						if (entity.Position.x > player.Position.x)entity.body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
-
-						/*if (entity.Position.x > player.Position.x)entity.body->SetLinearVelocity(b2Vec2(-entity.Speed, 0));
-						else entity.body->SetLinearVelocity(b2Vec2(entity.Speed, 0));*/
 					}
 					//attack behavior
 					if (distToPlayer < entity.ShootRange)
@@ -581,8 +579,8 @@ namespace wc
 						if (entity.AttackTimer <= 0 && entity.Alive())
 						{
 							//shoot
-							glm::vec2 directionToPlayer = glm::normalize(player.Position + glm::vec2(0.f, 0.5f) - entity.Position);
-							SpawnBullet(entity.Position + glm::vec2(0, 0.5f), directionToPlayer, 25.f, 0.5f, { 0.25f, 0.25f }, BulletType::RedCircle);
+							glm::vec2 directionToPlayer = glm::normalize(player.Position - entity.Position);
+							SpawnBullet(entity.Position + glm::vec2(0, 0.5f), directionToPlayer, 25.f, 5.f, { 0.25f, 0.25f }, BulletType::RedCircle);
 
 							entity.AttackTimer = 2.f;
 						}
@@ -595,7 +593,6 @@ namespace wc
 					Bullet& bullet = *(Bullet*)e;
 
 					bullet.body->SetLinearVelocity(b2Vec2(bullet.Direction.x * bullet.Speed, bullet.Direction.y * bullet.Speed));
-					//Eyeball Bullet Behavior
 					if (bullet.BulletType == BulletType::RedCircle)
 					{
 						if (bullet.Contacts > 0 || glm::distance(bullet.ShotPos, bullet.Position) > 50.f || bullet.PlayerTouch)
@@ -612,10 +609,13 @@ namespace wc
 									em->Position = bullet.Position + glm::vec2(0.f, 1.f);
 									em->CreateBody(PhysicsWorld);
 
-									m_SummonParticle.Position = em->Position;
-									m_SummonParticle.Velocity = glm::vec2(0.5f);
+									m_SummonParticle.Position = bullet.Position + glm::vec2(0.f, 1.f);
+									m_SummonParticle.Velocity = glm::vec2(0, 2.f);
 									for (int i = 0; i < 6; i++)
 									{
+										m_SummonParticle.LifeTime = 0.5f;
+										m_SummonParticle.ColorBegin = glm::vec4(1.f, 0.f, 0.f, 1.f);
+										m_SummonParticle.ColorEnd = glm::vec4(1.f, 0.3f, 0.2f, 0.5f);
 										m_SummonParticle.VelocityVariation = glm::normalize(glm::vec3(RandomValue(), RandomValue(), RandomValue()));
 
 										m_ParticleEmitter.Emit(m_SummonParticle);
@@ -667,7 +667,7 @@ namespace wc
 
 							if (bullet.Contacts != 0)
 							{
-								Explode(bullet.Position, 10.f, 130.f);
+								Explode(bullet.Position, 5.f, 100.f);
 							}
 
 							//Destroy
@@ -760,7 +760,7 @@ namespace wc
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 					for (uint32_t i = 0; i < 9; i++)
 					{
-						SpawnBullet(player.Position + dir * 0.45f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 17.5f, { 0.1f, 0.1f }, BulletType::Shotgun);
+						SpawnBullet(player.Position + dir * 0.45f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 17.f, { 0.1f, 0.1f }, BulletType::Shotgun);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();
@@ -776,18 +776,20 @@ namespace wc
 
 			if (player.Dash && player.DashCD <= 0)
 			{
-				ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
-				if (player.body->GetLinearVelocity().x > 0.7f) 
+				if (ImGui::IsKeyDown(ImGuiKey_D) || ImGui::IsKeyPressed(ImGuiKey_D))
 				{
+					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
 					player.body->ApplyLinearImpulseToCenter({ 5000.f, 0.f }, true);
 					player.Dash = false;
+					player.DashCD = 2.f;
 				}
-				else if (player.body->GetLinearVelocity().x < -0.7f) 
+				else if (ImGui::IsKeyDown(ImGuiKey_A) || ImGui::IsKeyPressed(ImGuiKey_A))
 				{
+					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
 					player.body->ApplyLinearImpulseToCenter({ -5000.f, 0.f }, true);
 					player.Dash = false;
+					player.DashCD = 2.f;
 				}
-				player.DashCD = 2.f;
 			}
 
 			if (player.SwordAttack)
@@ -815,6 +817,19 @@ namespace wc
 					TileID tileID = GetTile({ x,y, 0 });
 					if (tileID != 0) m_RenderData.DrawQuad({ x, y , 0.f }, { 1.f, 1.f }, 0, glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
 				}
+
+			float minDist = FLT_MAX;
+			int entityID = 0;
+			for (int i = 0; i < Entities.size(); i++) {
+				GameEntity& entity = *(GameEntity*)(Entities[i]);
+				if (entity.Type == EntityType::RedCube) {
+					float dist = glm::distance(entity.Position, player.Position);
+					if (minDist > dist) {
+						minDist = dist;
+						entityID = i;
+					}
+				}
+			}
 
 			//m_RenderData.DrawQuadSvg(glm::translate(glm::mat4(1.f), glm::vec3(1.f, 1.f, 0.f)), svg.textureID);
 			for (int i = 0; i < Entities.size(); i++)
@@ -846,9 +861,12 @@ namespace wc
 					//auto& fontsize = ImGui::CalcTextSize(std::format("HP: {}", entity.Health).c_str());
 					//auto tra = glm::translate(glm::mat4(1.f), glm::vec3(entity.Position, 0.f)) * glm::scale(glm::mat4(1.f), glm::vec3{ , 0.5f} *6.f);
 					//m_RenderData.DrawLineQuad(tra, glm::vec4(0.f, 1.f, 0.f, 1.f));
+
+					m_RenderData.DrawLine(player.Position, player.Position + glm::normalize(Entities[entityID]->Position - player.Position) * 2.f, glm::vec4(1.f, 0, 0, 1.f));
+
 					m_RenderData.DrawString(std::format("HP: {}", entity.Health), font, entity.Position + glm::vec2(-0.5f, 1.f),
 						entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
-
+					
 					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
 				}
 			}

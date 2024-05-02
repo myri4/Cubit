@@ -112,7 +112,7 @@ namespace wc
 			ma_engine_init(NULL, &Globals.sfx_engine);
 			ma_engine_init(NULL, &Globals.music_engine);
 			ma_engine_set_volume(&Globals.sfx_engine, Globals.sfx_volume);
-			ma_engine_set_volume(&Globals.music_engine, 0.f);
+			ma_engine_set_volume(&Globals.music_engine, 0.8f);
 			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/menu.wav", 0, 0, 0, &Globals.music_menu);
 			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/main_new.wav", 0, 0, 0, &Globals.music_main);
 			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/GameOver.wav", 0, 0, 0, &Globals.music_GameOver);
@@ -182,7 +182,7 @@ namespace wc
 				ma_sound_set_fade_in_milliseconds(&Globals.music_main, -1, 0, Globals.music_fade_time_mls);
 
 				ma_sound_seek_to_pcm_frame(&Globals.music_win, 0);
-				ma_sound_set_fade_in_milliseconds(&Globals.music_win, 0, 1, Globals.music_fade_time_mls);
+				ma_sound_set_fade_in_milliseconds(&Globals.music_win, -1, 1, Globals.music_fade_time_mls);
 				ma_sound_start(&Globals.music_win);
 			}
 		}

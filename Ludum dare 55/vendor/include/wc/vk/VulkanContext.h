@@ -187,7 +187,7 @@ namespace VulkanContext
 			{
 			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
 				WC_CORE_ERROR(pCallbackData->pMessage);
-				WC_DEBUGBREAK();
+				//WC_DEBUGBREAK();
 				//OutputDebugString(pCallbackData->pMessage);
 				break;
 

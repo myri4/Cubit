@@ -123,7 +123,7 @@ namespace wc
 				player.body->SetLinearVelocity(vel);
 			}
 				
-			if (player.body->GetLinearVelocity().y < 0.f) player.body->SetGravityScale(2.5f);
+			if (player.body->GetLinearVelocity().y < 0.f) player.body->SetGravityScale(2.f);
 		}		
 
 		void Update()
@@ -152,11 +152,11 @@ namespace wc
 			if (ImGui::Button("Play", ImVec2(200, 100))) {
 				Globals.gameState = GameState::PLAY;
 				m_Map.EnemyCount = 0;
-				m_Map.LoadFull("levels/level2.malen");
+				m_Map.LoadFull("levels/level1.malen");
 				m_Map.player.Health = m_Map.player.StartHealth;
 			}
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- Cube's Calling -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- Cube's Calling -").y) * 0.5f));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "- Cube's Calling -");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- CUBIT -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- CUBIT -").y) * 0.5f));
+			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "- CUBIT -");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 200) * 0.5f, (ImGui::GetWindowSize().y + 400) * 0.5f));
 			if (ImGui::Button("Credits", ImVec2(200, 100)))Globals.gameState = GameState::CREDITS;
 			ImGui::End();
@@ -183,7 +183,7 @@ namespace wc
 			ImGui::TextColored(ImVec4(1.f, 0, 0, 1.f), "You Died");
 			ImGui::SetWindowFontScale(1.f);
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 270) * 0.5f, (ImGui::GetWindowSize().y + 300) * 0.5f));
-			if (ImGui::Button("Go Back", ImVec2(270, 100)))Globals.gameState = GameState::MENU;
+			if (ImGui::Button("Go Back", ImVec2(300, 100)))Globals.gameState = GameState::MENU;
 			ImGui::End();
 			ImGui::PopStyleVar(5);
 		}
@@ -205,7 +205,12 @@ namespace wc
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("CONGRATS You Won!").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("CONGRATS You Won!").y) * 0.5f));
 			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "CONGRATS! You Won!");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 270) * 0.5f, (ImGui::GetWindowSize().y + 300) * 0.5f));
-			if (ImGui::Button("Go Back", ImVec2(270, 100)))Globals.gameState = GameState::MENU;
+			if (ImGui::Button("Go Next", ImVec2(270, 100))) {
+				Globals.gameState = GameState::PLAY;
+				m_Map.EnemyCount = 0;
+				m_Map.LoadFull("levels/level1.malen");
+				m_Map.player.Health = m_Map.player.StartHealth;
+			}
 			ImGui::End();
 			ImGui::PopStyleVar(5);
 		}
@@ -224,9 +229,11 @@ namespace wc
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			ImGui::SetWindowFontScale(0.5f);
-			ImGui::SetCursorPos(ImVec2(10, 10));
+			ImGui::SetCursorPos(ImVec2(10.f, 10.f));
 			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("FPS: {}", int(1.f / Globals.deltaTime)).c_str());
+			ImGui::SetCursorPosX(10.f);
 			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("AT: {}", CURRENT_FRAME).c_str());
+			ImGui::SetCursorPosX(10.f);
 			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("Enemy count: {}", m_Map.EnemyCount).c_str());
 			auto windowPos = (glm::vec2)Globals.window.GetPos();
 			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(windowPos.x, windowPos.y), ImVec2((float)Globals.window.GetSize().x + windowPos.x, (float)Globals.window.GetSize().y + windowPos.y));
