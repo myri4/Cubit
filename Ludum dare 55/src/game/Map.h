@@ -658,11 +658,11 @@ namespace wc
 							}
 
 							if(bullet.Contacts < 0 || glm::distance(bullet.ShotPos, bullet.Position) > WeaponStats[(int)bullet.WeaponType].Range)
-								WC_CORE_INFO("ENd");
+								//WC_CORE_INFO("END");
 
 							if (bullet.Contacts > 0) {
-								Explode(bullet.Position, 10.f, 130.f);
-								WC_CORE_ERROR("Explode");
+								//Explode(bullet.Position, 10.f, 130.f);
+								//WC_CORE_ERROR("Explode");
 							}
 
 							DestroyEntity(i);
@@ -685,7 +685,7 @@ namespace wc
 #define PHYSICS_MODE_SEMI_FIXED 0
 #define PHYSICS_MODE_CONSTANT 1
 #define	PHYSICS_MODE_TEST 2
-#define PHYSICS_MODE 1
+#define PHYSICS_MODE 0
 		void Update()
 		{
 			UpdateAI();
@@ -763,14 +763,17 @@ namespace wc
 				}
 				else if (player.weapon == WeaponType::Shotgun)
 				{
-					WC_CORE_INFO(" - SHOOT - ");
 					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/shotgun.wav", NULL);
+					if (player.DownContacts > 0 && Globals.window.GetCursorPos().y > Globals.window.GetSize().y * 0.5f && Globals.window.GetCursorPos().x > Globals.window.GetSize().x * 0.4 && Globals.window.GetCursorPos().x < Globals.window.GetSize().x * 0.6f) {
+						player.body->ApplyLinearImpulseToCenter(b2Vec2(0, player.JumpForce * 2), true);
+					}
+
 					std::random_device rd;
 					std::mt19937 gen(rd());
 					std::uniform_real_distribution<float> dis(-0.35f, 0.35f);
 
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-					for (uint32_t i = 0; i < 9; i++)
+					for (uint32_t i = 0; i < 10; i++)
 					{
 						SpawnBullet(player.Position, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.1f, 0.1f }, player.weapon);
 
@@ -782,6 +785,7 @@ namespace wc
 						m_Particle.VelocityVariation = glm::normalize(player.Position + RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))) * 0.85f - player.Position) * 5.f;
 						m_ParticleEmitter.Emit(m_Particle, 5);
 					}
+
 				}
 
 				player.ResetWeaponTimer();

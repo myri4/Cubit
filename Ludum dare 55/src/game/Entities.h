@@ -194,6 +194,8 @@ namespace wc
 			bodyDef.position.Set(Position.x, Position.y);
 			bodyDef.fixedRotation = true;
             bodyDef.bullet = true;
+            bodyDef.awake = true;
+            bodyDef.allowSleep = false;
 			body = PhysicsWorld->CreateBody(&bodyDef);
 
             b2CircleShape shape;
@@ -202,13 +204,14 @@ namespace wc
 			b2FixtureDef fixtureDef;
 			fixtureDef.density = Density;
 			fixtureDef.friction = 0.f;
+            fixtureDef.isSensor = true;
 
 			fixtureDef.userData.pointer = (uintptr_t)this;
 
 			fixtureDef.shape = &shape;
 			body->CreateFixture(&fixtureDef);
-
-            body->GetFixtureList()->SetSensor(true);
+ 
+            //body->GetFixtureList()->SetSensor(true);
 		}
     };    
 }

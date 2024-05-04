@@ -65,7 +65,7 @@ namespace wc
 				shotgun.BulletType = BulletType::Shotgun;
 				shotgun.Damage = 18.f;
 				shotgun.FireRate = 1.1f;
-				shotgun.Range = 5.f;
+				shotgun.Range = 3.5f;
 				shotgun.TextureID = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
 			}
 
@@ -120,7 +120,9 @@ namespace wc
 			//jump
 
 			if (ImGui::IsKeyPressed(ImGuiKey_Space) && player.DownContacts != 0) 
-				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);			
+				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);		
+
+			
 
 			if (moveDir != glm::vec2(0.f))
 			{
