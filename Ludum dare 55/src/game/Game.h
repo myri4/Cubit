@@ -49,14 +49,39 @@ namespace wc
 
 			m_Tileset.Load();
 
-			m_Map.PlasmaGunTexture = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
-			m_Map.SawedOffTexture = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
+			BackGroundTexture = m_RenderData.LoadTexture("assets/textures/AREA1concept2.png");
 			m_Map.SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
+			{
+				auto& blaster = WeaponStats[(int)WeaponType::Blaster];
+				blaster.BulletType = BulletType::Blaster;
+				blaster.Damage = 30.f;
+				blaster.FireRate = 0.3f;
+				blaster.Range = 50.f;
+				blaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
+			}
+
+			{
+				auto& shotgun = WeaponStats[(int)WeaponType::Shotgun];
+				shotgun.BulletType = BulletType::Shotgun;
+				shotgun.Damage = 18.f;
+				shotgun.FireRate = 1.1f;
+				shotgun.Range = 5.f;
+				shotgun.TextureID = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
+			}
+
+			{
+				auto& redBlaster = WeaponStats[(int)WeaponType::RedBlaster];
+				redBlaster.BulletType = BulletType::RedCircle;
+				redBlaster.Damage = 5.f;
+				redBlaster.FireRate = 0.3f;
+				redBlaster.Range = 50.f;
+				redBlaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
+			}
 
 			m_Renderer.CreateScreen(renderSize, m_RenderData);
 			m_ParticleEmitter.Init();
-			m_Particle.ColorBegin = { 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f };
-			m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
+			m_Particle.ColorBegin = { 0.99f, 0.83f, 0.48f, 1.f };
+			m_Particle.ColorEnd = { 0.99f, 0.42f, 0.16f, 1.f };
 			m_Particle.SizeBegin = 0.5f, m_Particle.SizeVariation = 0.3f, m_Particle.SizeEnd = 0.0f;
 			m_Particle.LifeTime = 0.6f;
 			m_Particle.Velocity = { 0.0f, 0.0f };
@@ -69,7 +94,7 @@ namespace wc
 			m_SummonParticle.LifeTime = 0.35f;
 			m_SummonParticle.Velocity = { 0.0f, 0.0f };
 			m_SummonParticle.VelocityVariation = { 6.f, 6.f };
-			m_SummonParticle.Position = { 0.0f, 0.0f };
+			m_SummonParticle.Position = { 0.0f, 0.0f };			
 
 			//m_SummonParticle.VelocityVariation = glm::normalize(entity.Position - m_Map.player.Position) * 2.5f;
 		}
@@ -84,31 +109,33 @@ namespace wc
 			if (Key::GetKey(Key::A)) { moveDir.x = -1.f; keyPressed = true; }
 			else if (Key::GetKey(Key::D)) { moveDir.x = 1.f;  keyPressed = true; }
 
-			if (ImGui::IsKeyPressed(ImGuiKey_E)) player.SwordAttack = true;
-			player.Dash = Key::GetKey(Key::LeftShift) == GLFW_PRESS;
+			if (ImGui::IsKeyPressed(ImGuiKey_E)) player.SwordAttack = true;			
 
-			if (ImGui::IsKeyReleased(ImGuiKey_1))
-			{
+			if (ImGui::IsKeyPressed(ImGuiKey_1))
 				player.weapon = WeaponType::Blaster;
-				player.AttackCD = 0.2f;
-			}
 			
-			else if (ImGui::IsKeyReleased(ImGuiKey_2)) 
-			{
+			else if (ImGui::IsKeyPressed(ImGuiKey_2))
 				player.weapon = WeaponType::Shotgun;
-				player.AttackCD = 0.2f;
-			}
 
 			//jump
 
 			if (ImGui::IsKeyPressed(ImGuiKey_Space) && player.DownContacts != 0) 
-				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
-						
+				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);			
+
 			if (moveDir != glm::vec2(0.f))
 			{
-				moveDir = glm::normalize(moveDir) * player.Speed * (player.DownContacts > 0 ? 1.f : m_Map.AirSpeedFactor);
-				player.body->ApplyLinearImpulseToCenter({ moveDir.x, moveDir.y }, true);
-			}
+				if (Key::GetKey(Key::LeftShift) == GLFW_PRESS && player.DashCD <= 0.f)
+				{
+					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
+					player.body->ApplyLinearImpulseToCenter({ 50.f * player.body->GetMass() * moveDir.x, 0.f }, true);
+					player.DashCD = 2.f;
+				}
+				else
+				{
+					moveDir = glm::normalize(moveDir) * player.Speed * (player.DownContacts > 0 ? 1.f : m_Map.AirSpeedFactor);
+					player.body->ApplyLinearImpulseToCenter({ moveDir.x, moveDir.y }, true);
+				}
+			}			
 
 			if (player.DownContacts > 0)
 			{
@@ -152,7 +179,7 @@ namespace wc
 			if (ImGui::Button("Play", ImVec2(200, 100))) {
 				Globals.gameState = GameState::PLAY;
 				m_Map.EnemyCount = 0;
-				m_Map.LoadFull("levels/level1.malen");
+				m_Map.LoadFull("levels/level2.malen");
 				m_Map.player.Health = m_Map.player.StartHealth;
 			}
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("- CUBIT -").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("- CUBIT -").y) * 0.5f));

@@ -45,8 +45,9 @@ namespace wc
 		LineVertex(const glm::vec3& pos, const glm::vec4& color) : Position(pos), Color(color) {}
 	};
 
-	class RenderData
+	struct RenderData
 	{
+	private:
 		BufferManager<Vertex> m_VertexBuffer;
 		BufferManager<uint32_t> m_IndexBuffer;
 		BufferManager<LineVertex> m_LineVertexBuffer;

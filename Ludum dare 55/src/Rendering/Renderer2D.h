@@ -312,7 +312,7 @@ namespace wc
 
 				submit.pWaitDstStageMask = &waitStage;
 
-				VulkanContext::graphicsQueue.Submit(submit);
+				SyncContext::GetGraphicsQueue().Submit(submit);
 			}
 
 			{				
@@ -404,7 +404,7 @@ namespace wc
 
 				submit.pWaitDstStageMask = &waitStage;
 
-				VulkanContext::computeQueue.Submit(submit);
+				SyncContext::GetComputeQueue().Submit(submit);
 			}			
 		}
 

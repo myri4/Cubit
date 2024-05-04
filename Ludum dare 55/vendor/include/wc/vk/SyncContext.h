@@ -12,7 +12,7 @@ namespace SyncContext
 
 	inline wc::Fence RenderFences[FRAME_OVERLAP];
 	inline wc::Fence ComputeFences[FRAME_OVERLAP];
-	inline wc::Fence UploadFence;
+	inline wc::Fence ImmediateFence;
 
 	inline wc::CommandBuffer MainCommandBuffers[FRAME_OVERLAP];
 	inline wc::CommandBuffer ComputeCommandBuffers[FRAME_OVERLAP];
@@ -24,12 +24,12 @@ namespace SyncContext
 
 	inline void Create()
 	{
-		CommandPool.Create(VulkanContext::graphicsQueue.GetFamily());
-		ComputeCommandPool.Create(VulkanContext::computeQueue.GetFamily());
-		UploadCommandPool.Create(VulkanContext::graphicsQueue.GetFamily());
+		CommandPool.Create(VulkanContext::GraphicsQueue.GetFamily());
+		ComputeCommandPool.Create(VulkanContext::ComputeQueue.GetFamily());
+		UploadCommandPool.Create(VulkanContext::GraphicsQueue.GetFamily());
 
 		UploadCommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, UploadCommandBuffer);
-		UploadFence.Create();
+		ImmediateFence.Create();
 		
 		for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
 		{
@@ -58,9 +58,9 @@ namespace SyncContext
 	inline auto& GetMainCommandBuffer() { return MainCommandBuffers[CURRENT_FRAME]; }
 	inline auto& GetComputeCommandBuffer() { return ComputeCommandBuffers[CURRENT_FRAME]; }
 
-	inline const wc::Queue GetGraphicsQueue() { return VulkanContext::graphicsQueue; }
-	inline const wc::Queue GetComputeQueue() { return VulkanContext::computeQueue; }
-	inline const wc::Queue GetPresentQueue() { return /*VulkanContext::presentQueue*/VulkanContext::graphicsQueue; }
+	inline const wc::Queue GetGraphicsQueue() { return VulkanContext::GraphicsQueue; }
+	inline const wc::Queue GetComputeQueue() { return VulkanContext::ComputeQueue; }
+	inline const wc::Queue GetPresentQueue() { return /*VulkanContext::presentQueue*/VulkanContext::GraphicsQueue; }
 
 	inline void UpdateFrame() { CURRENT_FRAME = (CURRENT_FRAME + 1) % FRAME_OVERLAP; }
 
@@ -77,10 +77,10 @@ namespace SyncContext
 		submit.commandBufferCount = 1;
 		submit.pCommandBuffers = UploadCommandBuffer.GetPointer();
 
-		VulkanContext::graphicsQueue.Submit(submit, UploadFence);
+		GetGraphicsQueue().Submit(submit, ImmediateFence);
 
-		UploadFence.Wait();
-		UploadFence.Reset();
+		ImmediateFence.Wait();
+		ImmediateFence.Reset();
 
 		UploadCommandBuffer.Reset();
 	}
@@ -100,8 +100,7 @@ namespace SyncContext
 			ComputeFences[i].Destroy();
 		}
 
-
 		UploadCommandPool.Destroy();
-		UploadFence.Destroy();
+		ImmediateFence.Destroy();
 	}
 }

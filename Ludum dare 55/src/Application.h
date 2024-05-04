@@ -34,7 +34,7 @@ namespace wc
 			VulkanContext::Create();
 
 			WindowCreateInfo windowInfo;
-			windowInfo.Width = 1280;
+			windowInfo.Width = 1290;
 			windowInfo.Height = 720;
 			windowInfo.VSync = false;
 			windowInfo.Resizeable = false;
@@ -182,7 +182,7 @@ namespace wc
 				ma_sound_set_fade_in_milliseconds(&Globals.music_main, -1, 0, Globals.music_fade_time_mls);
 
 				ma_sound_seek_to_pcm_frame(&Globals.music_win, 0);
-				ma_sound_set_fade_in_milliseconds(&Globals.music_win, -1, 1, Globals.music_fade_time_mls);
+				ma_sound_set_fade_in_milliseconds(&Globals.music_win, 0, 1, Globals.music_fade_time_mls);
 				ma_sound_start(&Globals.music_win);
 			}
 		}
@@ -278,8 +278,7 @@ namespace wc
 			submit.signalSemaphoreCount = 1;
 			submit.pSignalSemaphores = SyncContext::GetRenderSemaphore().GetPointer();
 
-			VulkanContext::graphicsQueue.Submit(submit, SyncContext::GetRenderFence());
-
+			SyncContext::GetGraphicsQueue().Submit(submit, SyncContext::GetRenderFence());
 
 			
 			VkResult presentationResult = Globals.window.Present(swapchainImageIndex, SyncContext::GetRenderSemaphore(), SyncContext::GetPresentQueue());

@@ -79,9 +79,8 @@ namespace wc
         float LinearDamping = 1.4f;        
         float Speed = 8.5f;
 
-        float StartHealth = 100.f;
-        float Health = 100.f;
-        float Damage = 5.f;
+        uint32_t StartHealth = 100;
+        uint32_t Health = 100;
 
         bool PlayerTouch = false;
         bool ShotEnemy = false;
@@ -89,7 +88,12 @@ namespace wc
 
         glm::vec2 HitBoxSize = glm::vec2(0.5f);
 
-        bool Alive() { return Health > 0.f; }        
+        void DealDamage(uint32_t Damage)
+        {
+            if (Alive()) Health -= glm::min(Damage, Health);
+        }
+
+        bool Alive() { return Health > 0; }        
 
         virtual void CreateBody(b2World* PhysicsWorld)
         {
@@ -117,37 +121,44 @@ namespace wc
         GameEntity() = default;
     };
 
-    enum class BulletType { UNKNOWN = -1, Blaster, Shotgun, RedCircle };
-    enum class WeaponType { UNKNOWN = -1, Blaster, Shotgun, Sword };
+    enum class BulletType { Blaster, Shotgun, RedCircle };
+    enum class WeaponType { Blaster, Shotgun, RedBlaster, Sword };
 
-    struct WeaponStats
+    struct WeaponInfo
     {
         bool CloseRange = false;
         BulletType BulletType = BulletType::Blaster;
-        float Damage = 0.f;
-        union
-        {
-            float FireRate;
-            float Range;
-        };
+        uint32_t Damage = 0;
+        float FireRate;
+        float Range;
 
         uint32 TextureID = 0;
     };
+
+    struct WeaponData
+    {
+        float Timer = 0.f;
+    };
+
+    WeaponInfo WeaponStats[magic_enum::enum_count<WeaponType>()];
+
 
     struct Player : public GameEntity
     {
         WeaponType weapon = WeaponType::Blaster;
 
+        WeaponData Weapons[magic_enum::enum_count<WeaponType>()];
+
         float JumpForce = 0.f;
 
-        bool Dash = false;
         float DashCD = 0.f;
 
         float SwordCD = 1.5f;
         bool SwordAttack = false;
-        float SwordDamage = 55.f;
+        uint32_t SwordDamage = 55;
 
-        float AttackCD = 0.5f;
+        inline bool CanShoot() { return Weapons[(int)weapon].Timer <= 0.f; }
+        inline void ResetWeaponTimer() { Weapons[(int)weapon].Timer = WeaponStats[(int)weapon].FireRate; }
 
         Player()
         {
@@ -161,15 +172,18 @@ namespace wc
         float AttackTimer = 2.f; 
         float ShootRange = 8.f;
         float DetectRange = 15.f;
+        uint32_t Damage = 10;
 
-        RedCube() { Type = EntityType::RedCube; Health = 150.f;  Speed = 1.1f; Damage = 10.f; }
+        RedCube() { Type = EntityType::RedCube; Health = 150; Speed = 1.1f; }
     };    
 
     struct Bullet : public GameEntity
     {
         glm::vec2 Direction;
         BulletType BulletType;
+        WeaponType WeaponType = WeaponType::Blaster;
         glm::vec2 ShotPos;
+        uint32_t Damage;
 
         Bullet() { Type = EntityType::Bullet; }
 

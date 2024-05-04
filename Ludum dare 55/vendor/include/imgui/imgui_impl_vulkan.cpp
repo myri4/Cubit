@@ -213,7 +213,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
     // Destroy existing texture (if any)
     if (bd->FontView || bd->FontImage || bd->FontDescriptorSet)
     {
-        vkQueueWaitIdle(VulkanContext::graphicsQueue);
+        SyncContext::GetGraphicsQueue().WaitIdle();
         ImGui_ImplVulkan_DestroyFontsTexture();
     }
 
@@ -545,14 +545,12 @@ VkPresentModeKHR ImGui_ImplVulkanH_SelectPresentMode(VkSurfaceKHR surface, const
 
 static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 {
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_ViewportData* vd = IM_NEW(ImGui_ImplVulkan_ViewportData)();
     viewport->RendererUserData = vd;
     ImGui_ImplVulkanH_Window* wd = &vd->Window;
 
     // Create surface
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-    VkResult err = (VkResult)platform_io.Platform_CreateVkSurface(viewport, (ImU64)VulkanContext::GetInstance(), (const void*)VK_NULL_HANDLE, (ImU64*)&wd->Surface);
 
     // Check for WSI support
     VkBool32 res;
@@ -587,7 +585,6 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
 {
     // The main viewport (owned by the application) will always have RendererUserData == 0 since we didn't create the data for it.
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     if (ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData)
     {
         if (vd->WindowOwned)
@@ -600,7 +597,6 @@ static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
     if (vd == nullptr) // This is nullptr for the main viewport (which is left to the user/app to handle)
         return;
@@ -610,7 +606,6 @@ static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 
 static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
 {
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
     ImGui_ImplVulkanH_Window* wd = &vd->Window;
     VkResult err;
@@ -655,12 +650,11 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
     info.pSignalSemaphores = fsd->RenderCompleteSemaphore.GetPointer();
 
     fd->Fence.Reset();
-    err = vkQueueSubmit(VulkanContext::graphicsQueue, 1, &info, fd->Fence);
+    err = SyncContext::GetGraphicsQueue().Submit(info, fd->Fence);
 }
 
 static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
 {
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
     ImGui_ImplVulkanH_Window* wd = &vd->Window;
 
@@ -675,7 +669,7 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     info.swapchainCount = 1;
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &present_index;
-    err = vkQueuePresentKHR(VulkanContext::graphicsQueue, &info);
+    err = SyncContext::GetGraphicsQueue().PresentKHR(info);
     if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
         vd->Window.CreateOrResize((int)viewport->Size.x, (int)viewport->Size.y, ImguiMinImageCount);
 

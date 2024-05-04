@@ -136,9 +136,7 @@ namespace wc
 
 	void CreateBloom(ImageView imageView)
 	{
-		ComputeShaderCreateInfo createInfo;
-		createInfo.path = "assets/shaders/bloom.comp";
-		m_BloomShader.Create(createInfo);
+		m_BloomShader.Create("assets/shaders/bloom.comp");
 
 
 		GenerateBloomDescriptor(m_BloomBuffers[0].imageViews[0], imageView);

@@ -36,7 +36,7 @@ namespace wc
 	ParticleSystem m_ParticleEmitter;
 	ParticleProps m_Particle;
 	ParticleProps m_SummonParticle;
-	SvgImage svg;
+	uint32_t BackGroundTexture = 0;
 
 	class ContactListener : public b2ContactListener
 	{
@@ -79,8 +79,7 @@ namespace wc
 			}
 
 			b2Vec2 bNormal = contact->GetManifold()->localNormal;
-			glm::vec2 normal = { glm::round(bNormal.x), glm::round(bNormal.y) };
-
+			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
 			if (entityA && entityA->Type > EntityType::Entity)
 			{
 				if (fixtureB->GetType() == b2Shape::e_chain)
@@ -129,7 +128,6 @@ namespace wc
 						entityA->ShotEnemy = false;
 						entityA->EnemyID = entityB->ID;
 					}
-
 				}
 
 				if (entityB->Type == EntityType::Bullet)
@@ -226,7 +224,8 @@ namespace wc
 		void DestroyEntity(uint32_t i)
 		{
 			auto e = Entities[i];
-			//PhysicsWorld->DestroyBody(e->body);
+			e->body->DestroyFixture(e->body->GetFixtureList());
+			PhysicsWorld->DestroyBody(e->body);
 
 			delete e;
 			Entities.erase(Entities.begin() + i);
@@ -509,16 +508,17 @@ namespace wc
 			}
 		}
 
-		void SpawnBullet(glm::vec2 position, glm::vec2 direction, float speed, float damage, glm::vec2 size, BulletType bulletType)
+		void SpawnBullet(glm::vec2 position, glm::vec2 direction, float speed, glm::vec2 size, WeaponType weaponType)
 		{
 			Bullet* bullet = new Bullet();
 			bullet->Position = position;
 			bullet->ShotPos = position;
 			bullet->Size = size;
-			bullet->Damage = damage;
+			bullet->Damage = WeaponStats[(int)weaponType].Damage;
 			bullet->Speed = speed;
 			bullet->Direction = direction;
-			bullet->BulletType = bulletType;			
+			bullet->BulletType = WeaponStats[(int)weaponType].BulletType;
+			bullet->WeaponType = weaponType;
 			bullet->Density = 0.f;
 			bullet->LinearDamping = 0.f;
 			bullet->CreateBody(PhysicsWorld);
@@ -546,21 +546,18 @@ namespace wc
 				case EntityType::RedCube:
 				{
 					RedCube& entity = *(RedCube*)e;
-					//timer
+					
 					if (entity.AttackTimer > 0.f) entity.AttackTimer -= Globals.deltaTime;
 
 					if (player.SwordAttack && player.SwordCD <= 0 && glm::distance(entity.Position, player.Position) < 8.f) 
 					{
 						glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0, player.Size.y * 0.5f)) - entity.Position);
 						entity.body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
-						entity.Health -= player.SwordDamage;
+						entity.DealDamage(player.SwordDamage);
 					}
 
 					if (!entity.Alive())
 					{
-						//Destroy
-						entity.body->DestroyFixture(entity.body->GetFixtureList());
-						PhysicsWorld->DestroyBody(entity.body);
 						EnemyCount--;
 						DestroyEntity(i);
 					}
@@ -572,6 +569,9 @@ namespace wc
 					{
 						if (entity.Position.x > player.Position.x)entity.body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
+
+						/*if (entity.Position.x > player.Position.x)entity.body->SetLinearVelocity(b2Vec2(-entity.Speed, 0));
+						else entity.body->SetLinearVelocity(b2Vec2(entity.Speed, 0));*/
 					}
 					//attack behavior
 					if (distToPlayer < entity.ShootRange)
@@ -579,8 +579,8 @@ namespace wc
 						if (entity.AttackTimer <= 0 && entity.Alive())
 						{
 							//shoot
-							glm::vec2 directionToPlayer = glm::normalize(player.Position - entity.Position);
-							SpawnBullet(entity.Position + glm::vec2(0, 0.5f), directionToPlayer, 25.f, 5.f, { 0.25f, 0.25f }, BulletType::RedCircle);
+							glm::vec2 directionToPlayer = glm::normalize(player.Position + glm::vec2(0.f, 0.5f) - entity.Position);
+							SpawnBullet(entity.Position + glm::vec2(0, 0.5f), directionToPlayer, 25.f, { 0.25f, 0.25f }, WeaponType::RedBlaster);
 
 							entity.AttackTimer = 2.f;
 						}
@@ -593,9 +593,11 @@ namespace wc
 					Bullet& bullet = *(Bullet*)e;
 
 					bullet.body->SetLinearVelocity(b2Vec2(bullet.Direction.x * bullet.Speed, bullet.Direction.y * bullet.Speed));
+
+					//Eyeball Bullet Behavior
 					if (bullet.BulletType == BulletType::RedCircle)
 					{
-						if (bullet.Contacts > 0 || glm::distance(bullet.ShotPos, bullet.Position) > 50.f || bullet.PlayerTouch)
+						if (bullet.Contacts > 0 || glm::distance(bullet.ShotPos, bullet.Position) > WeaponStats[(int)bullet.WeaponType].Range || bullet.PlayerTouch)
 						{
 							if (bullet.PlayerTouch)
 							{
@@ -609,13 +611,10 @@ namespace wc
 									em->Position = bullet.Position + glm::vec2(0.f, 1.f);
 									em->CreateBody(PhysicsWorld);
 
-									m_SummonParticle.Position = bullet.Position + glm::vec2(0.f, 1.f);
-									m_SummonParticle.Velocity = glm::vec2(0, 2.f);
+									m_SummonParticle.Position = em->Position;
+									m_SummonParticle.Velocity = glm::vec2(0.5f);
 									for (int i = 0; i < 6; i++)
 									{
-										m_SummonParticle.LifeTime = 0.5f;
-										m_SummonParticle.ColorBegin = glm::vec4(1.f, 0.f, 0.f, 1.f);
-										m_SummonParticle.ColorEnd = glm::vec4(1.f, 0.3f, 0.2f, 0.5f);
 										m_SummonParticle.VelocityVariation = glm::normalize(glm::vec3(RandomValue(), RandomValue(), RandomValue()));
 
 										m_ParticleEmitter.Emit(m_SummonParticle);
@@ -625,12 +624,9 @@ namespace wc
 								}
 
 								ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
-								player.Health -= bullet.Damage;
+								player.DealDamage(bullet.Damage);
 							}
 
-							//Destroy
-							bullet.body->DestroyFixture(bullet.body->GetFixtureList());
-							PhysicsWorld->DestroyBody(bullet.body);
 							DestroyEntity(i);
 						}
 					}
@@ -638,18 +634,15 @@ namespace wc
 					//BFG Bullet Behavior
 					if (bullet.BulletType == BulletType::Blaster)
 					{
-						if (bullet.Contacts != 0 || glm::distance(bullet.ShotPos, bullet.Position) > 50.f || bullet.ShotEnemy)
+						if (bullet.Contacts > 0 || glm::distance(bullet.ShotPos, bullet.Position) > WeaponStats[(int)bullet.WeaponType].Range || bullet.ShotEnemy)
 						{
 							if (bullet.ShotEnemy)
 							{
 								ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
 								GameEntity* shotEnt = (GameEntity*)Entities[bullet.EnemyID];
-								shotEnt->Health -= bullet.Damage;
+								shotEnt->DealDamage(bullet.Damage);
 							}
 
-							//Destroy
-							bullet.body->DestroyFixture(bullet.body->GetFixtureList());
-							PhysicsWorld->DestroyBody(bullet.body);
 							DestroyEntity(i);
 						}
 					}
@@ -657,22 +650,17 @@ namespace wc
 					//Shotgun Bullet Behavior
 					if (bullet.BulletType == BulletType::Shotgun)
 					{
-						if (bullet.Contacts != 0 || glm::distance(bullet.ShotPos, bullet.Position) > 5.f || bullet.ShotEnemy)
+						if (bullet.Contacts > 0 || glm::distance(bullet.ShotPos, bullet.Position) > WeaponStats[(int)bullet.WeaponType].Range || bullet.ShotEnemy)
 						{
 							if (bullet.ShotEnemy)
 							{
 								GameEntity* shotEnt = (GameEntity*)Entities[bullet.EnemyID];
-								shotEnt->Health -= bullet.Damage;
+								shotEnt->DealDamage(bullet.Damage);
 							}
 
-							if (bullet.Contacts != 0)
-							{
-								Explode(bullet.Position, 5.f, 100.f);
-							}
+							if (bullet.Contacts > 0)
+								Explode(bullet.Position, 10.f, 130.f);
 
-							//Destroy
-							bullet.body->DestroyFixture(bullet.body->GetFixtureList());
-							PhysicsWorld->DestroyBody(bullet.body);
 							DestroyEntity(i);
 						}
 					}
@@ -730,10 +718,17 @@ namespace wc
 
 
 			if (player.SwordCD > 0.f) player.SwordCD -= Globals.deltaTime;
-			if (player.AttackCD > 0.f) player.AttackCD -= Globals.deltaTime;
+
+			for (uint32_t i = 0; i < magic_enum::enum_count<WeaponType>() - 1; i++)
+			{
+				auto& weapon = player.Weapons[i];
+				if (weapon.Timer > 0.f) weapon.Timer -= Globals.deltaTime;
+
+
+			}
 			if (player.DashCD > 0.f) player.DashCD -= Globals.deltaTime;
 
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.AttackCD <= 0.f)
+			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.CanShoot())
 			{
 				if (player.weapon == WeaponType::Blaster)
 				{
@@ -747,8 +742,7 @@ namespace wc
 						WC_CORE_ERROR("sound play fail {}", result);
 
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 30.f, { 0.25f, 0.25f }, BulletType::Blaster);
-					player.AttackCD = 0.3f;
+					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.25f, 0.25f }, player.weapon);
 				}
 				else if (player.weapon == WeaponType::Shotgun)
 				{
@@ -760,7 +754,7 @@ namespace wc
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 					for (uint32_t i = 0; i < 9; i++)
 					{
-						SpawnBullet(player.Position + dir * 0.45f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, 17.f, { 0.1f, 0.1f }, BulletType::Shotgun);
+						SpawnBullet(player.Position + dir * 0.45f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.1f, 0.1f }, player.weapon);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();
@@ -770,33 +764,15 @@ namespace wc
 						m_Particle.VelocityVariation = glm::normalize(player.Position + RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))) * 0.85f - player.Position) * 5.f;
 						m_ParticleEmitter.Emit(m_Particle, 5);
 					}
-					player.AttackCD = 1.1f;
 				}
-			}
 
-			if (player.Dash && player.DashCD <= 0)
-			{
-				if (ImGui::IsKeyDown(ImGuiKey_D) || ImGui::IsKeyPressed(ImGuiKey_D))
-				{
-					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
-					player.body->ApplyLinearImpulseToCenter({ 5000.f, 0.f }, true);
-					player.Dash = false;
-					player.DashCD = 2.f;
-				}
-				else if (ImGui::IsKeyDown(ImGuiKey_A) || ImGui::IsKeyPressed(ImGuiKey_A))
-				{
-					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
-					player.body->ApplyLinearImpulseToCenter({ -5000.f, 0.f }, true);
-					player.Dash = false;
-					player.DashCD = 2.f;
-				}
-			}
+				player.ResetWeaponTimer();
+			}			
 
 			if (player.SwordAttack)
 			{
 				if (player.SwordCD <= 0.f)
 				{
-					//play sound
 					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/sword_swing.wav", NULL);
 					m_RotateSword = true;
 					player.SwordCD = 2.5f;
@@ -811,25 +787,14 @@ namespace wc
 
 		void RenderGame()
 		{
+			m_RenderData.DrawQuad({Size.x / 2, Size.y / 2, 0.f}, Size, BackGroundTexture);
+
 			for (uint32_t x = 0; x < Size.x; x++)
 				for (uint32_t y = 0; y < Size.y; y++)
 				{
 					TileID tileID = GetTile({ x,y, 0 });
 					if (tileID != 0) m_RenderData.DrawQuad({ x, y , 0.f }, { 1.f, 1.f }, 0, glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
 				}
-
-			float minDist = FLT_MAX;
-			int entityID = 0;
-			for (int i = 0; i < Entities.size(); i++) {
-				GameEntity& entity = *(GameEntity*)(Entities[i]);
-				if (entity.Type == EntityType::RedCube) {
-					float dist = glm::distance(entity.Position, player.Position);
-					if (minDist > dist) {
-						minDist = dist;
-						entityID = i;
-					}
-				}
-			}
 
 			//m_RenderData.DrawQuadSvg(glm::translate(glm::mat4(1.f), glm::vec3(1.f, 1.f, 0.f)), svg.textureID);
 			for (int i = 0; i < Entities.size(); i++)
@@ -861,12 +826,9 @@ namespace wc
 					//auto& fontsize = ImGui::CalcTextSize(std::format("HP: {}", entity.Health).c_str());
 					//auto tra = glm::translate(glm::mat4(1.f), glm::vec3(entity.Position, 0.f)) * glm::scale(glm::mat4(1.f), glm::vec3{ , 0.5f} *6.f);
 					//m_RenderData.DrawLineQuad(tra, glm::vec4(0.f, 1.f, 0.f, 1.f));
-
-					m_RenderData.DrawLine(player.Position, player.Position + glm::normalize(Entities[entityID]->Position - player.Position) * 2.f, glm::vec4(1.f, 0, 0, 1.f));
-
 					m_RenderData.DrawString(std::format("HP: {}", entity.Health), font, entity.Position + glm::vec2(-0.5f, 1.f),
 						entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
-					
+
 					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
 				}
 			}
@@ -901,9 +863,7 @@ namespace wc
 					glm::translate(glm::mat4(1.f), glm::vec3(offset, 0.f)) * glm::scale(glm::mat4(1.f),
 						{ (dir.x < 0.f ? -1.f : 1.f) * 1.f, 0.45f, 1.f });
 
-				uint32_t tex = player.weapon == WeaponType::Blaster ? PlasmaGunTexture : SawedOffTexture;
-
-				m_RenderData.DrawQuad(transform, tex);
+				m_RenderData.DrawQuad(transform, WeaponStats[(int)player.weapon].TextureID);
 			}
 
 			m_ParticleEmitter.OnRender(m_RenderData);
@@ -930,8 +890,6 @@ namespace wc
 
 		float DragStrength = 2.f;
 		float AirSpeedFactor = 0.7f;
-		uint32_t PlasmaGunTexture = 0;
-		uint32_t SawedOffTexture = 0;
 		uint32_t SwordTexture = 0;
 		Font font;
 

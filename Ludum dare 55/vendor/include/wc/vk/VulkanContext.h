@@ -15,7 +15,7 @@
 #include <glm/glm.hpp>
 #include "../Utils/Log.h"
 
-#define WC_GRAPHICS_DEBUGGER 1
+#define WC_GRAPHICS_DEBUGGER 0
 #define WC_SHADER_DEBUG_PRINT 0
 
 #define VK_CHECK(x)                                                 \
@@ -438,10 +438,10 @@ namespace VulkanContext
 		uint32_t GetFamily() const { return queueFamily; }
 	};
 
-	inline Queue graphicsQueue;
-	//inline Queue presentQueue;
-	inline Queue computeQueue;
-	inline Queue transferQueue;
+	inline Queue GraphicsQueue;
+	//inline Queue PresentQueue;
+	inline Queue ComputeQueue;
+	inline Queue TransferQueue;
 
 	inline void Create()
 	{
@@ -613,10 +613,14 @@ namespace VulkanContext
 			if (device.Create(physicalDevice, createInfo) != VK_SUCCESS)
 				WC_CORE_ERROR("Failed to create logical device!");
 
-			graphicsQueue.GetDeviceQueue(indices.graphicsFamily.value());
+			GraphicsQueue.GetDeviceQueue(indices.graphicsFamily.value());
 			//presentQueue.GetDeviceQueue(indices.presentFamily.value());
-			computeQueue.GetDeviceQueue(indices.computeFamily.value());
-			transferQueue.GetDeviceQueue(indices.transferFamily.value());
+			ComputeQueue.GetDeviceQueue(indices.computeFamily.value());
+			TransferQueue.GetDeviceQueue(indices.transferFamily.value());
+
+			GraphicsQueue.SetName("GraphicsQueue");
+			ComputeQueue.SetName("ComputeQueue");
+			TransferQueue.SetName("TransferQueue");
 		}
 
 		VmaVulkanFunctions vulkanFunctions = {};
