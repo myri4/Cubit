@@ -2,6 +2,7 @@
 *.db
 *.ipch
 *.log
+*.txt
 *.properties
 bin/
 .vs/
