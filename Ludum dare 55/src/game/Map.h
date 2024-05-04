@@ -530,7 +530,6 @@ namespace wc
 			delete PhysicsWorld;
 			PhysicsWorld = nullptr;
 		}
-
 		void UpdateAI()
 		{
 			float jumHeight = 8.f;
@@ -579,7 +578,7 @@ namespace wc
 						if (entity.AttackTimer <= 0 && entity.Alive())
 						{
 							//shoot
-							glm::vec2 directionToPlayer = glm::normalize(player.Position + glm::vec2(0.f, 0.5f) - entity.Position);
+							glm::vec2 directionToPlayer = glm::normalize(player.Position - entity.Position);
 							SpawnBullet(entity.Position + glm::vec2(0, 0.5f), directionToPlayer, 25.f, { 0.25f, 0.25f }, WeaponType::RedBlaster);
 
 							entity.AttackTimer = 2.f;
@@ -658,11 +657,17 @@ namespace wc
 								shotEnt->DealDamage(bullet.Damage);
 							}
 
-							if (bullet.Contacts > 0)
+							if(bullet.Contacts < 0 || glm::distance(bullet.ShotPos, bullet.Position) > WeaponStats[(int)bullet.WeaponType].Range)
+								WC_CORE_INFO("ENd");
+
+							if (bullet.Contacts > 0) {
 								Explode(bullet.Position, 10.f, 130.f);
+								WC_CORE_ERROR("Explode");
+							}
 
 							DestroyEntity(i);
 						}
+						
 					}
 				}
 				break;
@@ -679,13 +684,14 @@ namespace wc
 
 #define PHYSICS_MODE_SEMI_FIXED 0
 #define PHYSICS_MODE_CONSTANT 1
-#define PHYSICS_MODE 0
+#define	PHYSICS_MODE_TEST 2
+#define PHYSICS_MODE 1
 		void Update()
 		{
 			UpdateAI();
 
 			const int32_t velocityIterations = 8;
-			const int32_t positionIterations = 4;
+			const int32_t positionIterations = 8;
 
 #if PHYSICS_MODE == PHYSICS_MODE_CONSTANT
 			AccumulatedTime += Globals.deltaTime;
@@ -694,6 +700,7 @@ namespace wc
 				PhysicsWorld->Step(SimulationTime, velocityIterations, positionIterations);
 				AccumulatedTime -= SimulationTime;
 			}
+
 #elif PHYSICS_MODE == PHYSICS_MODE_SEMI_FIXED
 			float frameTime = Globals.deltaTime;
 
@@ -703,6 +710,16 @@ namespace wc
 				PhysicsWorld->Step(deltaTime, velocityIterations, positionIterations);
 				frameTime -= deltaTime;
 			}
+#elif PHYSICS_MODE == PHYSICS_MODE_TEST
+			float maxStep = 0.03;
+			float progress = 0.0;
+			while (progress < Globals.deltaTime)
+			{
+				float step = std::min((Globals.deltaTime - progress), maxStep);
+				PhysicsWorld->Step(step, velocityIterations, positionIterations);
+					progress += step;
+			}
+
 #endif
 
 			for (auto& entity : Entities)
@@ -742,10 +759,11 @@ namespace wc
 						WC_CORE_ERROR("sound play fail {}", result);
 
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.25f, 0.25f }, player.weapon);
+					SpawnBullet(player.Position, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.25f, 0.25f }, player.weapon);
 				}
 				else if (player.weapon == WeaponType::Shotgun)
 				{
+					WC_CORE_INFO(" - SHOOT - ");
 					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/shotgun.wav", NULL);
 					std::random_device rd;
 					std::mt19937 gen(rd());
@@ -754,7 +772,7 @@ namespace wc
 					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 					for (uint32_t i = 0; i < 9; i++)
 					{
-						SpawnBullet(player.Position + dir * 0.45f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.1f, 0.1f }, player.weapon);
+						SpawnBullet(player.Position, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.1f, 0.1f }, player.weapon);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();

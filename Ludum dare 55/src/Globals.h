@@ -14,7 +14,7 @@ namespace wc
 		DEATH,
 		WIN,
 		PLAY,
-		CREDITS,
+		SETTINGS,
 		PAUSE
 	};
 
@@ -38,6 +38,9 @@ namespace wc
 
 		Clock deltaTimer;
 		float deltaTime = 0.f;
+
+		float levelTime = 0.f;
+		int level = 1;
 
 		GameState gameState = GameState::MENU;
 

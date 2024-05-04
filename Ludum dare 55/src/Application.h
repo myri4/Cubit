@@ -34,7 +34,7 @@ namespace wc
 			VulkanContext::Create();
 
 			WindowCreateInfo windowInfo;
-			windowInfo.Width = 1290;
+			windowInfo.Width = 1280;
 			windowInfo.Height = 720;
 			windowInfo.VSync = false;
 			windowInfo.Resizeable = false;
@@ -72,40 +72,13 @@ namespace wc
 
 			if (Globals.window.resized) Resize();
 
-			if (Globals.window.HasFocus() && Globals.gameState == GameState::PLAY)
+			if (Globals.window.HasFocus() && Globals.gameState == GameState::PLAY) {
 				game.InputGame();
+				Globals.levelTime += Globals.deltaTime;
+			}
 		}
 
-		void Credits()
-		{
-			const ImGuiViewport* viewport = ImGui::GetMainViewport();
-			ImGui::SetNextWindowPos(viewport->WorkPos);
-			ImGui::SetNextWindowSize(viewport->WorkSize);
-			ImGui::SetNextWindowViewport(viewport->ID);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);			 
-
-			ImGui::Begin("Credits", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
-			ImGui::SetWindowFontScale(0.65f);
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer").y) * 0.5f - 200));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Martin Geshev(aka geshev) - Programming : Sound / Music / Sound Design").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Martin Geshev(aka geshev) - Programming : Sound / Music / Sound Design").y) * 0.5f - 150));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Martin Geshev(aka geshev) - Programming : Sound / Music / Sound Design");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Hristo Arabadzhiev(aka Icaka) - Programming : Player Mechanics and Movement / Level Design / Credits").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Hristo Arabadzhiev(aka Icaka) - Programming : Player Mechanics and Movement / Level Design / Credits").y) * 0.5f - 100));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Hristo Arabadzhiev(aka Icaka) - Programming : Player Mechanics and Movement / Level Design / Credits");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Georgi(aka gosho / jojo) - Programming : enemy AI").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Georgi(aka gosho / jojo) - Programming : enemy AI").y) * 0.5f - 50));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Georgi(aka gosho / jojo) - Programming : enemy AI");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Bulgaria na 3 moreta").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Bulgaria na 3 moreta").y) * 0.5f));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Bulgaria na 3 moreta");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 270) * 0.5f, (ImGui::GetWindowSize().y + 300) * 0.5f));
-			if (ImGui::Button("Go Back", ImVec2(270, 100)))Globals.gameState = GameState::MENU;
-			ImGui::End();
-			ImGui::PopStyleVar(5);
-		}
+		
 
 		void CreateAudio()
 		{
@@ -116,7 +89,7 @@ namespace wc
 			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/menu.wav", 0, 0, 0, &Globals.music_menu);
 			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/main_new.wav", 0, 0, 0, &Globals.music_main);
 			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/GameOver.wav", 0, 0, 0, &Globals.music_GameOver);
-			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/win.wav", 0, 0, 0, &Globals.music_win);
+			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/win_ver1.wav", 0, 0, 0, &Globals.music_win);
 			ma_sound_set_looping(&Globals.music_menu, true);
 			ma_sound_set_looping(&Globals.music_main, true);
 		}
@@ -227,7 +200,7 @@ namespace wc
 			else if (Globals.gameState == GameState::DEATH) game.DEATH_MENU();
 			else if (Globals.gameState == GameState::WIN) game.WIN_MENU();
 			else if (Globals.gameState == GameState::PLAY) game.UI();
-			else if (Globals.gameState == GameState::CREDITS) Credits();
+			else if (Globals.gameState == GameState::SETTINGS) game.SETTINGS_MENU();
 			ImGui::Render();			
 
 			if (Globals.gameState == GameState::PLAY) game.Update();
@@ -256,8 +229,6 @@ namespace wc
 				ImGui::UpdatePlatformWindows();
 				ImGui::RenderPlatformWindowsDefault();
 			}
-
-
 
 			VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
