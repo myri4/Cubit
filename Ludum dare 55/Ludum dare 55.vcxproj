@@ -264,12 +264,35 @@
     <ClInclude Include="src\game\Game.h" />
     <ClInclude Include="src\game\Map.h" />
     <ClInclude Include="src\game\ParticleSystem.h" />
+    <ClInclude Include="src\game\Raycasting.h" />
     <ClInclude Include="src\game\Tile.h" />
     <ClInclude Include="src\Globals.h" />
     <ClInclude Include="src\Rendering\BloomEffect.h" />
     <ClInclude Include="src\Rendering\Font.h" />
     <ClInclude Include="src\Rendering\RenderData.h" />
     <ClInclude Include="src\Rendering\Renderer2D.h" />
+    <ClInclude Include="src\Settings.h" />
+    <ClInclude Include="src\UI\Widgets.h" />
+    <ClInclude Include="vendor\include\wc\Audio\AudioEngine.h" />
+    <ClInclude Include="vendor\include\wc\Framebuffer.h" />
+    <ClInclude Include="vendor\include\wc\Math\Camera.h" />
+    <ClInclude Include="vendor\include\wc\Shader.h" />
+    <ClInclude Include="vendor\include\wc\Texture.h" />
+    <ClInclude Include="vendor\include\wc\Utils\CPUImage.h" />
+    <ClInclude Include="vendor\include\wc\Utils\FileDialogs.h" />
+    <ClInclude Include="vendor\include\wc\Utils\List.h" />
+    <ClInclude Include="vendor\include\wc\Utils\Log.h" />
+    <ClInclude Include="vendor\include\wc\Utils\Time.h" />
+    <ClInclude Include="vendor\include\wc\Utils\Window.h" />
+    <ClInclude Include="vendor\include\wc\Utils\YAML.h" />
+    <ClInclude Include="vendor\include\wc\vk\Buffer.h" />
+    <ClInclude Include="vendor\include\wc\vk\Commands.h" />
+    <ClInclude Include="vendor\include\wc\vk\Descriptors.h" />
+    <ClInclude Include="vendor\include\wc\vk\Images.h" />
+    <ClInclude Include="vendor\include\wc\vk\Pipeline.h" />
+    <ClInclude Include="vendor\include\wc\vk\SyncContext.h" />
+    <ClInclude Include="vendor\include\wc\vk\Synchronization.h" />
+    <ClInclude Include="vendor\include\wc\vk\VulkanContext.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\shaders\bloom.comp">
@@ -297,6 +320,11 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="src\shaders\Renderer2D.vert">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\shaders\chromaticAberration.comp">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

@@ -6,6 +6,8 @@
 #include <wc/Utils/Time.h>
 #include "miniaudio.h"
 
+#include "Settings.h"
+
 namespace wc 
 {
 	enum class GameState
@@ -15,13 +17,15 @@ namespace wc
 		WIN,
 		PLAY,
 		CREDITS,
+		SETTINGS,
 		PAUSE
 	};
 
 	struct GlobalVariables
 	{
-		//sound
+		Settings settings;
 
+		//sound
 		const int music_fade_time_mls = 500;
 
 		float sfx_volume = 0.6f;
@@ -30,6 +34,11 @@ namespace wc
 		ma_sound music_main;
 		ma_sound music_GameOver;
 		ma_sound music_win;
+
+		ma_sound shotgun;
+		ma_sound gun;
+		ma_sound swordSwing;
+		ma_sound damageEnemy;
 
 		ma_engine sfx_engine;
 		ma_engine music_engine;

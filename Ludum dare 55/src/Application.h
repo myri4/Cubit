@@ -33,13 +33,15 @@ namespace wc
 		{
 			VulkanContext::Create();
 
+			Globals.settings.Load();
+
 			WindowCreateInfo windowInfo;
-			windowInfo.Width = 1290;
-			windowInfo.Height = 720;
-			windowInfo.VSync = false;
-			windowInfo.Resizeable = false;
-			windowInfo.AppName = "Cube's Calling";
-			windowInfo.StartMode = WindowMode::Normal;
+			windowInfo.Width = Globals.settings.WindowSize.x;
+			windowInfo.Height = Globals.settings.WindowSize.y;
+			windowInfo.VSync = Globals.settings.VSync;
+			windowInfo.Resizeable = false && !Globals.settings.Fullscreen;
+			windowInfo.AppName = "CUBIT";
+			windowInfo.StartMode = Globals.settings.Fullscreen ? WindowMode::Fullscreen : WindowMode::Normal;
 			Globals.window.Create(windowInfo);
 
 			SyncContext::Create();
@@ -71,6 +73,12 @@ namespace wc
 			Globals.window.PoolEvents();
 
 			if (Globals.window.resized) Resize();
+
+			if (ImGui::IsKeyPressed(ImGuiKey_Escape)) 
+			{
+				if (Globals.gameState == GameState::PAUSE) Globals.gameState = GameState::PLAY;
+				else if (Globals.gameState == GameState::PLAY) Globals.gameState = GameState::PAUSE;
+			}
 
 			if (Globals.window.HasFocus() && Globals.gameState == GameState::PLAY)
 				game.InputGame();
@@ -119,6 +127,16 @@ namespace wc
 			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/win.wav", 0, 0, 0, &Globals.music_win);
 			ma_sound_set_looping(&Globals.music_menu, true);
 			ma_sound_set_looping(&Globals.music_main, true);
+
+
+			ma_sound_init_from_file(&Globals.sfx_engine, "assets/sound/sfx/shotgun.wav", 0, 0, 0, &Globals.shotgun);
+			ma_sound_init_from_file(&Globals.sfx_engine, "assets/sound/sfx/gun.wav", 0, 0, 0, &Globals.gun);
+			ma_sound_init_from_file(&Globals.sfx_engine, "assets/sound/sfx/sword_swing.wav", 0, 0, 0, &Globals.swordSwing);
+			ma_sound_init_from_file(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", 0, 0, 0, &Globals.damageEnemy);
+
+			ma_engine_set_volume(&Globals.music_engine, Globals.settings.MasterVolume);
+			ma_engine_set_volume(&Globals.music_engine, (Globals.settings.MusicVolume / 100.f) * (Globals.settings.MasterVolume / 100.f));
+			ma_engine_set_volume(&Globals.sfx_engine, (Globals.settings.SFXVolume / 100.f) * (Globals.settings.MasterVolume / 100.f));
 		}
 
 		bool main_menu = false;
@@ -228,6 +246,8 @@ namespace wc
 			else if (Globals.gameState == GameState::WIN) game.WIN_MENU();
 			else if (Globals.gameState == GameState::PLAY) game.UI();
 			else if (Globals.gameState == GameState::CREDITS) Credits();
+			else if (Globals.gameState == GameState::SETTINGS) game.SETTINGS_MENU();
+			else if (Globals.gameState == GameState::PAUSE) game.PAUSE_MENU();
 			ImGui::Render();			
 
 			if (Globals.gameState == GameState::PLAY) game.Update();

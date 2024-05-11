@@ -31,18 +31,20 @@ namespace wc
 		VkDescriptorSet m_ImageID = VK_NULL_HANDLE;
 		OrthographicCamera* camera = nullptr;
 
-		// Composite
+		// Post processing
 		ComputeShader m_CompositeShader;
 		DescriptorSet m_CompositeSet;
 
+		ComputeShader m_ChromaShader;
+		DescriptorSet m_ChromaSet;
 
 		ComputeShader m_CRTShader;
 		DescriptorSet m_CRTSet;
 
 		float time = 0.f;
 
-		Image m_FinalImage[2];
-		ImageView m_FinalImageView[2];
+		Image m_FinalImage[3];
+		ImageView m_FinalImageView[3];
 
 		Semaphore m_RtoPPSemaphore[FRAME_OVERLAP]; // Semaphore for synchronizing between main rendering and post proccesing
 
@@ -51,6 +53,12 @@ namespace wc
 	public:
 		Semaphore RenderSemaphore[FRAME_OVERLAP]; // Semaphore for signaling the end of the frame rendering
 
+		struct ChromaticAberrationSettings
+		{
+			uint32_t SampleCount = 50;
+			float Blur = 0.25f;
+			float Falloff = 7.f;
+		}ChromaSettings;
 	public:
 		auto GetRenderImageID() { return m_ImageID; }
 		auto GetRenderImage() { return m_Framebuffer.attachments[0].image; }
@@ -69,6 +77,16 @@ namespace wc
 			return glm::vec2(camX, camY) * GetHalfSize();
 		}
 
+		auto WorldToScreen(glm::vec2 worldCoords) const
+		{
+			glm::vec2 relativeCoords = worldCoords / GetHalfSize();
+
+			float screenX = ((relativeCoords.x + 1.f) / 2.f) * m_RenderSize.x;
+			float screenY = ((1.f - relativeCoords.y) / 2.f) * m_RenderSize.y;
+
+			return glm::vec2(screenX, screenY);
+		}
+
 		void CreateScreen(glm::vec2 size, RenderData& renderData)
 		{
 			m_RenderSize = size;
@@ -85,7 +103,7 @@ namespace wc
 			m_Framebuffer.Create(m_RenderSize);
 			m_Framebuffer.attachments[0].image.SetName("m_Framebuffer.attachments[0]");
 
-			for (int i = 0; i < 2; i++)
+			for (int i = 0; i < ARRAYSIZE(m_FinalImage); i++)
 			{
 				ImageCreateInfo imageInfo;
 				imageInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -109,7 +127,7 @@ namespace wc
 			}
 
 			SyncContext::immediate_submit([&](VkCommandBuffer cmd) {
-				for (int i = 0; i < 2; i++)
+				for (int i = 0; i < ARRAYSIZE(m_FinalImage); i++)
 					m_FinalImage[i].setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 				});
 
@@ -159,11 +177,6 @@ namespace wc
 			}	
 			CreateBloom(m_Framebuffer.attachments[0].view);
 			{
-				ComputeShaderCreateInfo createInfo;
-				createInfo.path = "assets/shaders/composite.comp";
-				m_CompositeShader.Create(createInfo);
-				descriptorAllocator.allocate(m_CompositeSet, m_CompositeShader.GetDescriptorLayout());
-
 				DescriptorWriter writer;
 				writer.dstSet = m_CompositeSet;
 				writer.write_image(0, GetDescriptorData(m_ScreenSampler, m_FinalImageView[0], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
@@ -171,17 +184,18 @@ namespace wc
 					.write_image(2, GetDescriptorData(m_ScreenSampler, m_BloomBuffers[2].imageViews[0], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 					.Update();
 			}
-
 			{
-				ComputeShaderCreateInfo createInfo;
-				createInfo.path = "assets/shaders/crt.comp";
-				m_CRTShader.Create(createInfo);
-				descriptorAllocator.allocate(m_CRTSet, m_CRTShader.GetDescriptorLayout());
-
 				DescriptorWriter writer;
-				writer.dstSet = m_CRTSet;
+				writer.dstSet = m_ChromaSet;
 				writer.write_image(0, GetDescriptorData(m_ScreenSampler, m_FinalImageView[1], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
 					.write_image(1, GetDescriptorData(m_ScreenSampler, m_FinalImageView[0], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+					.Update();
+			}
+			{
+				DescriptorWriter writer;
+				writer.dstSet = m_CRTSet;
+				writer.write_image(0, GetDescriptorData(m_ScreenSampler, m_FinalImageView[2], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+					.write_image(1, GetDescriptorData(m_ScreenSampler, m_FinalImageView[1], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 					.Update();
 			}
 			{
@@ -206,7 +220,7 @@ namespace wc
 				writer.Update();
 			}
 
-			m_ImageID = MakeImGuiDescriptor(m_ImageID, { m_ScreenSampler, m_FinalImageView[1], VK_IMAGE_LAYOUT_GENERAL });
+			m_ImageID = MakeImGuiDescriptor(m_ImageID, { m_ScreenSampler, m_FinalImageView[2], VK_IMAGE_LAYOUT_GENERAL });
 			{
 				DescriptorWriter writer;
 				writer.dstSet = m_DescriptorSet;
@@ -233,6 +247,15 @@ namespace wc
 		void Init(OrthographicCamera& cameraptr)
 		{			
 			camera = &cameraptr;
+			
+			m_CompositeShader.Create("assets/shaders/composite.comp");
+			descriptorAllocator.allocate(m_CompositeSet, m_CompositeShader.GetDescriptorLayout());
+
+			m_ChromaShader.Create("assets/shaders/chromaticAberration.comp");
+			descriptorAllocator.allocate(m_ChromaSet, m_ChromaShader.GetDescriptorLayout());
+
+			m_CRTShader.Create("assets/shaders/crt.comp");
+			descriptorAllocator.allocate(m_CRTSet, m_CRTShader.GetDescriptorLayout());
 
 			for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
 			{
@@ -273,14 +296,11 @@ namespace wc
 
 				cmd.BeginRenderPass(rpInfo);
 
-				glm::mat4 proj = camera->GetViewProjectionMatrix();
-
 				if (renderData.GetIndexCount())
 				{
 					renderData.UploadVertexData();
 					m_Shader.Bind(cmd);
 
-					cmd.PushConstants(m_Shader.GetPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, sizeof(proj), &proj);
 					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, 0, m_Shader.GetPipelineLayout(), m_DescriptorSet);
 					cmd.BindIndexBuffer(renderData.GetIndexBuffer());
 					cmd.DrawIndexed(renderData.GetIndexCount());
@@ -291,7 +311,6 @@ namespace wc
 					renderData.UploadLineVertexData();
 
 					m_LineShader.Bind(cmd);
-					cmd.PushConstants(m_Shader.GetPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, sizeof(proj), &proj);
 					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_GRAPHICS, 0, m_LineShader.GetPipelineLayout(), m_LineDescriptorSet);
 					cmd.Draw(renderData.GetLineVertexCount());
 				}
@@ -377,11 +396,16 @@ namespace wc
 				m_CompositeShader.Bind(cmd);
 				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
 
+				cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_ChromaShader.GetPipelineLayout(), m_ChromaSet);
+				m_ChromaShader.Bind(cmd);
+				m_ChromaShader.PushConstants(cmd, sizeof(ChromaSettings), &ChromaSettings);
+				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
+
 				time += Globals.deltaTime;
 				cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_CRTShader.GetPipelineLayout(), m_CRTSet);
 				m_CRTShader.Bind(cmd);
 				struct {
-					float time;
+					float time = 0.f;
 				} m_Data;
 				m_Data.time = time;
 				m_CRTShader.PushConstants(cmd, sizeof(m_Data), &m_Data);
@@ -415,7 +439,7 @@ namespace wc
 			m_Shader.Destroy();
 			m_LineShader.Destroy();
 
-			for (int i = 0; i < 2; i++)
+			for (int i = 0; i < ARRAYSIZE(m_FinalImage); i++)
 			{
 				m_FinalImage[i].Destroy();
 				m_FinalImageView[i].Destroy();
@@ -428,6 +452,7 @@ namespace wc
 		{
 			DeinitBloom();
 			m_CompositeShader.Destroy();
+			m_ChromaShader.Destroy();
 			m_CRTShader.Destroy();
 
 			for (uint32_t i = 0; i < FRAME_OVERLAP; i++)

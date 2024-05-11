@@ -1,0 +1,46 @@
+#pragma shader_stage(compute)
+
+layout(local_size_x = 4, local_size_y = 4) in;
+layout(binding = 0, rgba32f) restrict writeonly uniform image2D o_Image;
+
+layout(binding = 1) uniform sampler2D u_Texture;
+
+layout (push_constant) uniform Uniforms
+{
+    // Settings
+    uint u_SampleCount;
+    float u_Blur;
+    float u_Falloff;
+};
+
+void main() 
+{ 
+    vec2 imgSize = vec2(imageSize(o_Image));
+    ivec2 invocID = ivec2(gl_GlobalInvocationID);  
+    vec2 uv = vec2(float(invocID.x) / imgSize.x, float(invocID.y) / imgSize.y);
+    uv += (1.f / imgSize) * 0.5f;
+    
+    vec2 direction = normalize(uv - 0.5f); 
+    vec2 velocity = direction * u_Blur * pow(length(uv - 0.5f), u_Falloff);
+    float inverseSampleCount = 1.f / float(u_SampleCount); 
+    
+    mat3x2 increments = mat3x2(velocity * 1.f * inverseSampleCount,
+                               velocity * 2.f * inverseSampleCount,
+                               velocity * 4.f * inverseSampleCount);
+    
+    vec3 accumulator = vec3(0);
+    mat3x2 offsets = mat3x2(0); 
+    
+    //for (int i = 0; i < u_SampleCount; i++) 
+    //{
+    //    accumulator.r += texture(u_Texture, uv + offsets[0]).r; 
+    //    accumulator.g += texture(u_Texture, uv + offsets[1]).g; 
+    //    accumulator.b += texture(u_Texture, uv + offsets[2]).b; 
+    //    
+    //    offsets -= increments;
+    //}
+    
+    vec3 result = accumulator / float(u_SampleCount);
+
+    imageStore(o_Image, invocID, texture(u_Texture, uv));
+}

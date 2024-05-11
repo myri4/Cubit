@@ -16,6 +16,7 @@ namespace wc
         Entity,
         Bullet,
         RedCube,
+        Fly,
 
         Player,
     };
@@ -166,7 +167,7 @@ namespace wc
             Density = 100.f;
         }
     };
-
+    	
     struct RedCube : public GameEntity
     {
         float AttackTimer = 2.f; 
@@ -176,6 +177,16 @@ namespace wc
 
         RedCube() { Type = EntityType::RedCube; Health = 150; Speed = 1.1f; }
     };    
+
+	struct Fly : public GameEntity
+	{
+		float AttackTimer = 5.f;
+		float ShootRange = 4.f;
+		float DetectRange = 10.f;
+		uint32_t Damage = 5;
+
+		Fly() { Type = EntityType::Fly; Health = 50; Speed = 1.5f; }
+	};
 
     struct Bullet : public GameEntity
     {
@@ -202,13 +213,12 @@ namespace wc
 			b2FixtureDef fixtureDef;
 			fixtureDef.density = Density;
 			fixtureDef.friction = 0.f;
+            fixtureDef.isSensor = true;
 
 			fixtureDef.userData.pointer = (uintptr_t)this;
 
 			fixtureDef.shape = &shape;
 			body->CreateFixture(&fixtureDef);
-
-            body->GetFixtureList()->SetSensor(true);
 		}
     };    
 }

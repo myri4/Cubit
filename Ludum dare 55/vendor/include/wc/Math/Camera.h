@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
+#include <random>
 
 namespace wc
 {
@@ -52,6 +53,20 @@ namespace wc
 		float Zoom = 1.f;
 
 	public:
+
+		void Shake(float shake, float maxOffset = 0.3f, float maxRotation = 10.f)
+		{
+			shake *= shake;
+
+			static std::uniform_real_distribution<float> rd(-1.f, 1.f);
+			static std::mt19937 gen;
+
+			glm::vec2 offset = maxOffset * shake * glm::normalize(glm::vec2(rd(gen), rd(gen)));
+			float angle = maxRotation * shake * rd(gen);
+
+			Position += glm::vec3(offset, 0.f);
+			Rotation += angle;
+		}
 
 		void SetProjection(float left, float right, float bottom, float top, float Near = -1.f, float Far = 1.f) 
 		{

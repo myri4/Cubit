@@ -16,7 +16,7 @@
 
 #include "ParticleSystem.h"
 #include "Entities.h"
-//#include "Raycasting.h"
+#include "Raycasting.h"
 #include "Tile.h"
 #include <magic_enum.hpp>
 
@@ -171,6 +171,7 @@ namespace wc
 		}
 	} ContactListenerInstance;
 
+
 	struct Map
 	{
 		Map()
@@ -290,6 +291,13 @@ namespace wc
 							Entities.emplace_back(e);
 							EnemyCount++;
 						}
+						else if (Type == EntityType::Fly)
+						{
+							Fly* e = new Fly();
+							e->LoadMapBase(metaData);
+							Entities.emplace_back(e);
+							EnemyCount++;
+						}
 					}
 				}
 
@@ -300,8 +308,19 @@ namespace wc
 		void LoadFull(const std::string& filepath) // @TODO: Rename?
 		{
 			Load(filepath);
+			LevelTime = 0.f;
 			CreatePhysicsWorld();
 			camera.Position = glm::vec3(player.Position, 0.f);
+
+			//stopping sword animation
+			m_RotateSword = false;
+			m_SwordRotation = 0.f;
+
+			//resetting player and timers
+			player.SwordCD = 0.2f;
+			player.DashCD = 0.2f;
+			player.Health = player.StartHealth;
+			player.DownContacts = 0;
 		}
 
 		float Gravity = -9.8f;
@@ -501,7 +520,7 @@ namespace wc
 
 				if (dist <= radius)
 				{
-					float invDistance = 1 / dist;
+					float invDistance = 1.f / dist;
 					glm::vec2 dir = glm::normalize(e.Position - position) * blastPower * invDistance * invDistance;
 					if (e.Type != EntityType::Bullet) e.body->ApplyLinearImpulse(b2Vec2{ dir.x, dir.y }, b2Vec2{ position.x, position.y }, true);
 				}
@@ -579,12 +598,53 @@ namespace wc
 						if (entity.AttackTimer <= 0 && entity.Alive())
 						{
 							//shoot
-							glm::vec2 directionToPlayer = glm::normalize(player.Position + glm::vec2(0.f, 0.5f) - entity.Position);
-							SpawnBullet(entity.Position + glm::vec2(0, 0.5f), directionToPlayer, 25.f, { 0.25f, 0.25f }, WeaponType::RedBlaster);
+							glm::vec2 dir = glm::normalize(player.Position - entity.Position);
+							SpawnBullet(entity.Position + dir * 0.5f, dir, 25.f, { 0.25f, 0.25f }, WeaponType::RedBlaster);
 
 							entity.AttackTimer = 2.f;
 						}
 					}
+				}
+				break;
+
+				case EntityType::Fly: 
+				{
+					Fly& entity = *(Fly*)e;
+
+					entity.body->SetGravityScale(0.f);
+
+					if (entity.AttackTimer > 0.f) entity.AttackTimer -= Globals.deltaTime;
+
+					if (player.SwordAttack && player.SwordCD <= 0 && glm::distance(entity.Position, player.Position) < 8.f)
+					{
+						glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0, player.Size.y * 0.5f)) - entity.Position);
+						entity.body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
+						entity.DealDamage(player.SwordDamage);
+					}
+
+					if (!entity.Alive())
+					{
+						EnemyCount--;
+						DestroyEntity(i);
+					}
+
+					//movement
+					float distToPlayer = glm::distance(player.Position, entity.Position);
+					if (distToPlayer < entity.DetectRange)
+					{
+						if (entity.Position.x > player.Position.x)entity.body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
+						else entity.body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
+
+					}
+					//attack behavior
+					if (distToPlayer < entity.ShootRange)
+					{
+						if (entity.AttackTimer <= 0 && entity.Alive())
+						{
+							WC_CORE_INFO("Fly Attack");
+						}
+					}
+
 				}
 				break;
 
@@ -623,7 +683,7 @@ namespace wc
 									Entities.emplace_back(em);
 								}
 
-								ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
+								ma_sound_start(&Globals.damageEnemy);
 								player.DealDamage(bullet.Damage);
 							}
 
@@ -638,7 +698,7 @@ namespace wc
 						{
 							if (bullet.ShotEnemy)
 							{
-								ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", NULL);
+								ma_sound_start(&Globals.damageEnemy);
 								GameEntity* shotEnt = (GameEntity*)Entities[bullet.EnemyID];
 								shotEnt->DealDamage(bullet.Damage);
 							}
@@ -658,9 +718,6 @@ namespace wc
 								shotEnt->DealDamage(bullet.Damage);
 							}
 
-							if (bullet.Contacts > 0)
-								Explode(bullet.Position, 10.f, 130.f);
-
 							DestroyEntity(i);
 						}
 					}
@@ -670,11 +727,6 @@ namespace wc
 					break;
 				}
 			}
-		}
-
-		glm::vec2 RandomOnHemisphere(const glm::vec2& normal, const glm::vec2& dir)
-		{
-			return dir * glm::sign(dot(normal, dir));
 		}
 
 #define PHYSICS_MODE_SEMI_FIXED 0
@@ -708,53 +760,128 @@ namespace wc
 			for (auto& entity : Entities)
 				entity->UpdatePosition();
 		}
+		
+		HitInfo Intersect(const Ray& ray, uint32_t startIndex = 0)
+		{
+			HitInfo hitInfo;
+			float t = FLT_MAX;
+
+			float fMaxDistance = 36.f;
+
+			glm::vec2 vRayLength1D;
+			auto& vRayStart = ray.Origin;
+			auto& vRayDir = ray.Direction;
+			auto vRayUnitStepSize = abs(ray.InvDirection);
+			glm::ivec2 vMapCheck = glm::round(vRayStart);
+			glm::ivec2 vMapLastCheck = vMapCheck;
+			glm::ivec2 vStep = glm::ivec2(glm::sign(vRayDir));
+
+			// Establish Starting Conditions
+			for (int i = 0; i < 2; i++)
+				vRayLength1D[i] = ((vRayDir[i] < 0.f ? (vRayStart[i] - float(vMapCheck[i])) : (float(vMapCheck[i]) - vRayStart[i])) + 0.5f) * vRayUnitStepSize[i];
+
+			bool bTileFound = false;
+			float fDistance = 0.f;
+			while (!bTileFound && fDistance < fMaxDistance)
+			{
+				// Walk along shortest path
+				int axis = 0;
+				for (int i = 0; i < 2; i++)
+				{
+					int nextAxis = (i + 1) % 2;
+					if (vRayLength1D[axis] > vRayLength1D[nextAxis]) axis = nextAxis;
+				}
+
+				vMapCheck[axis] += vStep[axis];
+				fDistance = vRayLength1D[axis];
+				vRayLength1D[axis] += vRayUnitStepSize[axis];
+
+				// Test tile at new test point
+				TileID tileID = GetTile(glm::uvec3(vMapCheck, 0));
+				if (tileID > 0)
+				{
+					hitInfo.Hit = true;
+					t = fDistance;
+					hitInfo.N = glm::vec2(vMapLastCheck - vMapCheck);
+					bTileFound = true;
+				}
+				vMapLastCheck = vMapCheck;
+			}
+
+			for (uint32_t i = startIndex; i < Entities.size(); i++)
+			{
+				auto& entity = *Entities[i];
+
+				auto oHitInfo = aabbIntersection(ray, -entity.Size + entity.Position, entity.Size + entity.Position);
+
+				if (oHitInfo.Hit && oHitInfo.t < t)
+				{
+					hitInfo.Hit = true;
+					t = oHitInfo.t;
+					hitInfo.Entity = Entities[i];
+					hitInfo.N = oHitInfo.N;
+					hitInfo.Point = oHitInfo.Point;
+				}
+			}
+
+			hitInfo.Point = ray.Origin + t * ray.Direction;
+			hitInfo.t = t;
+
+			return hitInfo;
+		}
 
 		void UpdateGame()
 		{
 			Update();
-
+					
 			m_TargetPosition = player.Position;
-			camera.Position += glm::vec3((m_TargetPosition - glm::vec2(camera.Position)) * 11.5f * Globals.deltaTime, 0.f);
-
+			m_TargetRotation = 0.f;
 
 			if (player.SwordCD > 0.f) player.SwordCD -= Globals.deltaTime;
+			if (player.DashCD > 0.f) player.DashCD -= Globals.deltaTime;
 
 			for (uint32_t i = 0; i < magic_enum::enum_count<WeaponType>() - 1; i++)
 			{
 				auto& weapon = player.Weapons[i];
 				if (weapon.Timer > 0.f) weapon.Timer -= Globals.deltaTime;
-
-
 			}
-			if (player.DashCD > 0.f) player.DashCD -= Globals.deltaTime;
 
 			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.CanShoot())
 			{
+				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
+
 				if (player.weapon == WeaponType::Blaster)
 				{
 					std::random_device rd;
 					std::mt19937 gen(rd());
 					std::uniform_real_distribution<float> dis(-0.08f, 0.12f);
 
-					auto result = ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/gun.wav", NULL);
+					ma_sound_start(&Globals.gun);
 
-					if (result != MA_SUCCESS)
-						WC_CORE_ERROR("sound play fail {}", result);
-
-					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.25f, 0.25f }, player.weapon);
 				}
 				else if (player.weapon == WeaponType::Shotgun)
 				{
-					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/shotgun.wav", NULL);
+					camera.Shake(0.6f);
+
+					glm::vec2 shootPos = player.Position + dir * 0.35f;
+					auto hitInfo = Intersect({shootPos, dir}, 1);
+					
+					if (hitInfo.t <= 5.f)
+					{
+						float invDist = 1.f / glm::max(hitInfo.t, 1.f);
+						auto recoilForce = -dir * player.JumpForce * 2.f * invDist * invDist;
+						player.body->ApplyLinearImpulseToCenter({ recoilForce.x, recoilForce.y }, true);
+					}
+
+					ma_sound_start(&Globals.shotgun);
 					std::random_device rd;
 					std::mt19937 gen(rd());
 					std::uniform_real_distribution<float> dis(-0.35f, 0.35f);
-
-					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-					for (uint32_t i = 0; i < 9; i++)
+										
+					for (uint32_t i = 0; i < 10; i++)
 					{
-						SpawnBullet(player.Position + dir * 0.45f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.1f, 0.1f }, player.weapon);
+						SpawnBullet(shootPos, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.1f, 0.1f }, player.weapon);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();
@@ -773,12 +900,16 @@ namespace wc
 			{
 				if (player.SwordCD <= 0.f)
 				{
-					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/sword_swing.wav", NULL);
+					ma_sound_start(&Globals.swordSwing);
 					m_RotateSword = true;
 					player.SwordCD = 2.5f;
 				}
 				player.SwordAttack = false;
 			}
+
+			camera.Position += glm::vec3((m_TargetPosition - glm::vec2(camera.Position)) * 11.5f * Globals.deltaTime, 0.f);
+			camera.Rotation += m_TargetRotation - camera.Rotation * 11.5f * Globals.deltaTime;
+
 			m_ParticleEmitter.OnUpdate();
 
 			if (!player.Alive()) Globals.gameState = GameState::DEATH;
@@ -787,8 +918,9 @@ namespace wc
 
 		void RenderGame()
 		{
-			m_RenderData.DrawQuad({Size.x / 2, Size.y / 2, 0.f}, Size, BackGroundTexture);
-
+			m_RenderData.ViewProjection = camera.GetViewProjectionMatrix();
+			//m_RenderData.DrawQuad({Size.x / 2, Size.y / 2, 0.f}, Size, BackGroundTexture);
+						
 			for (uint32_t x = 0; x < Size.x; x++)
 				for (uint32_t y = 0; y < Size.y; y++)
 				{
@@ -826,10 +958,10 @@ namespace wc
 					//auto& fontsize = ImGui::CalcTextSize(std::format("HP: {}", entity.Health).c_str());
 					//auto tra = glm::translate(glm::mat4(1.f), glm::vec3(entity.Position, 0.f)) * glm::scale(glm::mat4(1.f), glm::vec3{ , 0.5f} *6.f);
 					//m_RenderData.DrawLineQuad(tra, glm::vec4(0.f, 1.f, 0.f, 1.f));
-					m_RenderData.DrawString(std::format("HP: {}", entity.Health), font, entity.Position + glm::vec2(-0.5f, 1.f),
-						entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
+					if (entity.Type != EntityType::Player) 
+						m_RenderData.DrawString(std::format("HP: {}", entity.Health), font, entity.Position + glm::vec2(-0.5f, 1.f), glm::vec4(1.f, 0, 0, 1.f));
 
-					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
+					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::RedCube || entity.Type == EntityType::Fly ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
 				}
 			}
 
@@ -866,6 +998,9 @@ namespace wc
 				m_RenderData.DrawQuad(transform, WeaponStats[(int)player.weapon].TextureID);
 			}
 
+			glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
+			glm::vec2 shootPos = player.Position + dir * 0.35f;
+
 			m_ParticleEmitter.OnRender(m_RenderData);
 
 			m_Renderer.Flush(m_RenderData);
@@ -896,11 +1031,14 @@ namespace wc
 		bool m_RotateSword = false;
 		float m_SwordRotation = 0.f;
 		float AccumulatedTime = 0.f;
+
+		float LevelTime = 0.f;
 	private:
 		TileID* m_Data = nullptr;
 		uint32_t m_Size = 1;
 
 		glm::vec2 m_TargetPosition;
+		float m_TargetRotation = 0.f;
 
 		const float SimulationTime = 1.f / 60.f;
 

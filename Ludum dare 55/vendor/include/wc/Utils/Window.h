@@ -214,9 +214,8 @@ namespace wc
     const char* GetClipboard() { return glfwGetClipboardString(nullptr); }
     void SetClipboard(const std::string& string) { glfwSetClipboardString(nullptr, string.c_str()); }
 
-    class Window 
+    struct Window 
     {
-    public:
         void Create(const WindowCreateInfo& info)
         {
             if (info.StartMode == WindowMode::Maximized)
@@ -513,6 +512,12 @@ namespace wc
         void SetSizeLimits(glm::ivec2 minSize, glm::ivec2 maxSize) { glfwSetWindowSizeLimits(m_Window, minSize.x, minSize.y, maxSize.x, maxSize.y); }
 
         void SetCursorMode(int value) { glfwSetInputMode(m_Window, GLFW_CURSOR, value); }
+
+		void SetMonitor() 
+        {
+			const GLFWvidmode* mode = glfwGetVideoMode(m_Monitor);
+			glfwSetWindowMonitor(m_Window, m_Monitor, 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
+		}
 
         glm::ivec2 GetCursorPos() 
         {
