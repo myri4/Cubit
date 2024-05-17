@@ -11,7 +11,7 @@ layout (push_constant) uniform Uniforms
     float time;
 };
 
-const float bend = 3.6f;
+const float bend = 4.f;
 vec2 crt(vec2 coord)
 {
 	// put in symmetrical coords

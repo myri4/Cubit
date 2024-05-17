@@ -241,7 +241,7 @@ namespace wc
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 			ImGuizmo::BeginFrame();
-			if (Globals.gameState == GameState::MENU) game.MENU();
+			if (Globals.gameState == GameState::MENU) game.MAIN_MENU();
 			else if (Globals.gameState == GameState::DEATH) game.DEATH_MENU();
 			else if (Globals.gameState == GameState::WIN) game.WIN_MENU();
 			else if (Globals.gameState == GameState::PLAY) game.UI();

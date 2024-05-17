@@ -23,10 +23,7 @@
 // @TODO: Separate tile map and scene
 namespace wc
 {
-	int to1D(const glm::uvec3& pos, const glm::uvec3& size)
-	{
-		return (pos.z * size.x * size.y) + (pos.y * size.x) + pos.x;
-	}
+	int to1D(const glm::uvec3& pos, const glm::uvec3& size)	{ return (pos.z * size.x * size.y) + (pos.y * size.x) + pos.x; }
 
 	Tileset m_Tileset; 
 	
@@ -36,7 +33,6 @@ namespace wc
 	ParticleSystem m_ParticleEmitter;
 	ParticleProps m_Particle;
 	ParticleProps m_SummonParticle;
-	uint32_t BackGroundTexture = 0;
 
 	class ContactListener : public b2ContactListener
 	{
@@ -171,7 +167,6 @@ namespace wc
 		}
 	} ContactListenerInstance;
 
-
 	struct Map
 	{
 		Map()
@@ -247,8 +242,28 @@ namespace wc
 			return GetTile(coords);
 		}
 
+		void Reset()
+		{
+			AccumulatedTime = 0.f;
+			EnemyCount = 0;
+			LevelTime = 0.f;
+			//stopping sword animation
+			m_RotateSword = false;
+			m_SwordRotation = 0.f;
+
+			m_ParticleEmitter.Reset();
+
+			//resetting player and timers
+			player.SwordCD = 0.2f;
+			player.DashCD = 0.2f;
+			player.Health = player.StartHealth;
+			player.DownContacts = 0;
+		}
+
 		void Load(const std::string& filepath)
 		{
+			Reset();
+
 			std::ifstream file(filepath);
 
 			file >> Size.x >> Size.y >> Size.z;
@@ -308,19 +323,8 @@ namespace wc
 		void LoadFull(const std::string& filepath) // @TODO: Rename?
 		{
 			Load(filepath);
-			LevelTime = 0.f;
 			CreatePhysicsWorld();
-			camera.Position = glm::vec3(player.Position, 0.f);
-
-			//stopping sword animation
-			m_RotateSword = false;
-			m_SwordRotation = 0.f;
-
-			//resetting player and timers
-			player.SwordCD = 0.2f;
-			player.DashCD = 0.2f;
-			player.Health = player.StartHealth;
-			player.DownContacts = 0;
+			camera.Position = glm::vec3(player.Position, 0.f);			
 		}
 
 		float Gravity = -9.8f;
@@ -511,6 +515,75 @@ namespace wc
 			}
 		}
 
+		HitInfo Intersect(const Ray& ray, uint32_t startIndex = 0)
+		{
+			HitInfo hitInfo;
+			float t = FLT_MAX;
+
+			float fMaxDistance = 36.f;
+
+			glm::vec2 vRayLength1D;
+			auto& vRayStart = ray.Origin;
+			auto& vRayDir = ray.Direction;
+			auto vRayUnitStepSize = abs(ray.InvDirection);
+			glm::ivec2 vMapCheck = glm::round(vRayStart);
+			glm::ivec2 vMapLastCheck = vMapCheck;
+			glm::ivec2 vStep = glm::ivec2(glm::sign(vRayDir));
+
+			// Establish Starting Conditions
+			for (int i = 0; i < 2; i++)
+				vRayLength1D[i] = ((vRayDir[i] < 0.f ? (vRayStart[i] - float(vMapCheck[i])) : (float(vMapCheck[i]) - vRayStart[i])) + 0.5f) * vRayUnitStepSize[i];
+
+			bool bTileFound = false;
+			float fDistance = 0.f;
+			while (!bTileFound && fDistance < fMaxDistance)
+			{
+				// Walk along shortest path
+				int axis = 0;
+				for (int i = 0; i < 2; i++)
+				{
+					int nextAxis = (i + 1) % 2;
+					if (vRayLength1D[axis] > vRayLength1D[nextAxis]) axis = nextAxis;
+				}
+
+				vMapCheck[axis] += vStep[axis];
+				fDistance = vRayLength1D[axis];
+				vRayLength1D[axis] += vRayUnitStepSize[axis];
+
+				// Test tile at new test point
+				TileID tileID = GetTile(glm::uvec3(vMapCheck, 0));
+				if (tileID > 0)
+				{
+					hitInfo.Hit = true;
+					t = fDistance;
+					hitInfo.N = glm::vec2(vMapLastCheck - vMapCheck);
+					bTileFound = true;
+				}
+				vMapLastCheck = vMapCheck;
+			}
+
+			for (uint32_t i = startIndex; i < Entities.size(); i++)
+			{
+				auto& entity = *Entities[i];
+
+				auto oHitInfo = aabbIntersection(ray, -entity.Size + entity.Position, entity.Size + entity.Position);
+
+				if (oHitInfo.Hit && oHitInfo.t < t)
+				{
+					hitInfo.Hit = true;
+					t = oHitInfo.t;
+					hitInfo.Entity = Entities[i];
+					hitInfo.N = oHitInfo.N;
+					hitInfo.Point = oHitInfo.Point;
+				}
+			}
+
+			hitInfo.Point = ray.Origin + t * ray.Direction;
+			hitInfo.t = t;
+
+			return hitInfo;
+		}
+
 		void Explode(glm::vec2 position, float radius, float blastPower)
 		{
 			for (auto& en : Entities)
@@ -527,16 +600,17 @@ namespace wc
 			}
 		}
 
-		void SpawnBullet(glm::vec2 position, glm::vec2 direction, float speed, glm::vec2 size, WeaponType weaponType)
+		void SpawnBullet(glm::vec2 position, glm::vec2 direction, WeaponType weaponType)
 		{
+			auto& weaponInfo = WeaponStats[(int)weaponType];
 			Bullet* bullet = new Bullet();
 			bullet->Position = position;
 			bullet->ShotPos = position;
-			bullet->Size = size;
-			bullet->Damage = WeaponStats[(int)weaponType].Damage;
-			bullet->Speed = speed;
+			bullet->Size = weaponInfo.BulletSize;
+			bullet->Damage = weaponInfo.Damage;
+			bullet->Speed = weaponInfo.BulletSpeed;
 			bullet->Direction = direction;
-			bullet->BulletType = WeaponStats[(int)weaponType].BulletType;
+			bullet->BulletType = weaponInfo.BulletType;
 			bullet->WeaponType = weaponType;
 			bullet->Density = 0.f;
 			bullet->LinearDamping = 0.f;
@@ -552,9 +626,44 @@ namespace wc
 
 		void UpdateAI()
 		{
-			float jumHeight = 8.f;
-			player.JumpForce = glm::sqrt(jumHeight * Gravity * player.body->GetGravityScale() * -(2.f + player.LinearDamping)) * player.body->GetMass();
+			for (uint32_t i = 1; i < Entities.size(); i++)
+			{
+				auto& e = Entities[i];
 
+				e->ID = i;
+				switch (e->Type)
+				{
+				case EntityType::RedCube:
+				{
+					RedCube& entity = *(RedCube*)e;
+
+					if (entity.AttackTimer > 0.f) entity.AttackTimer -= Globals.deltaTime;
+				}
+				break;
+
+				case EntityType::Fly:
+				{
+					Fly& entity = *(Fly*)e;
+
+					entity.body->SetGravityScale(0.f);
+
+					if (entity.AttackTimer > 0.f) entity.AttackTimer -= Globals.deltaTime;
+				}
+				break;
+
+				case EntityType::Bullet:
+				{
+					
+				}
+				break;
+				default:
+					break;
+				}
+			}
+		}
+
+		void UpdateAIFixed()
+		{
 			for (uint32_t i = 0; i < Entities.size(); i++)
 			{
 				auto& e = Entities[i];
@@ -566,13 +675,19 @@ namespace wc
 				{
 					RedCube& entity = *(RedCube*)e;
 					
-					if (entity.AttackTimer > 0.f) entity.AttackTimer -= Globals.deltaTime;
-
-					if (player.SwordAttack && player.SwordCD <= 0 && glm::distance(entity.Position, player.Position) < 8.f) 
+					float dist = glm::distance(entity.Position, player.Position);
+					if (player.SwordAttack && dist < 8.f) 
 					{
-						glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0, player.Size.y * 0.5f)) - entity.Position);
-						entity.body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
-						entity.DealDamage(player.SwordDamage);
+						glm::vec2 direction = glm::normalize(entity.Position - player.Position);
+
+						auto hitInfo = Intersect({ player.Position, direction }, Entities.size()); // We skip entity intersection
+
+						if ((hitInfo.Hit && dist <= hitInfo.t) || !hitInfo.Hit)
+						{
+							auto vel = glm::sign(direction.x) * entity.Speed * entity.body->GetMass();
+							entity.body->ApplyLinearImpulseToCenter(b2Vec2(vel, 0.f), true);
+							entity.DealDamage(player.SwordDamage);
+						}
 					}
 
 					if (!entity.Alive())
@@ -599,7 +714,7 @@ namespace wc
 						{
 							//shoot
 							glm::vec2 dir = glm::normalize(player.Position - entity.Position);
-							SpawnBullet(entity.Position + dir * 0.5f, dir, 25.f, { 0.25f, 0.25f }, WeaponType::RedBlaster);
+							SpawnBullet(entity.Position + dir * 0.5f, dir, WeaponType::RedBlaster);
 
 							entity.AttackTimer = 2.f;
 						}
@@ -613,9 +728,7 @@ namespace wc
 
 					entity.body->SetGravityScale(0.f);
 
-					if (entity.AttackTimer > 0.f) entity.AttackTimer -= Globals.deltaTime;
-
-					if (player.SwordAttack && player.SwordCD <= 0 && glm::distance(entity.Position, player.Position) < 8.f)
+					if (player.SwordAttack <= 0 && glm::distance(entity.Position, player.Position) < 8.f)
 					{
 						glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0, player.Size.y * 0.5f)) - entity.Position);
 						entity.body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
@@ -727,129 +840,90 @@ namespace wc
 					break;
 				}
 			}
+
+			if (player.SwordAttack) player.SwordAttack = false;
 		}
 
-#define PHYSICS_MODE_SEMI_FIXED 0
-#define PHYSICS_MODE_CONSTANT 1
-#define PHYSICS_MODE 0
-		void Update()
+		void FixedUpdate()
 		{
-			UpdateAI();
+			if (player.MoveDir != 0.f)
+				player.body->ApplyLinearImpulseToCenter({ player.MoveDir * player.Speed * player.body->GetMass() / 10.f * (player.DownContacts > 0 ? 1.f : AirSpeedFactor), 0.f }, true);
 
-			const int32_t velocityIterations = 8;
-			const int32_t positionIterations = 4;
-
-#if PHYSICS_MODE == PHYSICS_MODE_CONSTANT
-			AccumulatedTime += Globals.deltaTime;
-			while (AccumulatedTime >= SimulationTime)
-			{
-				PhysicsWorld->Step(SimulationTime, velocityIterations, positionIterations);
-				AccumulatedTime -= SimulationTime;
-			}
-#elif PHYSICS_MODE == PHYSICS_MODE_SEMI_FIXED
-			float frameTime = Globals.deltaTime;
-
-			while (frameTime > 0.f)
-			{
-				float deltaTime = glm::min(frameTime, Globals.deltaTime);
-				PhysicsWorld->Step(deltaTime, velocityIterations, positionIterations);
-				frameTime -= deltaTime;
-			}
-#endif
-
-			for (auto& entity : Entities)
-				entity->UpdatePosition();
+			UpdateAIFixed();
 		}
-		
-		HitInfo Intersect(const Ray& ray, uint32_t startIndex = 0)
+
+		void InputGame()
 		{
-			HitInfo hitInfo;
-			float t = FLT_MAX;
+			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyLeft)) player.MoveDir = -1.f;
+			else if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyRight)) player.MoveDir = 1.f;
+			else player.MoveDir = 0.f;
 
-			float fMaxDistance = 36.f;
-
-			glm::vec2 vRayLength1D;
-			auto& vRayStart = ray.Origin;
-			auto& vRayDir = ray.Direction;
-			auto vRayUnitStepSize = abs(ray.InvDirection);
-			glm::ivec2 vMapCheck = glm::round(vRayStart);
-			glm::ivec2 vMapLastCheck = vMapCheck;
-			glm::ivec2 vStep = glm::ivec2(glm::sign(vRayDir));
-
-			// Establish Starting Conditions
-			for (int i = 0; i < 2; i++)
-				vRayLength1D[i] = ((vRayDir[i] < 0.f ? (vRayStart[i] - float(vMapCheck[i])) : (float(vMapCheck[i]) - vRayStart[i])) + 0.5f) * vRayUnitStepSize[i];
-
-			bool bTileFound = false;
-			float fDistance = 0.f;
-			while (!bTileFound && fDistance < fMaxDistance)
+			if (player.MoveDir != 0.f)
 			{
-				// Walk along shortest path
-				int axis = 0;
-				for (int i = 0; i < 2; i++)
+				if (Key::GetKey(Key::LeftShift) == GLFW_PRESS && player.DashCD <= 0.f)
 				{
-					int nextAxis = (i + 1) % 2;
-					if (vRayLength1D[axis] > vRayLength1D[nextAxis]) axis = nextAxis;
-				}
-
-				vMapCheck[axis] += vStep[axis];
-				fDistance = vRayLength1D[axis];
-				vRayLength1D[axis] += vRayUnitStepSize[axis];
-
-				// Test tile at new test point
-				TileID tileID = GetTile(glm::uvec3(vMapCheck, 0));
-				if (tileID > 0)
-				{
-					hitInfo.Hit = true;
-					t = fDistance;
-					hitInfo.N = glm::vec2(vMapLastCheck - vMapCheck);
-					bTileFound = true;
-				}
-				vMapLastCheck = vMapCheck;
-			}
-
-			for (uint32_t i = startIndex; i < Entities.size(); i++)
-			{
-				auto& entity = *Entities[i];
-
-				auto oHitInfo = aabbIntersection(ray, -entity.Size + entity.Position, entity.Size + entity.Position);
-
-				if (oHitInfo.Hit && oHitInfo.t < t)
-				{
-					hitInfo.Hit = true;
-					t = oHitInfo.t;
-					hitInfo.Entity = Entities[i];
-					hitInfo.N = oHitInfo.N;
-					hitInfo.Point = oHitInfo.Point;
+					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
+					player.body->ApplyLinearImpulseToCenter({ 50.f * player.body->GetMass() * player.MoveDir, 0.f }, true);
+					player.DashCD = 2.f;
 				}
 			}
 
-			hitInfo.Point = ray.Origin + t * ray.Direction;
-			hitInfo.t = t;
+			if (ImGui::IsKeyReleased((ImGuiKey)Globals.settings.KeyFastSwich))
+			{
+				if (player.weapon == WeaponType::Blaster) player.weapon = WeaponType::Shotgun;
+				else player.weapon = WeaponType::Blaster;
+			}
 
-			return hitInfo;
-		}
+			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMainWeapon))
+				player.weapon = WeaponType::Blaster;
 
-		void UpdateGame()
-		{
-			Update();
-					
-			m_TargetPosition = player.Position;
+			else if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeySecondaryWeapon))
+				player.weapon = WeaponType::Shotgun;
+
+
+			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump) && player.DownContacts != 0)
+			{
+				// @NOTE: if gravity is changed we should update this
+				float jumHeight = 8.f;
+				player.JumpForce = glm::sqrt(jumHeight * Gravity * player.body->GetGravityScale() * -(2.f + player.LinearDamping)) * player.body->GetMass();
+
+				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
+			}
+
+			if (player.DownContacts > 0)
+			{
+				auto vel = player.body->GetLinearVelocity();
+
+				player.body->SetGravityScale(1.f);
+
+				vel.x -= DragStrength * vel.x * Globals.deltaTime;
+
+				if (abs(vel.x) < 0.01f) vel.x = 0.f;
+
+				player.body->SetLinearVelocity(vel);
+			}
+
+			if (player.body->GetLinearVelocity().y < 0.f) player.body->SetGravityScale(2.5f);
+
+
+			glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
+
+			bool Zoom = Mouse::GetMouse(Mouse::RIGHT) != GLFW_RELEASE;
+
 			m_TargetRotation = 0.f;
-
-			if (player.SwordCD > 0.f) player.SwordCD -= Globals.deltaTime;
-			if (player.DashCD > 0.f) player.DashCD -= Globals.deltaTime;
-
-			for (uint32_t i = 0; i < magic_enum::enum_count<WeaponType>() - 1; i++)
+			if (Zoom)
 			{
-				auto& weapon = player.Weapons[i];
-				if (weapon.Timer > 0.f) weapon.Timer -= Globals.deltaTime;
+				m_TargetPosition = player.Position + dir * 3.f;
+				m_TargetZoom = 0.6f;
+			}
+			else
+			{
+				m_TargetPosition = player.Position;
+				m_TargetZoom = 1.f;
 			}
 
 			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.CanShoot())
 			{
-				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-
 				if (player.weapon == WeaponType::Blaster)
 				{
 					std::random_device rd;
@@ -858,15 +932,15 @@ namespace wc
 
 					ma_sound_start(&Globals.gun);
 
-					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.25f, 0.25f }, player.weapon);
+					SpawnBullet(player.Position + dir * 0.75f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.weapon);
 				}
 				else if (player.weapon == WeaponType::Shotgun)
 				{
-					camera.Shake(0.6f);
+					camera.Shake(0.8f);
 
 					glm::vec2 shootPos = player.Position + dir * 0.35f;
-					auto hitInfo = Intersect({shootPos, dir}, 1);
-					
+					auto hitInfo = Intersect({ shootPos, dir }, 1);
+
 					if (hitInfo.t <= 5.f)
 					{
 						float invDist = 1.f / glm::max(hitInfo.t, 1.f);
@@ -878,10 +952,10 @@ namespace wc
 					std::random_device rd;
 					std::mt19937 gen(rd());
 					std::uniform_real_distribution<float> dis(-0.35f, 0.35f);
-										
+
 					for (uint32_t i = 0; i < 10; i++)
 					{
-						SpawnBullet(shootPos, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), 25.f, { 0.1f, 0.1f }, player.weapon);
+						SpawnBullet(shootPos, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.weapon);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.body->GetLinearVelocity();
@@ -894,21 +968,70 @@ namespace wc
 				}
 
 				player.ResetWeaponTimer();
-			}			
-
-			if (player.SwordAttack)
-			{
-				if (player.SwordCD <= 0.f)
-				{
-					ma_sound_start(&Globals.swordSwing);
-					m_RotateSword = true;
-					player.SwordCD = 2.5f;
-				}
-				player.SwordAttack = false;
 			}
 
+			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMelee) && player.SwordCD <= 0.f)
+			{
+				ma_sound_start(&Globals.swordSwing);
+				m_RotateSword = true;
+				player.SwordCD = 2.5f;
+				player.SwordAttack = true;
+			}
+		}
+
+		void Update()
+		{
+			const int32_t velocityIterations = 8;
+			const int32_t positionIterations = 3;
+			const int32_t MAX_STEPS = 5;
+
+			AccumulatedTime += Globals.deltaTime;
+
+			const int32_t nSteps = (int32_t)glm::floor(AccumulatedTime / SimulationTime);
+			const int32_t nStepsClamped = glm::min(nSteps, MAX_STEPS);
+
+			UpdateAI();
+			if (nStepsClamped > 0)
+			{
+				AccumulatedTime -= nStepsClamped * SimulationTime;
+
+				for (int i = 0; i < nStepsClamped; i++)
+				{
+					FixedUpdate();
+					PhysicsWorld->Step(SimulationTime, velocityIterations, positionIterations);
+				}
+			}
+
+			float AccumulatedTimeRatio = AccumulatedTime / SimulationTime;
+
+			for (auto& entity : Entities)
+				entity->UpdatePosition(AccumulatedTimeRatio);
+
+			if (player.SwordCD > 0.f) player.SwordCD -= Globals.deltaTime;
+			if (player.DashCD > 0.f) player.DashCD -= Globals.deltaTime;
+
+			for (uint32_t i = 0; i < magic_enum::enum_count<WeaponType>() - 1; i++)
+			{
+				auto& weapon = player.Weapons[i];
+				if (weapon.Timer > 0.f) weapon.Timer -= Globals.deltaTime;
+			}
+		}
+
+		void UpdateGame()
+		{
+			Update();
+
+			LevelTime += Globals.deltaTime;
+			m_TargetPosition = glm::clamp(m_TargetPosition, glm::vec2(8, 4), glm::vec2(Size) - glm::vec2(8, 4));
+
 			camera.Position += glm::vec3((m_TargetPosition - glm::vec2(camera.Position)) * 11.5f * Globals.deltaTime, 0.f);
-			camera.Rotation += m_TargetRotation - camera.Rotation * 11.5f * Globals.deltaTime;
+			camera.Rotation += (m_TargetRotation - camera.Rotation) * 11.5f * Globals.deltaTime;
+			if (camera.Zoom != m_TargetZoom)
+			{
+				camera.Zoom += (m_TargetZoom - camera.Zoom) * 11.5f * Globals.deltaTime;
+				camera.Update(m_Renderer.GetHalfSize());
+			}
+			m_Renderer.ChromaSettings.Falloff += (m_TargetChromaFallOff - m_Renderer.ChromaSettings.Falloff) * 11.5f * Globals.deltaTime;
 
 			m_ParticleEmitter.OnUpdate();
 
@@ -928,7 +1051,6 @@ namespace wc
 					if (tileID != 0) m_RenderData.DrawQuad({ x, y , 0.f }, { 1.f, 1.f }, 0, glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
 				}
 
-			//m_RenderData.DrawQuadSvg(glm::translate(glm::mat4(1.f), glm::vec3(1.f, 1.f, 0.f)), svg.textureID);
 			for (int i = 0; i < Entities.size(); i++)
 			{
 				GameEntity& entity = *(GameEntity*)(Entities[i]);
@@ -955,9 +1077,6 @@ namespace wc
 				}
 				else
 				{
-					//auto& fontsize = ImGui::CalcTextSize(std::format("HP: {}", entity.Health).c_str());
-					//auto tra = glm::translate(glm::mat4(1.f), glm::vec3(entity.Position, 0.f)) * glm::scale(glm::mat4(1.f), glm::vec3{ , 0.5f} *6.f);
-					//m_RenderData.DrawLineQuad(tra, glm::vec4(0.f, 1.f, 0.f, 1.f));
 					if (entity.Type != EntityType::Player) 
 						m_RenderData.DrawString(std::format("HP: {}", entity.Health), font, entity.Position + glm::vec2(-0.5f, 1.f), glm::vec4(1.f, 0, 0, 1.f));
 
@@ -976,14 +1095,16 @@ namespace wc
 				}
 				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(player.Position, 0.f)) *
 					glm::rotate(glm::mat4(1.f), m_SwordRotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f),
-						glm::vec3{ 0.14f, 1.f, 0.5f } *6.f);
+						glm::vec3{ 0.14f, 1.f, 0.5f } * 6.f);
 
 				m_RenderData.DrawQuad(transform, SwordTexture);
 			}
 			else
 			{
+				auto& weapon = WeaponStats[(int)player.weapon];
+
 				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-				glm::vec2 offset = glm::vec2(0.25f, -0.15f);
+				glm::vec2 offset = weapon.Offset;
 				float angle = atan2(dir.y, dir.x);
 				if (dir.x < 0.f)
 				{
@@ -993,9 +1114,9 @@ namespace wc
 				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(player.Position, 0.f)) *
 					glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, dir.x < 0.f ? -1.f : 1.f }) *
 					glm::translate(glm::mat4(1.f), glm::vec3(offset, 0.f)) * glm::scale(glm::mat4(1.f),
-						{ (dir.x < 0.f ? -1.f : 1.f) * 1.f, 0.45f, 1.f });
+						{ (dir.x < 0.f ? -1.f : 1.f) * weapon.Size.x, weapon.Size.y, 1.f });
 
-				m_RenderData.DrawQuad(transform, WeaponStats[(int)player.weapon].TextureID);
+				m_RenderData.DrawQuad(transform, weapon.TextureID);
 			}
 
 			glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
@@ -1039,6 +1160,9 @@ namespace wc
 
 		glm::vec2 m_TargetPosition;
 		float m_TargetRotation = 0.f;
+		float m_TargetZoom = 1.f;
+		float m_TargetChromaFallOff = 10.f;
+
 
 		const float SimulationTime = 1.f / 60.f;
 

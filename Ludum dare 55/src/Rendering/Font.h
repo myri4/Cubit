@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <glm/glm.hpp>
+
 namespace wc
 {
     struct RenderData;

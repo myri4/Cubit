@@ -14,7 +14,7 @@ namespace wc
 
 		void start() { m_Start = std::chrono::high_resolution_clock::now(); }
 
-		float restart() 
+		float restart()
 		{
 			m_End = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<float> dur = m_End - m_Start;

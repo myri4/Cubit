@@ -44,10 +44,6 @@ namespace wc
 
 	public:	
 
-		Texture MenuBackgroundTexture;
-		Texture PlayButtonTexture;
-		float TextureRatio = 1.f;
-
 		void Create(glm::vec2 renderSize)
 		{
 			m_RenderData.Create();
@@ -56,11 +52,6 @@ namespace wc
 
 			m_Tileset.Load();
 
-			MenuBackgroundTexture.Load("assets/textures/cubitMenuConcept.png");
-			PlayButtonTexture.Load("assets/textures/button.png");
-			TextureRatio = Globals.settings.WindowSize.x / MenuBackgroundTexture.GetSize().x;
-
-			BackGroundTexture = m_RenderData.LoadTexture("assets/textures/AREA1concept2.png");
 			m_Map.SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
 			{
 				auto& blaster = WeaponStats[(int)WeaponType::Blaster];
@@ -68,6 +59,10 @@ namespace wc
 				blaster.Damage = 30.f;
 				blaster.FireRate = 0.3f;
 				blaster.Range = 50.f;
+				blaster.BulletSpeed = 25.f;
+				blaster.BulletSize = { 0.25f, 0.25f };
+				blaster.Offset = { 0.25f, -0.15f };
+				blaster.Size = { 1.f, 0.45f };
 				blaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			}
 
@@ -77,6 +72,10 @@ namespace wc
 				shotgun.Damage = 18.f;
 				shotgun.FireRate = 1.1f;
 				shotgun.Range = 4.5f;
+				shotgun.BulletSpeed = 25.f;
+				shotgun.BulletSize = { 0.1f, 0.1f };
+				shotgun.Offset = { 0.25f, -0.15f };
+				shotgun.Size = { 1.f, 0.45f };
 				shotgun.TextureID = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
 			}
 
@@ -86,6 +85,10 @@ namespace wc
 				redBlaster.Damage = 5.f;
 				redBlaster.FireRate = 0.3f;
 				redBlaster.Range = 50.f;
+				redBlaster.BulletSpeed = 25.f;
+				redBlaster.BulletSize = { 0.25f, 0.25f };
+				redBlaster.Offset = { 0.25f, -0.15f };
+				redBlaster.Size = { 1.f, 0.45f };
 				redBlaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			}
 
@@ -112,135 +115,90 @@ namespace wc
 		
 		void InputGame()
 		{
-			glm::vec2 moveDir;
-			Player& player = m_Map.player;
-
-			bool keyPressed = false;
-
-			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyLeft)) { moveDir.x = -1.f; keyPressed = true; }
-			else if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyRight)) { moveDir.x = 1.f;  keyPressed = true; }
-
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMelee)) player.SwordAttack = true;
-
-			if (ImGui::IsKeyReleased((ImGuiKey)Globals.settings.KeyFastSwich))
-			{
-				if (player.weapon == WeaponType::Blaster) player.weapon = WeaponType::Shotgun;
-				else player.weapon = WeaponType::Blaster;
-			}
-
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMainWeapon))
-				player.weapon = WeaponType::Blaster;
-			
-			else if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeySecondaryWeapon))
-				player.weapon = WeaponType::Shotgun;
-
-			//jump
-
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump) && player.DownContacts != 0)
-				player.body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);			
-
-			if (moveDir != glm::vec2(0.f))
-			{
-				if (Key::GetKey(Key::LeftShift) == GLFW_PRESS && player.DashCD <= 0.f)
-				{
-					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
-					player.body->ApplyLinearImpulseToCenter({ 50.f * player.body->GetMass() * moveDir.x, 0.f }, true);
-					player.DashCD = 2.f;
-				}
-				else
-				{
-					moveDir = glm::normalize(moveDir) * player.Speed * (player.DownContacts > 0 ? 1.f : m_Map.AirSpeedFactor);
-					player.body->ApplyLinearImpulseToCenter({ moveDir.x, moveDir.y }, true);
-				}
-			}			
-
-			if (player.DownContacts > 0)
-			{
-				auto vel = player.body->GetLinearVelocity();
-
-				player.body->SetGravityScale(1.f);
-
-				vel.x -= m_Map.DragStrength * vel.x * Globals.deltaTime;
-
-				if (abs(vel.x) < 0.01f) vel.x = 0.f;
-
-				player.body->SetLinearVelocity(vel);
-			}
-			
-			//auto s = player.body->GetLinearVelocity();
-			//m_Renderer.ChromaScale = glm::length(glm::vec2{s.x, s.y}) + 1.f;
-
-			if (player.body->GetLinearVelocity().y < 0.f) player.body->SetGravityScale(2.f);
+			m_Map.InputGame();
 		}		
 
 		void Update()
 		{
 			m_Map.UpdateGame();
 			m_Map.RenderGame();
-			m_Map.LevelTime += Globals.deltaTime;
 		}
 
 		void UI_Data()
 		{
+			auto color = ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f);
 			ImGui::SetWindowFontScale(0.5f);
 			ImGui::SetCursorPos(ImVec2(10.f, 10.f));
-			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("FPS: {}", int(1.f / Globals.deltaTime)).c_str());
+			ImGui::TextColored(color, std::format("FPS: {}", int(1.f / Globals.deltaTime)).c_str());
 			ImGui::SetCursorPosX(10.f);
-			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("Enemy count: {}", m_Map.EnemyCount).c_str());
+			ImGui::TextColored(color, std::format("Enemy count: {}", m_Map.EnemyCount).c_str());
 			ImGui::SetCursorPosX(10.f);
-			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("Level Time: {:.2f} sec.", m_Map.LevelTime).c_str());
+			ImGui::TextColored(color, std::format("Level Time: {:.2f} sec.", m_Map.LevelTime).c_str());
 			ImGui::SetCursorPosX(10.f);
-			ImGui::TextColored(ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f), std::format("Current Level: {}", m_LevelID).c_str());
-			
+			ImGui::TextColored(color, std::format("Current Level: {}", m_LevelID).c_str());
+			ImGui::SetCursorPosX(10.f);
+			ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.AccumulatedTime).c_str());
+			//ImGui::SetCursorPosX(10.f);
+			//ImGui::TextColored(color, std::format("Steps: {}", m_Map.nSteps).c_str());
+			//ImGui::SetCursorPosX(10.f);
+			//ImGui::TextColored(color, std::format("Clamped steps: {}", glm::min(m_Map.nSteps, m_Map.MAX_STEPS)).c_str());
+
 			ImGui::SetCursorPosX(10.f);
 			//big hp-bar
 			ImGui::SetWindowFontScale(0.2f);
 			ImGui::SetCursorPos(ImVec2(0, ImGui::GetWindowSize().y - 10));
-			ImGui::ProgressBar((float)m_Map.player.Health / m_Map.player.StartHealth, ImVec2(ImGui::GetWindowSize().x, 10), std::format("HP: {}", m_Map.player.Health).c_str());
+			//ImGui::ProgressBar((float)m_Map.player.Health / m_Map.player.StartHealth, ImVec2(ImGui::GetWindowSize().x, 10), std::format("HP: {}", m_Map.player.Health).c_str());
 
 			ImGui::SetWindowFontScale(1.f);
 		}
 
-		void MENU()
+		void MAIN_MENU()
 		{
 			const ImGuiViewport* viewport = ImGui::GetMainViewport();
 			ImGui::SetNextWindowPos(viewport->WorkPos);
 			ImGui::SetNextWindowSize(viewport->WorkSize);
 			ImGui::SetNextWindowViewport(viewport->ID);
 
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.f);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 0.f));
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.7f));
 
-			ImGui::Begin("MENU", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::Begin("MENU", NULL, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
+			ImGui::SetCursorPos(ImVec2(0, 0));
+
+			ImGui::SetWindowFontScale(2.f);
+
+			char buf[128];
+			sprintf(buf, "%c Cubit %c", "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3], "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3]);
+			ImVec2 CubitSize = ImGui::CalcTextSize(buf);
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - CubitSize.x) * 0.5f, (ImGui::GetWindowSize().y - CubitSize.y) * 0.5f - 100));
+			ImGui::TextColored(ImVec4(0, 1, 1, 1), buf);
+
+
 			ImGui::SetWindowFontScale(1.f);
 
-			ImVec2 PlaySize = ImVec2(484 * TextureRatio, 197 * TextureRatio);
-			if (UI::ImageButton(PlayButtonTexture, PlaySize, ImVec2((ImGui::GetWindowSize().x - PlaySize.x) * 0.5f, (ImGui::GetWindowSize().y - PlaySize.y) * 0.5f + 200)))
+			ImVec2 PlaySize = ImGui::CalcTextSize("PLAY");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - PlaySize.x) * 0.5f, (ImGui::GetWindowSize().y - PlaySize.y) * 0.5f + 250));
+			if (ImGui::Button("PLAY"))
 			{
 				m_Map.LoadFull("levels/level1.malen");
 				Globals.gameState = GameState::PLAY;
 			}
 
-
+			ImVec2 QuitSize = ImGui::CalcTextSize("Quit");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - QuitSize.x) * 0.5f, (ImGui::GetWindowSize().y - QuitSize.y) * 0.5f + 150));
+			if (ImGui::Button("Quit")) Globals.window.Close();
 
 			ImVec2 SettingsSize = ImGui::CalcTextSize("Settings");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - SettingsSize.x) * 0.5f, (ImGui::GetWindowSize().y - SettingsSize.y) * 0.5f - 100));
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - SettingsSize.x) * 0.5f, (ImGui::GetWindowSize().y - SettingsSize.y) * 0.5f + 50));
 			if (ImGui::Button("Settings")) {
 				Globals.settings.Load();
 				Globals.gameState = GameState::SETTINGS;
 			}
-
-			ImVec2 QuitSize = ImGui::CalcTextSize("Quit");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - QuitSize.x) * 0.5f, (ImGui::GetWindowSize().y - QuitSize.y) * 0.5f));
-			if (ImGui::Button("Quit")) Globals.window.Close();
-
-			auto windowPos = (glm::vec2)Globals.window.GetPos();
-			ImGui::GetBackgroundDrawList()->AddImage(MenuBackgroundTexture, ImVec2(windowPos.x, windowPos.y), ImVec2((float)Globals.window.GetSize().x + windowPos.x, (float)Globals.window.GetSize().y + windowPos.y));
 
 			ImGui::PopStyleVar(6);
 			ImGui::End();
@@ -454,7 +412,7 @@ namespace wc
 
 			glm::vec2 pos = m_Renderer.WorldToScreen(m_Map.player.Position - (glm::vec2)m_Map.camera.Position - m_Map.player.Size.x);
 			ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
-			ImGui::ProgressBar(m_Map.player.DashCD / 2, ImVec2(65, 10), "");
+			//ImGui::ProgressBar(m_Map.player.DashCD / 2, ImVec2(65, 10), "");
 
 			auto windowPos = (glm::vec2)Globals.window.GetPos();
 			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(windowPos.x, windowPos.y), ImVec2((float)Globals.window.GetSize().x + windowPos.x, (float)Globals.window.GetSize().y + windowPos.y));

@@ -5,18 +5,19 @@
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 
+#define WC_GRAPHICS_DEBUGGER 0
+#define WC_SHADER_DEBUG_PRINT 0
+
 #include <Volk/volk.h>
 #include <GLFW/glfw3.h>
 #include <vma/vk_mem_alloc.h>
 
 #pragma warning(pop)
 #include <magic_enum.hpp>
+#include <set>
 #include <unordered_set>
 #include <glm/glm.hpp>
 #include "../Utils/Log.h"
-
-#define WC_GRAPHICS_DEBUGGER 0
-#define WC_SHADER_DEBUG_PRINT 0
 
 #define VK_CHECK(x)                                                 \
 	do                                                              \
@@ -561,7 +562,7 @@ namespace VulkanContext
 			QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
 			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::unordered_set<uint32_t> uniqueQueueFamilies = {
+			std::set<uint32_t> uniqueQueueFamilies = {
 				indices.graphicsFamily.value(),
 				//indices.presentFamily.value(),
 				indices.computeFamily.value(),

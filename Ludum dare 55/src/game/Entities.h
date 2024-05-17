@@ -67,6 +67,13 @@ namespace wc
             Position = { bPos.x, bPos.y };
         }
 
+		inline void UpdatePosition(float alpha) // @NOTE: We don't interpolate angles yet
+		{
+			auto bPos = glm::vec2(body->GetPosition().x, body->GetPosition().y);
+
+			Position = glm::mix(Position, bPos, alpha);
+		}
+
         void LoadMapBase(const YAML::Node& node)
         {
             YAML_LOAD_VAR(node, Position);
@@ -78,7 +85,7 @@ namespace wc
         // Properties
         float Density = 55.f;
         float LinearDamping = 1.4f;        
-        float Speed = 8.5f;
+        float Speed = 7.f;
 
         uint32_t StartHealth = 100;
         uint32_t Health = 100;
@@ -88,6 +95,9 @@ namespace wc
         uint32_t EnemyID;
 
         glm::vec2 HitBoxSize = glm::vec2(0.5f);
+
+        // Character controller components
+		float MoveDir = 0.f;
 
         void DealDamage(uint32_t Damage)
         {
@@ -130,8 +140,14 @@ namespace wc
         bool CloseRange = false;
         BulletType BulletType = BulletType::Blaster;
         uint32_t Damage = 0;
-        float FireRate;
-        float Range;
+        float FireRate = 0.f;
+        float BulletSpeed = 0.f;
+        float Range = 0.f;
+
+        glm::vec2 Size;
+        glm::vec2 Offset;
+
+        glm::vec2 BulletSize;
 
         uint32 TextureID = 0;
     };

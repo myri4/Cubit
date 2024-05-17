@@ -102,6 +102,11 @@ namespace wc
 		{
 			for (uint32_t i = 0; i < amount; i++) Emit(particleProps);
 		}
+
+		void Reset()
+		{
+			memset(m_ParticlePool.data(), 0, sizeof(Particle) * m_ParticlePool.size());
+		}
 	private:
 		struct Particle
 		{
