@@ -188,6 +188,8 @@ namespace wc
 			}
 		}
 
+		void SetScrollSpeed(float speed) { ImGui::SetScrollY(ImGui::GetScrollY() + speed * -ImGui::GetIO().MouseWheel); }
+		
 		bool ImageButton(ImTextureID Texture, ImVec2 size, ImVec2 position) 
 		{
 			ImGui::SetCursorPos(position);

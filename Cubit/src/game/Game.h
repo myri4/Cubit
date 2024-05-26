@@ -44,6 +44,10 @@ namespace wc
 
 	public:	
 
+		Texture MenuBackgroundTexture;
+		Texture PlayButtonTexture;
+		glm::vec2 TextureRatio;
+
 		void Create(glm::vec2 renderSize)
 		{
 			m_RenderData.Create();
@@ -52,7 +56,11 @@ namespace wc
 
 			m_Tileset.Load();
 
+			MenuBackgroundTexture.Load("assets/textures/cubitMenuConcept1.png");
+			PlayButtonTexture.Load("assets/textures/button.png");
+			TextureRatio = Globals.settings.WindowSize / (glm::vec2)MenuBackgroundTexture.GetSize();
 			m_Map.SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
+
 			{
 				auto& blaster = WeaponStats[(int)WeaponType::Blaster];
 				blaster.BulletType = BulletType::Blaster;
@@ -198,48 +206,42 @@ namespace wc
 
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.f);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
-
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 0.f));
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.7f));
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f));
 
-			ImGui::Begin("MENU", NULL, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
-			ImGui::SetCursorPos(ImVec2(0, 0));
+			ImGui::Begin("MENU", NULL, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+			UI::SetScrollSpeed(50.0f);
 
+			auto windowPos = (glm::vec2)Globals.window.GetPos();
+			ImGui::Image(MenuBackgroundTexture, ImVec2((float)Globals.window.GetSize().x, (float)MenuBackgroundTexture.GetSize().y * TextureRatio.x));
 
-			ImGui::SetWindowFontScale(2.f);
-			char buf[128];
-			sprintf(buf, "%c Cubit %c", "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3], "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3]);
-			ImVec2 CubitSize = ImGui::CalcTextSize(buf);
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - CubitSize.x) * 0.5f, (ImGui::GetWindowSize().y - CubitSize.y) * 0.5f - 200));
-			ImGui::TextColored(ImVec4(0, 1, 1, 1), buf);
-			ImGui::SetWindowFontScale(1.f);
-
-
-			ImVec2 PlaySize = ImGui::CalcTextSize("PLAY");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - PlaySize.x) * 0.5f, (ImGui::GetWindowSize().y - PlaySize.y) * 0.5f));
-			if (ImGui::Button("PLAY"))
+			ImVec2 PlaySize = ImVec2(484 * TextureRatio.x, 197 * TextureRatio.x);
+			if (UI::ImageButton(PlayButtonTexture, PlaySize, ImVec2((ImGui::GetWindowSize().x - PlaySize.x) * 0.5f, (ImGui::GetWindowSize().y - PlaySize.y) * 0.5f + 305)))
 			{
 				m_Map.LoadFull("levels/level1.malen");
 				Globals.gameState = GameState::PLAY;
 			}
 
-			ImVec2 LoadoutSize = ImGui::CalcTextSize("Loadout");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - LoadoutSize.x) * 0.5f, (ImGui::GetWindowSize().y - LoadoutSize.y) * 0.5f + 100));
-			if (ImGui::Button("Loadout")) Globals.gameState = GameState::LOADOUT;
-
 			ImVec2 SettingsSize = ImGui::CalcTextSize("Settings");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - SettingsSize.x) * 0.5f, (ImGui::GetWindowSize().y - SettingsSize.y) * 0.5f + 200));
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - SettingsSize.x) * 0.5f, (ImGui::GetWindowSize().y - SettingsSize.y) * 0.5f - 100));
 			if (ImGui::Button("Settings")) {
 				Globals.settings.Load();
 				Globals.gameState = GameState::SETTINGS;
 			}
 
-			ImVec2 QuitSize = ImGui::CalcTextSize("Quit");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - QuitSize.x) * 0.5f, (ImGui::GetWindowSize().y - QuitSize.y) * 0.5f + 300));
-			if (ImGui::Button("Quit")) Globals.window.Close();
+			ImVec2 LoadoutSize = ImGui::CalcTextSize("Loadout");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - LoadoutSize.x) * 0.5f, (ImGui::GetWindowSize().y - LoadoutSize.y) * 0.5f + 100));
+			if (ImGui::Button("Loadout")) {
+				//Globals.settings.Load();
+				Globals.gameState = GameState::LOADOUT;
+			}
 
+			ImVec2 QuitSize = ImGui::CalcTextSize("Quit");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - QuitSize.x) * 0.5f, (ImGui::GetWindowSize().y - QuitSize.y) * 0.5f));
+			if (ImGui::Button("Quit")) Globals.window.Close();
 
 			ImGui::PopStyleVar(6);
 			ImGui::End();
