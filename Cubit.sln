@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34714.143
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ludum dare 55", "Ludum dare 55\Ludum dare 55.vcxproj", "{3BC8AB90-EE56-4EF2-B6C8-C6E4F35AD036}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cubit", "Cubit\Cubit.vcxproj", "{3BC8AB90-EE56-4EF2-B6C8-C6E4F35AD036}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

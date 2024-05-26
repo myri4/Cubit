@@ -56,11 +56,10 @@ namespace wc
 			{
 				auto& blaster = WeaponStats[(int)WeaponType::Blaster];
 				blaster.BulletType = BulletType::Blaster;
-				blaster.Damage = 30.f;
+				blaster.WeaponClass = WeaponClass::Primary;
+				blaster.Damage = 30;
 				blaster.FireRate = 0.3f;
-				blaster.Ammo = 60;
 				blaster.MaxMag = 15;
-				blaster.Magazine = 15;
 				blaster.ReloadSpeed = 1.5f;
 				blaster.Range = 50.f;
 				blaster.BulletSpeed = 25.f;
@@ -73,14 +72,13 @@ namespace wc
 			{
 				auto& shotgun = WeaponStats[(int)WeaponType::Shotgun];
 				shotgun.BulletType = BulletType::Shotgun;
-				shotgun.Damage = 18.f;
+				shotgun.WeaponClass = WeaponClass::Secondary;
+				shotgun.Damage = 18;
 				shotgun.FireRate = 1.1f;
-				shotgun.Ammo = 12;
 				shotgun.MaxMag = 4;
-				shotgun.Magazine = 4;
 				shotgun.ReloadSpeed = 0.5f;
 				shotgun.ReloadByOne = true;
-				shotgun.Range = 4.5f;
+				shotgun.Range = 2.5f;
 				shotgun.BulletSpeed = 25.f;
 				shotgun.BulletSize = { 0.1f, 0.1f };
 				shotgun.Offset = { 0.25f, -0.15f };
@@ -91,22 +89,26 @@ namespace wc
 			{
 				auto& revolver = WeaponStats[(int)WeaponType::Revolver];
 				revolver.BulletType = BulletType::Revolver;
-				revolver.Damage = 25.f;
+				revolver.WeaponClass = WeaponClass::Secondary;
+				revolver.Damage = 25;
 				revolver.FireRate = 1.f;
 				revolver.AltFireRate = 1.5f;
-				revolver.Ammo = 24;
 				revolver.MaxMag = 6;
-				revolver.Magazine = 6;
 				revolver.ReloadSpeed = 0.5f;
 				revolver.ReloadByOne = true;
 				revolver.Range = 25.f;
+				revolver.Offset = { 0.25f, -0.15f };
+				revolver.Size = { 1.f, 0.45f };
+				revolver.BulletSpeed = 25.f;
+				revolver.BulletSize = { 0.1f, 0.1f };
 				revolver.TextureID = m_RenderData.LoadTexture("assets/textures/Revolver.png");
 			}
 
 			{
 				auto& redBlaster = WeaponStats[(int)WeaponType::RedBlaster];
+				redBlaster.WeaponClass = WeaponClass::EnemyWeapon;
 				redBlaster.BulletType = BulletType::RedCircle;
-				redBlaster.Damage = 5.f;
+				redBlaster.Damage = 5;
 				redBlaster.FireRate = 0.3f;
 				redBlaster.Range = 50.f;
 				redBlaster.BulletSpeed = 25.f;
@@ -114,6 +116,15 @@ namespace wc
 				redBlaster.Offset = { 0.25f, -0.15f };
 				redBlaster.Size = { 1.f, 0.45f };
 				redBlaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
+			}
+
+			{
+				auto& sword = WeaponStats[(int)WeaponType::Sword];
+				sword.WeaponClass = WeaponClass::Melee;
+				sword.Damage = 50;
+				sword.FireRate = 2.5f;
+				sword.Range = 8.f;
+				sword.TextureID = m_RenderData.LoadTexture("assets/textures/Sword.png");
 			}
 
 			m_Renderer.CreateScreen(renderSize, m_RenderData);
@@ -161,9 +172,9 @@ namespace wc
 			ImGui::SetCursorPosX(10.f);
 			ImGui::TextColored(color, std::format("Current Level: {}", m_LevelID).c_str());
 			ImGui::SetCursorPosX(10.f);
-			ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.AccumulatedTime).c_str());
+			ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.player.Weapons[(int)m_Map.player.MeleeWeapon].Timer).c_str());
 			ImGui::SetCursorPosX(10.f);
-			ImGui::TextColored(color, std::format("Ammo: {}/{}", WeaponStats[(int)m_Map.player.Weapon].Magazine, WeaponStats[(int)m_Map.player.Weapon].Ammo).c_str());
+			ImGui::TextColored(color, std::format("Ammo: {}/{}", m_Map.player.Weapons[(int)m_Map.player.Weapon].Magazine, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
 			//ImGui::SetCursorPosX(10.f);
 			//ImGui::TextColored(color, std::format("Steps: {}", m_Map.nSteps).c_str());
 			//ImGui::SetCursorPosX(10.f);

@@ -23,9 +23,9 @@ namespace wc
         Player,
     };
 
-
-	enum class BulletType : uint8_t { Blaster, Shotgun, RedCircle, Revolver };
-	enum class WeaponType : uint8_t { Blaster, Shotgun, RedBlaster, Revolver, Sword };
+	enum class BulletType : uint8_t { Blaster, Revolver, Shotgun, RedCircle };
+	enum class WeaponType : uint8_t { Blaster, Revolver, Shotgun, RedBlaster, Sword };
+	enum class WeaponClass : uint8_t { Primary, Secondary, Melee, EnemyWeapon };
 
     struct BaseEntity
     {
@@ -105,10 +105,16 @@ namespace wc
         GameEntity() = default;
     };
 
+    struct BulletInfo
+    {
+
+    };
+
     struct WeaponInfo
     {
         bool CloseRange = false;
         BulletType BulletType = BulletType::Blaster;
+        WeaponClass WeaponClass = WeaponClass::Primary;
         uint32_t Damage = 0;
         float FireRate = 0.f;
         float AltFireRate = 0.f;
@@ -117,9 +123,6 @@ namespace wc
 		float ReloadSpeed = 0.f;
 		bool ReloadByOne = false;
 		uint32_t MaxMag = 0;
-
-		uint32_t Ammo = 0;
-		uint32_t Magazine = 0;
 
         glm::vec2 Size;
         glm::vec2 Offset;
@@ -134,6 +137,8 @@ namespace wc
         float Timer = 0.f;
 		float AltFireTimer = 0.f;
 		float ReloadTimer = 0.f;
+		uint32_t Ammo = 0; // Reserved ammo
+		uint32_t Magazine = 0; 
     };
 
     WeaponInfo WeaponStats[magic_enum::enum_count<WeaponType>()];
@@ -143,17 +148,20 @@ namespace wc
     {
         WeaponType Weapon = WeaponType::Blaster;
 
+		WeaponType PrimaryWeapon = WeaponType::Blaster;
+		WeaponType SecondaryWeapon = WeaponType::Shotgun;
+		WeaponType MeleeWeapon = WeaponType::Sword;
+
         WeaponData Weapons[magic_enum::enum_count<WeaponType>()];
 
         float JumpForce = 0.f;
 
         float DashCD = 0.f;
 
-        float SwordCD = 1.5f;
-        bool SwordAttack = false;
-        uint32_t SwordDamage = 55;
+        inline bool CanShoot() { return Weapons[(int)Weapon].Timer <= 0.f && Weapons[(int)Weapon].Magazine > 0; }
 
-        inline bool CanShoot() { return Weapons[(int)Weapon].Timer <= 0.f && WeaponStats[(int)Weapon].Magazine > 0; }
+		inline bool CanMelee() { return Weapons[(int)MeleeWeapon].Timer <= 0; }
+		inline void ResetMeleeTimer() { Weapons[(int)MeleeWeapon].Timer = WeaponStats[(int)MeleeWeapon].FireRate; }
 
 		inline void ResetWeaponTimer(const bool Reload = true) { Weapons[(int)Weapon].Timer = Reload ? WeaponStats[(int)Weapon].FireRate : WeaponStats[(int)Weapon].AltFireRate; }
 
@@ -164,25 +172,25 @@ namespace wc
 			if (weaponStats.ReloadByOne)
 			{
 				weapon.Timer = weaponStats.ReloadSpeed;
-				if (weapon.ReloadTimer <= 0 && weaponStats.Magazine < weaponStats.MaxMag && weaponStats.Ammo > 0)
+				if (weapon.ReloadTimer <= 0 && weapon.Magazine < weaponStats.MaxMag && weapon.Ammo > 0)
 				{
-					weaponStats.Magazine++;
-					weaponStats.Ammo--;
+					weapon.Magazine++;
+					weapon.Ammo--;
 					weapon.ReloadTimer = weaponStats.ReloadSpeed;
 				}
 			}
 			else
 			{
 				weapon.Timer = weaponStats.ReloadSpeed;
-				if (weaponStats.Ammo >= weaponStats.MaxMag - weaponStats.Magazine) 
+				if (weapon.Ammo >= weaponStats.MaxMag - weapon.Magazine) 
                 {
-					weaponStats.Ammo -= weaponStats.MaxMag - weaponStats.Magazine;
-					weaponStats.Magazine = weaponStats.MaxMag;
+					weapon.Ammo -= weaponStats.MaxMag - weapon.Magazine;
+					weapon.Magazine = weaponStats.MaxMag;
 				}
 				else 
                 {
-					weaponStats.Magazine += weaponStats.Ammo;
-					weaponStats.Ammo = 0;
+					weapon.Magazine += weapon.Ammo;
+					weapon.Ammo = 0;
 				}
 			}
 		}
@@ -247,7 +255,9 @@ namespace wc
             fixtureDef.userData.pointer = (uintptr_t)this;
 
             fixtureDef.shape = &shape;
-            Body->CreateFixture(&fixtureDef);
+            Body->CreateFixture(&fixtureDef); 
+            Body->SetLinearVelocity(b2Vec2(Direction.x * Speed, Direction.y * Speed));
+            Body->SetGravityScale(0.f);
         }
     };
 }

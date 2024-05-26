@@ -46,14 +46,13 @@ namespace wc
 
 			GameEntity* entityA = reinterpret_cast<GameEntity*>(fixtureUserDataA.pointer);
 			GameEntity* entityB = reinterpret_cast<GameEntity*>(fixtureUserDataB.pointer);
-			WC_CORE_INFO("Begin contact {} {}", fixtureUserDataA.pointer, fixtureUserDataB.pointer);
 			if (entityA && entityB)
 			{
 				if (entityA->Type == EntityType::Bullet)
 				{
 					Bullet& bullet = *(Bullet*)entityA;
 
-					if (bullet.SourceEntity != entityB)
+					if (bullet.SourceEntity != entityB && entityB->Type != EntityType::Bullet)
 					{
 						bullet.HitEntityType = entityB->Type;
 						if (entityB->Type > EntityType::Entity) bullet.HitEntity = entityB;
@@ -64,7 +63,7 @@ namespace wc
 				{
 					Bullet& bullet = *(Bullet*)entityB;
 
-					if (bullet.SourceEntity != entityA)
+					if (bullet.SourceEntity != entityA && entityA->Type != EntityType::Bullet)
 					{
 						bullet.HitEntityType = entityA->Type;
 						if (entityA->Type > EntityType::Entity) bullet.HitEntity = entityA;
@@ -124,9 +123,6 @@ namespace wc
 
 			b2Vec2 bNormal = contact->GetManifold()->localNormal;
 			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
-
-
-			WC_CORE_ERROR("End contact {} {}", fixtureUserDataA.pointer, fixtureUserDataB.pointer);
 
 			if (entityA && entityA->Type > EntityType::Entity)
 			{
@@ -236,7 +232,6 @@ namespace wc
 			m_ParticleEmitter.Reset();
 
 			//resetting player and timers
-			player.SwordCD = 0.2f;
 			player.DashCD = 0.2f;
 			player.Health = player.StartHealth;
 			player.DownContacts = 0;
@@ -280,12 +275,22 @@ namespace wc
 						EntityType Type = EntityType::UNDEFINED;
 						Type = magic_enum::enum_cast<EntityType>(metaData["Type"].as<std::string>()).value();
 
-						if (Type == EntityType::Player) player.LoadMapBase(metaData);
+						if (Type == EntityType::Player)
+						{
+							player.Weapons[(int)WeaponType::Blaster].Ammo = 60;
+							player.Weapons[(int)WeaponType::Shotgun].Ammo = 12;
+							player.Weapons[(int)WeaponType::Revolver].Ammo = 24;
+							player.Weapon = player.PrimaryWeapon;
+
+							for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++) player.Weapons[i].Magazine = WeaponStats[i].MaxMag;
+
+							player.LoadMapBase(metaData);
+						}
 						else if (Type == EntityType::RedCube)
 						{
-							//RedCube* e = new RedCube();
-							//e->LoadMapBase(metaData);
-							//Entities.emplace_back(e);
+							RedCube* e = new RedCube();
+							e->LoadMapBase(metaData);
+							Entities.emplace_back(e);
 
 							EnemyCount++;
 						}
@@ -693,22 +698,7 @@ namespace wc
 				{
 				case EntityType::RedCube:
 				{
-					RedCube& entity = *(RedCube*)e;
-					
-					float dist = glm::distance(entity.Position, player.Position);
-					if (player.SwordAttack && dist < 8.f) 
-					{
-						glm::vec2 direction = glm::normalize(entity.Position - player.Position);
-
-						auto hitInfo = Intersect({ player.Position, direction }, Entities.size()); // We skip entity intersection
-
-						if ((hitInfo.Hit && dist <= hitInfo.t) || !hitInfo.Hit)
-						{
-							auto vel = glm::sign(direction.x) * entity.Speed * entity.Body->GetMass();
-							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(vel, 0.f), true);
-							entity.DealDamage(player.SwordDamage);
-						}
-					}
+					RedCube& entity = *(RedCube*)e;	
 
 					if (!entity.Alive())
 					{
@@ -748,13 +738,6 @@ namespace wc
 
 					entity.Body->SetGravityScale(0.f);
 
-					if (player.SwordAttack <= 0 && glm::distance(entity.Position, player.Position) < 8.f)
-					{
-						//glm::vec2 direction = glm::normalize((player.Position - glm::vec2(0, player.Size.y * 0.5f)) - entity.Position);
-						//entity.Body->ApplyLinearImpulseToCenter(-1500.f * b2Vec2(direction.x, direction.y), true);
-						//entity.DealDamage(player.SwordDamage);
-					}
-
 					if (!entity.Alive())
 					{
 						EnemyCount--;
@@ -786,12 +769,8 @@ namespace wc
 					Bullet& bullet = *(Bullet*)e;
 					WeaponInfo& weapon = WeaponStats[(int)bullet.WeaponType];
 
-					bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * bullet.Speed, bullet.Direction.y * bullet.Speed));
-
 					if (bullet.HitEntityType != EntityType::UNDEFINED)
 					{
-						WC_CORE_INFO(magic_enum::enum_name(bullet.HitEntityType));
-
 						if (bullet.BulletType == BulletType::RedCircle && bullet.HitEntityType == EntityType::Player)
 						{
 							std::random_device rd;
@@ -849,8 +828,7 @@ namespace wc
 
 						DestroyEntity(i);
 					}
-
-					if (glm::distance(bullet.ShotPos, bullet.Position) > weapon.Range)
+					else if (glm::distance(bullet.ShotPos, bullet.Position) > weapon.Range)
 					{
 						DestroyEntity(i);
 					}
@@ -860,8 +838,6 @@ namespace wc
 					break;
 				}
 			}
-
-			if (player.SwordAttack) player.SwordAttack = false;
 		}
 
 		void FixedUpdate()
@@ -890,15 +866,15 @@ namespace wc
 
 			if (ImGui::IsKeyReleased((ImGuiKey)Globals.settings.KeyFastSwich))
 			{
-				if (player.Weapon == WeaponType::Blaster) player.Weapon = WeaponType::Revolver;
-				else player.Weapon = WeaponType::Blaster;
+				if (player.Weapon == player.PrimaryWeapon) player.Weapon = player.SecondaryWeapon;
+				else player.Weapon = player.PrimaryWeapon;
 			}
 
 			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMainWeapon))
-				player.Weapon = WeaponType::Blaster;
+				player.Weapon = player.PrimaryWeapon;
 
 			else if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeySecondaryWeapon))
-				player.Weapon = WeaponType::Shotgun;
+				player.Weapon = player.SecondaryWeapon;
 
 
 			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump) && player.DownContacts != 0)
@@ -931,7 +907,7 @@ namespace wc
 			bool Zoom = Mouse::GetMouse(Mouse::RIGHT) != GLFW_RELEASE;
 
 			m_TargetRotation = 0.f;
-			if (Zoom)
+			if (Zoom && player.Weapon != WeaponType::Revolver)
 			{
 				m_TargetPosition = player.Position + dir * 3.f;
 				m_TargetZoom = 0.6f;
@@ -997,29 +973,33 @@ namespace wc
 					std::uniform_real_distribution<float> dis(-0.08f, 0.12f);
 
 					ma_sound_start(&Globals.gun);
-
 					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
 				}
 
-				//alt fire
-				if (ImGui::IsKeyDown(ImGuiKey_MouseRight) && player.CanShoot())
+				player.Weapons[(int)player.Weapon].Magazine--;
+				player.ResetWeaponTimer();
+			}
+
+			//alt fire
+			if (ImGui::IsKeyDown(ImGuiKey_MouseRight) && player.CanShoot())
+			{
+				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
+
+				player.ResetWeaponTimer(false);
+
+				if (player.Weapon == WeaponType::Revolver)
 				{
-					glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
+					ma_sound_start(&Globals.gun);
 
-					player.ResetWeaponTimer(false);
-
-					if (player.Weapon == WeaponType::Revolver)
-					{
-						ma_sound_start(&Globals.gun);
-
-						player.Weapons[(int)player.Weapon].AltFireTimer = 1.2f;
-						player.Weapons[(int)player.Weapon].Timer = 0.f;
-					}
-
+					player.Weapons[(int)player.Weapon].AltFireTimer = 1.2f;
+					player.Weapons[(int)player.Weapon].Timer = 0.f;
 				}
+			}
 
-				//revolver alt fire
-				if (player.Weapons[(int)player.Weapon].AltFireTimer > 0.f && player.CanShoot())
+			//revolver alt fire
+			if (player.Weapons[(int)player.Weapon].AltFireTimer > 0.f && player.CanShoot())
+			{
+				if (player.Weapon == WeaponType::Revolver) 
 				{
 					std::random_device rd;
 					std::mt19937 gen(rd());
@@ -1030,21 +1010,44 @@ namespace wc
 						glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 
 						SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
-
+						player.Weapons[(int)player.Weapon].Magazine--;
 						player.Weapons[(int)player.Weapon].Timer = 0.2f;
 					}
 				}
-
-				WeaponStats[(int)player.Weapon].Magazine--;
-				player.ResetWeaponTimer();
 			}
 
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMelee) && player.SwordCD <= 0.f)
+
+			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyMelee) && player.CanMelee()) 
 			{
-				ma_sound_start(&Globals.swordSwing);
-				m_RotateSword = true;
-				player.SwordCD = 2.5f;
-				player.SwordAttack = true;
+				if (player.MeleeWeapon == WeaponType::Sword)
+				{
+					ma_sound_start(&Globals.swordSwing);
+					m_RotateSword = true;
+
+					for (uint32_t i = 0; i < Entities.size(); i++)
+					{
+						auto& entity = *Entities[i];
+						if (entity.Type == EntityType::RedCube || entity.Type == EntityType::Fly)
+						{
+							float dist = glm::distance(entity.Position, player.Position);
+							if (dist < WeaponStats[(int)player.MeleeWeapon].Range)
+							{
+								glm::vec2 direction = glm::normalize(entity.Position - player.Position);
+
+								auto hitInfo = Intersect({ player.Position, direction }, Entities.size()); // We skip entity intersection
+
+								if ((hitInfo.Hit && dist <= hitInfo.t) || !hitInfo.Hit)
+								{
+									auto vel = glm::sign(direction.x) * 50.f * entity.Body->GetMass();
+									entity.Body->ApplyLinearImpulseToCenter(b2Vec2(vel, 0.f), true);
+									entity.DealDamage(WeaponStats[(int)player.MeleeWeapon].Damage);
+								}
+							}
+						}
+					}
+				}
+
+				player.ResetMeleeTimer();
 			}
 		}
 
@@ -1076,10 +1079,9 @@ namespace wc
 			for (auto& entity : Entities)
 				entity->UpdatePosition(AccumulatedTimeRatio);
 
-			if (player.SwordCD > 0.f) player.SwordCD -= Globals.deltaTime;
 			if (player.DashCD > 0.f) player.DashCD -= Globals.deltaTime;
 
-			for (uint32_t i = 0; i < magic_enum::enum_count<WeaponType>() - 1; i++)
+			for (uint32_t i = 0; i < magic_enum::enum_count<WeaponType>(); i++)
 			{
 				auto& weapon = player.Weapons[i];
 				if (weapon.Timer > 0.f) weapon.Timer -= Globals.deltaTime;
@@ -1132,9 +1134,9 @@ namespace wc
 					Bullet& bullet = *(Bullet*)(Entities[i]);
 					glm::vec4 bulletColor = glm::vec4(0.f);
 					if (bullet.BulletType == BulletType::Blaster) bulletColor = glm::vec4(0.f, 1.f, 0.f, 1.f);
-					else if (bullet.BulletType == BulletType::Revolver) bulletColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
-					else if (bullet.BulletType == BulletType::Shotgun) bulletColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
-					else if (bullet.BulletType == BulletType::RedCircle) bulletColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
+					if (bullet.BulletType == BulletType::Revolver) bulletColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
+					if (bullet.BulletType == BulletType::Shotgun) bulletColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
+					if (bullet.BulletType == BulletType::RedCircle) bulletColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
 					m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bulletColor * 1.3f);
 				}
 				else
