@@ -20,7 +20,6 @@ namespace wc
 		float m_AspectRatio = 16.f / 9.f;
 
 		// Rendering
-
 		Framebuffer m_Framebuffer;
 		Shader m_Shader;
 		DescriptorSet m_DescriptorSet;
@@ -32,6 +31,9 @@ namespace wc
 		OrthographicCamera* camera = nullptr;
 
 		// Post processing
+		ComputeShader m_BackgroundShader;
+		DescriptorSet m_BackgroundSet;
+
 		ComputeShader m_CompositeShader;
 		DescriptorSet m_CompositeSet;
 
@@ -46,12 +48,14 @@ namespace wc
 		Image m_FinalImage[3];
 		ImageView m_FinalImageView[3];
 
-		Semaphore m_RtoPPSemaphore[FRAME_OVERLAP]; // Semaphore for synchronizing between main rendering and post proccesing
+		Semaphore m_BackgroundSemaphore[FRAME_OVERLAP];
+		Semaphore m_RtoPPSemaphore[FRAME_OVERLAP]; // Semaphore for synchronizing between main rendering and post processing
 
 		CommandBuffer m_Cmd[FRAME_OVERLAP];
 		CommandBuffer m_ComputeCmd[FRAME_OVERLAP];
 	public:
 		Semaphore RenderSemaphore[FRAME_OVERLAP]; // Semaphore for signaling the end of the frame rendering
+		uint32_t BackgroundTexture = 0;
 
 		struct ChromaticAberrationSettings
 		{
@@ -85,6 +89,37 @@ namespace wc
 			float screenY = ((1.f - relativeCoords.y) / 2.f) * m_RenderSize.y;
 
 			return glm::vec2(screenX, screenY);
+		}
+
+		// Intitializes size-independant data
+		void Init(OrthographicCamera& cameraptr)
+		{			
+			camera = &cameraptr;
+			
+			m_BackgroundShader.Create("assets/shaders/background.comp");
+			descriptorAllocator.allocate(m_BackgroundSet, m_BackgroundShader.GetDescriptorLayout());
+
+			m_CompositeShader.Create("assets/shaders/composite.comp");
+			descriptorAllocator.allocate(m_CompositeSet, m_CompositeShader.GetDescriptorLayout());
+
+			m_ChromaShader.Create("assets/shaders/chromaticAberration.comp");
+			descriptorAllocator.allocate(m_ChromaSet, m_ChromaShader.GetDescriptorLayout());
+
+			m_CRTShader.Create("assets/shaders/crt.comp");
+			descriptorAllocator.allocate(m_CRTSet, m_CRTShader.GetDescriptorLayout());
+
+			for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
+			{
+				m_BackgroundSemaphore[i].Create();
+				m_RtoPPSemaphore[i].Create();
+				RenderSemaphore[i].Create();
+
+				SyncContext::CommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, m_Cmd[i]);
+				SyncContext::ComputeCommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, m_ComputeCmd[i]);
+
+				m_RtoPPSemaphore[i].SetName(std::format("Renderer2D::m_RtoPPSemaphore[{}]", i));
+				RenderSemaphore[i].SetName(std::format("Renderer2D::RenderSemaphore[{}]", i));
+			}
 		}
 
 		void CreateScreen(glm::vec2 size, RenderData& renderData)
@@ -126,14 +161,24 @@ namespace wc
 				m_FinalImageView[i].SetName(std::format("Renderer2D::FinalImageView[{}]", i));
 			}
 
+			{
+				TextureCreateInfo textureInfo;
+				textureInfo.width = m_RenderSize.x;
+				textureInfo.height = m_RenderSize.y;
+				textureInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+				BackgroundTexture = renderData.AllocateTexture(textureInfo);
+			}
+
 			SyncContext::immediate_submit([&](VkCommandBuffer cmd) {
 				for (int i = 0; i < ARRAYSIZE(m_FinalImage); i++)
 					m_FinalImage[i].setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-				});
+
+				renderData.Textures[BackgroundTexture].GetImage().setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+			});
 
 			CreateBloomImages(m_RenderSize, m_Framebuffer.attachments[0].image.GetMipLevelCount());
 
-			// For now we are using the same sampler for sampling the screen and the bloom images but maybe it should be separeted
+			// For now we are using the same sampler for sampling the screen and the bloom images but maybe it should be separated
 			SamplerCreateInfo sampler;
 			sampler.magFilter = Filter::LINEAR;
 			sampler.minFilter = Filter::LINEAR;
@@ -145,7 +190,6 @@ namespace wc
 			sampler.maxLod = float(m_BloomMipLevels);
 
 			m_ScreenSampler.Create(sampler);
-
 			{
 				ShaderCreateInfo createInfo;
 				createInfo.vertexShader = "assets/shaders/Renderer2D.vert";
@@ -199,6 +243,13 @@ namespace wc
 					.Update();
 			}
 			{
+				auto& texture = renderData.Textures[BackgroundTexture];
+				DescriptorWriter writer;
+				writer.dstSet = m_BackgroundSet;
+				writer.write_image(0, GetDescriptorData(texture.GetSampler(), texture.GetView(), VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+					.Update();
+			}
+			{
 				ShaderCreateInfo createInfo;
 				createInfo.vertexShader = "assets/shaders/Line.vert";
 				createInfo.fragmentShader = "assets/shaders/Line.frag";
@@ -243,33 +294,6 @@ namespace wc
 			}
 		}
 
-		// Intitializes size-independant data
-		void Init(OrthographicCamera& cameraptr)
-		{			
-			camera = &cameraptr;
-			
-			m_CompositeShader.Create("assets/shaders/composite.comp");
-			descriptorAllocator.allocate(m_CompositeSet, m_CompositeShader.GetDescriptorLayout());
-
-			m_ChromaShader.Create("assets/shaders/chromaticAberration.comp");
-			descriptorAllocator.allocate(m_ChromaSet, m_ChromaShader.GetDescriptorLayout());
-
-			m_CRTShader.Create("assets/shaders/crt.comp");
-			descriptorAllocator.allocate(m_CRTSet, m_CRTShader.GetDescriptorLayout());
-
-			for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
-			{
-				m_RtoPPSemaphore[i].Create();
-				RenderSemaphore[i].Create();
-
-				SyncContext::CommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, m_Cmd[i]);
-				SyncContext::ComputeCommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, m_ComputeCmd[i]);
-
-				m_RtoPPSemaphore[i].SetName(std::format("Renderer2D::m_RtoPPSemaphore[{}]", i));
-				RenderSemaphore[i].SetName(std::format("Renderer2D::RenderSemaphore[{}]", i));
-			}
-		}
-
 		void Resize(glm::vec2 newSize, RenderData& renderData)
 		{
 			DestroyScreen();
@@ -279,6 +303,43 @@ namespace wc
 		void Flush(RenderData& renderData)
 		{
 			//if (!m_IndexCount && !m_LineVertexCount) return;
+
+			time += Globals.deltaTime;
+			{
+				CommandBuffer& cmd = m_ComputeCmd[CURRENT_FRAME];
+				cmd.Reset();
+				cmd.Begin();
+
+				cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BackgroundShader.GetPipelineLayout(), m_BackgroundSet);
+				m_BackgroundShader.Bind(cmd);
+				struct {
+					float time = 0.f;
+					float zoom = 0.f;
+					glm::vec2 cameraPos;
+				} m_Data;
+				m_Data.time = time;
+				m_Data.zoom = camera->Zoom;
+				m_Data.cameraPos = glm::vec2(camera->Position);
+				m_BackgroundShader.PushConstants(cmd, sizeof(m_Data), &m_Data);
+				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
+
+				cmd.End();
+
+				VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+
+				submit.commandBufferCount = 1;
+				submit.pCommandBuffers = cmd.GetPointer();
+
+				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+				submit.pSignalSemaphores = m_BackgroundSemaphore[CURRENT_FRAME].GetPointer();
+				submit.signalSemaphoreCount = 1;
+
+				submit.pWaitDstStageMask = &waitStage;
+
+				SyncContext::GetComputeQueue().Submit(submit);
+			}
+
 			{
 				CommandBuffer& cmd = m_Cmd[CURRENT_FRAME];
 				cmd.Reset();
@@ -325,6 +386,9 @@ namespace wc
 				submit.pCommandBuffers = cmd.GetPointer();
 
 				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+				submit.pWaitSemaphores = m_BackgroundSemaphore[CURRENT_FRAME].GetPointer();
+				submit.waitSemaphoreCount = 1;
 
 				submit.pSignalSemaphores = m_RtoPPSemaphore[CURRENT_FRAME].GetPointer();
 				submit.signalSemaphoreCount = 1;
@@ -401,7 +465,6 @@ namespace wc
 				m_ChromaShader.PushConstants(cmd, sizeof(ChromaSettings), &ChromaSettings);
 				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
 
-				time += Globals.deltaTime;
 				cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_CRTShader.GetPipelineLayout(), m_CRTSet);
 				m_CRTShader.Bind(cmd);
 				struct {
@@ -429,7 +492,7 @@ namespace wc
 				submit.pWaitDstStageMask = &waitStage;
 
 				SyncContext::GetComputeQueue().Submit(submit);
-			}			
+			}
 		}
 
 		void DestroyScreen()
@@ -451,12 +514,14 @@ namespace wc
 		void Deinit()
 		{
 			DeinitBloom();
+			m_BackgroundShader.Destroy();
 			m_CompositeShader.Destroy();
 			m_ChromaShader.Destroy();
 			m_CRTShader.Destroy();
 
 			for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
 			{
+				m_BackgroundSemaphore[i].Destroy();
 				m_RtoPPSemaphore[i].Destroy();
 				RenderSemaphore[i].Destroy();
 			}

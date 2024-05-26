@@ -155,7 +155,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(ProjectDir)vendor\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BuildStlModules>true</BuildStlModules>
     </ClCompile>
@@ -262,6 +262,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
+    <ClInclude Include="src\game\Components.h" />
     <ClInclude Include="src\game\Entities.h" />
     <ClInclude Include="src\game\Game.h" />
     <ClInclude Include="src\game\Map.h" />
@@ -327,6 +328,11 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\shaders\chromaticAberration.comp">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\shaders\background.comp">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

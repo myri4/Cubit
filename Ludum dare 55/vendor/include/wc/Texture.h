@@ -10,8 +10,22 @@ namespace wc
 {
     struct TextureCreateInfo
     {
+        // Image
+		VkFormat                 format = VK_FORMAT_R8G8B8A8_UNORM;
+		uint32_t                 width = 1;
+		uint32_t                 height = 1;
+        bool                     mipMapping = false;
+		VkImageUsageFlags        usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
+        // Sampler
+		Filter                magFilter = Filter::NEAREST;
+		Filter                minFilter = Filter::NEAREST;
+		SamplerMipmapMode     mipmapMode = SamplerMipmapMode::NEAREST;
+		SamplerAddressMode    addressModeU = SamplerAddressMode::REPEAT;
+		SamplerAddressMode    addressModeV = SamplerAddressMode::REPEAT;
+		SamplerAddressMode    addressModeW = SamplerAddressMode::REPEAT;
     };
+
     class Texture 
     {
         Image image;
@@ -21,6 +35,42 @@ namespace wc
     public:
 
         Texture() = default;
+
+		void Allocate(const TextureCreateInfo& createInfo)
+		{
+			ImageCreateInfo imageCreateInfo;
+
+			imageCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+
+			imageCreateInfo.width = createInfo.width;
+			imageCreateInfo.height = createInfo.height;
+
+			imageCreateInfo.mipLevels = createInfo.mipMapping ? GetMipLevelCount(glm::vec2(createInfo.width, createInfo.height)) : 1;
+			imageCreateInfo.usage = createInfo.usage;
+
+			image.Create(imageCreateInfo);
+
+			view.Create(imageCreateInfo.format, image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, image.mipLevels);
+
+			SamplerCreateInfo samplerInfo;
+			samplerInfo.addressModeU = createInfo.addressModeU;
+            samplerInfo.addressModeV = createInfo.addressModeV;
+            samplerInfo.addressModeW = createInfo.addressModeW;
+			samplerInfo.maxLod = (float)image.mipLevels;
+
+			if (VulkanContext::GetSupportedFeatures().samplerAnisotropy && createInfo.mipMapping)
+			{
+				samplerInfo.anisotropyEnable = true;
+				samplerInfo.maxAnisotropy = VulkanContext::GetProperties().limits.maxSamplerAnisotropy;
+			}
+            			
+			samplerInfo.magFilter = createInfo.magFilter;
+			samplerInfo.minFilter = createInfo.minFilter;
+			samplerInfo.mipmapMode = createInfo.mipmapMode;			
+
+			sampler.Create(samplerInfo);
+			imageID = MakeImGuiDescriptor(imageID, { .sampler = sampler, .imageView = view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+		}
 
         void Allocate(uint32_t width, uint32_t height, bool mipMaping = false)
         {

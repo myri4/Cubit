@@ -127,6 +127,15 @@ namespace wc
 			return uint32_t(Textures.size() - 1);
 		}
 
+		uint32_t AllocateTexture(const TextureCreateInfo& createInfo)
+		{
+			Texture texture;
+			texture.Allocate(createInfo);
+			Textures.push_back(texture);
+
+			return uint32_t(Textures.size() - 1);
+		}
+
 		void DrawMesh(const Vertex* pVertices, uint32_t vCount, const uint32_t* pIndices, uint32_t iCount)
 		{
 
@@ -246,6 +255,33 @@ namespace wc
 		{
 			glm::mat4 transform = glm::translate(glm::mat4(1.f), position) * glm::rotate(glm::mat4(1.f), rotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f), { size.x, size.y, 1.f });
 			DrawTriangle(transform, texID, color);
+		}
+
+		void DrawCircle(glm::mat4 transform, float thickness = 1.f, float fade = 0.05f, const glm::vec4& color = glm::vec4(1.f))
+		{
+			Vertex* vertices = m_VertexBuffer;
+			auto& vertCount = m_VertexBuffer.Counter;
+
+			uint32_t* indices = m_IndexBuffer;
+			auto& indexCount = m_IndexBuffer.Counter;
+
+			transform = ViewProjection * transform;
+
+			vertices[vertCount + 0] = Vertex(transform * glm::vec4(1.f, 1.f, 0.f, 1.f), { 1.f, 1.f }, thickness, fade, color);
+			vertices[vertCount + 1] = Vertex(transform * glm::vec4(-1.f, 1.f, 0.f, 1.f), { -1.f, 1.f }, thickness, fade, color);
+			vertices[vertCount + 2] = Vertex(transform * glm::vec4(-1.f, -1.f, 0.f, 1.f), { -1.f,-1.f }, thickness, fade, color);
+			vertices[vertCount + 3] = Vertex(transform * glm::vec4(1.f, -1.f, 0.f, 1.f), { 1.f,-1.f }, thickness, fade, color);
+
+			indices[indexCount + 0] = vertCount;
+			indices[indexCount + 1] = 1 + vertCount;
+			indices[indexCount + 2] = 2 + vertCount;
+
+			indices[indexCount + 3] = 2 + vertCount;
+			indices[indexCount + 4] = 3 + vertCount;
+			indices[indexCount + 5] = vertCount;
+
+			vertCount += 4;
+			indexCount += 6;
 		}
 
 		void DrawCircle(glm::vec3 position, float radius, float thickness = 1.f, float fade = 0.05f, const glm::vec4& color = glm::vec4(1.f))

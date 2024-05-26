@@ -58,6 +58,10 @@ namespace wc
 				blaster.BulletType = BulletType::Blaster;
 				blaster.Damage = 30.f;
 				blaster.FireRate = 0.3f;
+				blaster.Ammo = 60;
+				blaster.MaxMag = 15;
+				blaster.Magazine = 15;
+				blaster.ReloadSpeed = 1.5f;
 				blaster.Range = 50.f;
 				blaster.BulletSpeed = 25.f;
 				blaster.BulletSize = { 0.25f, 0.25f };
@@ -71,12 +75,32 @@ namespace wc
 				shotgun.BulletType = BulletType::Shotgun;
 				shotgun.Damage = 18.f;
 				shotgun.FireRate = 1.1f;
+				shotgun.Ammo = 12;
+				shotgun.MaxMag = 4;
+				shotgun.Magazine = 4;
+				shotgun.ReloadSpeed = 0.5f;
+				shotgun.ReloadByOne = true;
 				shotgun.Range = 4.5f;
 				shotgun.BulletSpeed = 25.f;
 				shotgun.BulletSize = { 0.1f, 0.1f };
 				shotgun.Offset = { 0.25f, -0.15f };
 				shotgun.Size = { 1.f, 0.45f };
 				shotgun.TextureID = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
+			}
+
+			{
+				auto& revolver = WeaponStats[(int)WeaponType::Revolver];
+				revolver.BulletType = BulletType::Revolver;
+				revolver.Damage = 25.f;
+				revolver.FireRate = 1.f;
+				revolver.AltFireRate = 1.5f;
+				revolver.Ammo = 24;
+				revolver.MaxMag = 6;
+				revolver.Magazine = 6;
+				revolver.ReloadSpeed = 0.5f;
+				revolver.ReloadByOne = true;
+				revolver.Range = 25.f;
+				revolver.TextureID = m_RenderData.LoadTexture("assets/textures/Revolver.png");
 			}
 
 			{
@@ -138,6 +162,8 @@ namespace wc
 			ImGui::TextColored(color, std::format("Current Level: {}", m_LevelID).c_str());
 			ImGui::SetCursorPosX(10.f);
 			ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.AccumulatedTime).c_str());
+			ImGui::SetCursorPosX(10.f);
+			ImGui::TextColored(color, std::format("Ammo: {}/{}", WeaponStats[(int)m_Map.player.Weapon].Magazine, WeaponStats[(int)m_Map.player.Weapon].Ammo).c_str());
 			//ImGui::SetCursorPosX(10.f);
 			//ImGui::TextColored(color, std::format("Steps: {}", m_Map.nSteps).c_str());
 			//ImGui::SetCursorPosX(10.f);
@@ -410,8 +436,8 @@ namespace wc
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
 			UI_Data();
 
-			glm::vec2 pos = m_Renderer.WorldToScreen(m_Map.player.Position - (glm::vec2)m_Map.camera.Position - m_Map.player.Size.x);
-			ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
+			//glm::vec2 pos = m_Renderer.WorldToScreen(m_Map.player.Position - (glm::vec2)m_Map.camera.Position - m_Map.player.Size.x);
+			//ImGui::SetCursorPos(ImVec2(pos.x, pos.y));
 			//ImGui::ProgressBar(m_Map.player.DashCD / 2, ImVec2(65, 10), "");
 
 			auto windowPos = (glm::vec2)Globals.window.GetPos();

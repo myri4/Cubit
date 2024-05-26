@@ -368,6 +368,9 @@
     <ClInclude Include="src\game\Raycasting.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\game\Components.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\shaders\bloom.comp" />
@@ -380,5 +383,6 @@
     <CustomBuild Include="src\shaders\Renderer2D.frag" />
     <CustomBuild Include="src\shaders\Renderer2D.vert" />
     <CustomBuild Include="src\shaders\chromaticAberration.comp" />
+    <CustomBuild Include="src\shaders\background.comp" />
   </ItemGroup>
 </Project>

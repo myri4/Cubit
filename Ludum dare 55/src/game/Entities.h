@@ -6,70 +6,47 @@
 #include <wc/Utils/Time.h>
 #include <wc/Utils/YAML.h>
 
+#include "Components.h"
+
 namespace wc
 {
-    enum class EntityType : int32_t
+    enum class EntityType : int8_t
     {
         Tile = -1,
         UNDEFINED = 0,
         // Entities
-        Entity,
         Bullet,
+        Entity,
         RedCube,
         Fly,
 
         Player,
     };
 
+
+	enum class BulletType : uint8_t { Blaster, Shotgun, RedCircle, Revolver };
+	enum class WeaponType : uint8_t { Blaster, Shotgun, RedBlaster, Revolver, Sword };
+
     struct BaseEntity
     {
         EntityType Type = EntityType::UNDEFINED;
-    };
+    };    
 
-    struct TransformComponent
-    {
-        glm::vec2 Position;
-        glm::vec2 Size = glm::vec2(0.5f);
-        float Rotation = 0.f;
+    struct DynamicEntity : public BaseEntity, public TransformComponent, public Rigidbody2DComponent
+	{
+		uint32_t ID = 0;
 
-        TransformComponent() = default;
-        TransformComponent(const TransformComponent&) = default;
-        TransformComponent(const glm::vec2& translation) { Position = translation; }
-
-        glm::mat4 GetTransform() const
-        {
-            auto Translation = glm::vec3(Position, 0.f);
-            auto Scale = glm::vec3(Size, 1.f);
-
-            return glm::translate(glm::mat4(1.f), Translation)
-                * glm::rotate(glm::mat4(1.f), Rotation, { 0.f, 0.f, 1.f })
-                * glm::scale(glm::mat4(1.f), Scale);
-        }
-    };
-
-    struct DynamicEntity : public BaseEntity, public TransformComponent
-    {
-        b2Body* body = nullptr;
-        // @TODO: Improve on contacts
-        uint32_t UpContacts = 0;
-        uint32_t DownContacts = 0;
-        uint32_t LeftContacts = 0;
-        uint32_t RightContacts = 0;
-        uint32_t Contacts = 0;
-
-        uint32_t ID = 0;
-
-        inline void SetPosition() { body->SetTransform({ Position.x, Position.y }, 0.f); }
+        inline void SetPosition() { Body->SetTransform({ Position.x, Position.y }, 0.f); }
 
         inline void UpdatePosition()
         {
-            auto& bPos = body->GetPosition();
+            auto& bPos = Body->GetPosition();
             Position = { bPos.x, bPos.y };
         }
 
 		inline void UpdatePosition(float alpha) // @NOTE: We don't interpolate angles yet
 		{
-			auto bPos = glm::vec2(body->GetPosition().x, body->GetPosition().y);
+			auto bPos = glm::vec2(Body->GetPosition().x, Body->GetPosition().y);
 
 			Position = glm::mix(Position, bPos, alpha);
 		}
@@ -90,10 +67,6 @@ namespace wc
         uint32_t StartHealth = 100;
         uint32_t Health = 100;
 
-        bool PlayerTouch = false;
-        bool ShotEnemy = false;
-        uint32_t EnemyID;
-
         glm::vec2 HitBoxSize = glm::vec2(0.5f);
 
         // Character controller components
@@ -112,7 +85,8 @@ namespace wc
             bodyDef.type = b2_dynamicBody;
             bodyDef.position.Set(Position.x, Position.y);
             bodyDef.fixedRotation = true;
-            body = PhysicsWorld->CreateBody(&bodyDef);
+            bodyDef.linearDamping = LinearDamping;
+            Body = PhysicsWorld->CreateBody(&bodyDef);
 
             b2PolygonShape shape;
             shape.SetAsBox(HitBoxSize.x, HitBoxSize.y);
@@ -125,15 +99,11 @@ namespace wc
             fixtureDef.userData.pointer = (uintptr_t)this;
 
             fixtureDef.shape = &shape;
-            body->CreateFixture(&fixtureDef);
-            body->SetLinearDamping(LinearDamping);
+            Body->CreateFixture(&fixtureDef);
         }
 
         GameEntity() = default;
     };
-
-    enum class BulletType { Blaster, Shotgun, RedCircle };
-    enum class WeaponType { Blaster, Shotgun, RedBlaster, Sword };
 
     struct WeaponInfo
     {
@@ -141,8 +111,15 @@ namespace wc
         BulletType BulletType = BulletType::Blaster;
         uint32_t Damage = 0;
         float FireRate = 0.f;
+        float AltFireRate = 0.f;
         float BulletSpeed = 0.f;
         float Range = 0.f;
+		float ReloadSpeed = 0.f;
+		bool ReloadByOne = false;
+		uint32_t MaxMag = 0;
+
+		uint32_t Ammo = 0;
+		uint32_t Magazine = 0;
 
         glm::vec2 Size;
         glm::vec2 Offset;
@@ -155,6 +132,8 @@ namespace wc
     struct WeaponData
     {
         float Timer = 0.f;
+		float AltFireTimer = 0.f;
+		float ReloadTimer = 0.f;
     };
 
     WeaponInfo WeaponStats[magic_enum::enum_count<WeaponType>()];
@@ -162,7 +141,7 @@ namespace wc
 
     struct Player : public GameEntity
     {
-        WeaponType weapon = WeaponType::Blaster;
+        WeaponType Weapon = WeaponType::Blaster;
 
         WeaponData Weapons[magic_enum::enum_count<WeaponType>()];
 
@@ -174,8 +153,39 @@ namespace wc
         bool SwordAttack = false;
         uint32_t SwordDamage = 55;
 
-        inline bool CanShoot() { return Weapons[(int)weapon].Timer <= 0.f; }
-        inline void ResetWeaponTimer() { Weapons[(int)weapon].Timer = WeaponStats[(int)weapon].FireRate; }
+        inline bool CanShoot() { return Weapons[(int)Weapon].Timer <= 0.f && WeaponStats[(int)Weapon].Magazine > 0; }
+
+		inline void ResetWeaponTimer(const bool Reload = true) { Weapons[(int)Weapon].Timer = Reload ? WeaponStats[(int)Weapon].FireRate : WeaponStats[(int)Weapon].AltFireRate; }
+
+		void ReloadWeapon()
+		{
+            auto& weapon = Weapons[(int)Weapon];
+            auto& weaponStats = WeaponStats[(int)Weapon];
+			if (weaponStats.ReloadByOne)
+			{
+				weapon.Timer = weaponStats.ReloadSpeed;
+				if (weapon.ReloadTimer <= 0 && weaponStats.Magazine < weaponStats.MaxMag && weaponStats.Ammo > 0)
+				{
+					weaponStats.Magazine++;
+					weaponStats.Ammo--;
+					weapon.ReloadTimer = weaponStats.ReloadSpeed;
+				}
+			}
+			else
+			{
+				weapon.Timer = weaponStats.ReloadSpeed;
+				if (weaponStats.Ammo >= weaponStats.MaxMag - weaponStats.Magazine) 
+                {
+					weaponStats.Ammo -= weaponStats.MaxMag - weaponStats.Magazine;
+					weaponStats.Magazine = weaponStats.MaxMag;
+				}
+				else 
+                {
+					weaponStats.Magazine += weaponStats.Ammo;
+					weaponStats.Ammo = 0;
+				}
+			}
+		}
 
         Player()
         {
@@ -210,31 +220,34 @@ namespace wc
         BulletType BulletType;
         WeaponType WeaponType = WeaponType::Blaster;
         glm::vec2 ShotPos;
-        uint32_t Damage;
+
+        EntityType HitEntityType = EntityType::UNDEFINED;
+		GameEntity* HitEntity = nullptr;
+        GameEntity* SourceEntity = nullptr;
 
         Bullet() { Type = EntityType::Bullet; }
 
-		void CreateBody(b2World* PhysicsWorld) override
-		{
-			b2BodyDef bodyDef;
-			bodyDef.type = b2_dynamicBody;
-			bodyDef.position.Set(Position.x, Position.y);
-			bodyDef.fixedRotation = true;
+        void CreateBody(b2World* PhysicsWorld) override
+        {
+            b2BodyDef bodyDef;
+            bodyDef.type = b2_dynamicBody;
+            bodyDef.position.Set(Position.x, Position.y);
+            bodyDef.fixedRotation = true;
             bodyDef.bullet = true;
-			body = PhysicsWorld->CreateBody(&bodyDef);
+            Body = PhysicsWorld->CreateBody(&bodyDef);
 
             b2CircleShape shape;
             shape.m_radius = Size.x;
 
-			b2FixtureDef fixtureDef;
-			fixtureDef.density = Density;
-			fixtureDef.friction = 0.f;
+            b2FixtureDef fixtureDef;
+            fixtureDef.density = Density;
+            fixtureDef.friction = 0.f;
             fixtureDef.isSensor = true;
 
-			fixtureDef.userData.pointer = (uintptr_t)this;
+            fixtureDef.userData.pointer = (uintptr_t)this;
 
-			fixtureDef.shape = &shape;
-			body->CreateFixture(&fixtureDef);
-		}
-    };    
+            fixtureDef.shape = &shape;
+            Body->CreateFixture(&fixtureDef);
+        }
+    };
 }
