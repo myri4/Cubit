@@ -18,6 +18,7 @@ namespace wc
 		PLAY,
 		CREDITS,
 		SETTINGS,
+		LOADOUT,
 		PAUSE
 	};
 

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <imgui/imgui.h>
+#include "../game/Entities.h"
+#include "../game/Map.h"
 
 namespace wc
 {
@@ -197,6 +199,26 @@ namespace wc
 				if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 					return true;
 			}
+		}
+
+		void WeaponChoose(WeaponType weapon, WeaponType& playerWeapon)
+		{
+			//WC_CORE_ERROR(weapon);
+			if (playerWeapon != weapon)ImGui::BeginDisabled();
+			ImGui::Image(m_RenderData.Textures[WeaponStats[(int)weapon].TextureID], ImVec2(150, 100));
+			if (playerWeapon != weapon)ImGui::EndDisabled();
+
+			if (playerWeapon == weapon) {
+				ImGui::SameLine();
+				ImGui::Text("  <-");
+			}
+
+			if (playerWeapon == weapon)ImGui::BeginDisabled();
+			ImGui::PushID((int)weapon);
+			if (ImGui::Button("Select"))playerWeapon = weapon;
+			ImGui::PopID();
+			if (playerWeapon == weapon)ImGui::EndDisabled();
+			ImGui::Separator();
 		}
 	}
 }

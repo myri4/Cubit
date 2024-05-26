@@ -111,16 +111,16 @@ namespace wc
 			YAML_LOAD_VAR(settings, KeySecondaryWeapon);
 			YAML_LOAD_VAR(settings, KeyFastSwich);
 
-			//if (iWindowSize == 0)
-			//	WindowSize = { 1920, 1080 };
-			//else if (iWindowSize == 1)
-			//	WindowSize = { 1366, 768 };
-			//else if (iWindowSize == 2)
-			//	WindowSize = { 1280, 1024 };
-			//else if (iWindowSize == 3)
-			//	WindowSize = { 1024, 768 };
-			//else if (iWindowSize == 4)
-			//	WindowSize = { 1280, 720 };
+			if (iWindowSize == 0)
+				WindowSize = { 1920, 1080 };
+			else if (iWindowSize == 1)
+				WindowSize = { 1366, 768 };
+			else if (iWindowSize == 2)
+				WindowSize = { 1280, 1024 };
+			else if (iWindowSize == 3)
+				WindowSize = { 1024, 768 };
+			else if (iWindowSize == 4)
+				WindowSize = { 1280, 720 };
 		}
 	};
 }

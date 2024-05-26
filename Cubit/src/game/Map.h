@@ -1038,7 +1038,7 @@ namespace wc
 
 								if ((hitInfo.Hit && dist <= hitInfo.t) || !hitInfo.Hit)
 								{
-									auto vel = glm::sign(direction.x) * 50.f * entity.Body->GetMass();
+									auto vel = glm::sign(direction.x) * 15.f * entity.Body->GetMass();
 									entity.Body->ApplyLinearImpulseToCenter(b2Vec2(vel, 0.f), true);
 									entity.DealDamage(WeaponStats[(int)player.MeleeWeapon].Damage);
 								}

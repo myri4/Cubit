@@ -245,6 +245,7 @@ namespace wc
 			else if (Globals.gameState == GameState::DEATH) game.DEATH_MENU();
 			else if (Globals.gameState == GameState::WIN) game.WIN_MENU();
 			else if (Globals.gameState == GameState::PLAY) game.UI();
+			else if (Globals.gameState == GameState::LOADOUT) game.LOADOUT_MENU();
 			else if (Globals.gameState == GameState::CREDITS) Credits();
 			else if (Globals.gameState == GameState::SETTINGS) game.SETTINGS_MENU();
 			else if (Globals.gameState == GameState::PAUSE) game.PAUSE_MENU();

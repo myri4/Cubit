@@ -123,7 +123,7 @@ namespace wc
 				sword.WeaponClass = WeaponClass::Melee;
 				sword.Damage = 50;
 				sword.FireRate = 2.5f;
-				sword.Range = 8.f;
+				sword.Range = 15.f;
 				sword.TextureID = m_RenderData.LoadTexture("assets/textures/Sword.png");
 			}
 
@@ -207,35 +207,39 @@ namespace wc
 			ImGui::Begin("MENU", NULL, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
 			ImGui::SetCursorPos(ImVec2(0, 0));
 
-			ImGui::SetWindowFontScale(2.f);
 
+			ImGui::SetWindowFontScale(2.f);
 			char buf[128];
 			sprintf(buf, "%c Cubit %c", "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3], "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3]);
 			ImVec2 CubitSize = ImGui::CalcTextSize(buf);
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - CubitSize.x) * 0.5f, (ImGui::GetWindowSize().y - CubitSize.y) * 0.5f - 100));
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - CubitSize.x) * 0.5f, (ImGui::GetWindowSize().y - CubitSize.y) * 0.5f - 200));
 			ImGui::TextColored(ImVec4(0, 1, 1, 1), buf);
-
-
 			ImGui::SetWindowFontScale(1.f);
 
+
 			ImVec2 PlaySize = ImGui::CalcTextSize("PLAY");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - PlaySize.x) * 0.5f, (ImGui::GetWindowSize().y - PlaySize.y) * 0.5f + 250));
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - PlaySize.x) * 0.5f, (ImGui::GetWindowSize().y - PlaySize.y) * 0.5f));
 			if (ImGui::Button("PLAY"))
 			{
 				m_Map.LoadFull("levels/level1.malen");
 				Globals.gameState = GameState::PLAY;
 			}
 
-			ImVec2 QuitSize = ImGui::CalcTextSize("Quit");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - QuitSize.x) * 0.5f, (ImGui::GetWindowSize().y - QuitSize.y) * 0.5f + 150));
-			if (ImGui::Button("Quit")) Globals.window.Close();
+			ImVec2 LoadoutSize = ImGui::CalcTextSize("Loadout");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - LoadoutSize.x) * 0.5f, (ImGui::GetWindowSize().y - LoadoutSize.y) * 0.5f + 100));
+			if (ImGui::Button("Loadout")) Globals.gameState = GameState::LOADOUT;
 
 			ImVec2 SettingsSize = ImGui::CalcTextSize("Settings");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - SettingsSize.x) * 0.5f, (ImGui::GetWindowSize().y - SettingsSize.y) * 0.5f + 50));
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - SettingsSize.x) * 0.5f, (ImGui::GetWindowSize().y - SettingsSize.y) * 0.5f + 200));
 			if (ImGui::Button("Settings")) {
 				Globals.settings.Load();
 				Globals.gameState = GameState::SETTINGS;
 			}
+
+			ImVec2 QuitSize = ImGui::CalcTextSize("Quit");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - QuitSize.x) * 0.5f, (ImGui::GetWindowSize().y - QuitSize.y) * 0.5f + 300));
+			if (ImGui::Button("Quit")) Globals.window.Close();
+
 
 			ImGui::PopStyleVar(6);
 			ImGui::End();
@@ -286,8 +290,74 @@ namespace wc
 			ImGui::PopStyleVar(3);
 		}
 
-		bool buttonChecks[10] = { false };
+		void LOADOUT_MENU()
+		{
+			const ImGuiViewport* viewport = ImGui::GetMainViewport();
+			ImGui::SetNextWindowPos(viewport->WorkPos);
+			ImGui::SetNextWindowSize(viewport->WorkSize);
+			ImGui::SetNextWindowViewport(viewport->ID);
 
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 7.f);
+
+			ImGui::Begin("LOADOUT", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
+			ImGui::SetWindowFontScale(0.8f);
+			if (ImGui::BeginTabBar("Tab", ImGuiTabBarFlags_None))
+			{
+				//@TODO - optimize this
+				// ? put primaries in one class, secondaries in another and melee in another
+				// - make the loops shorter -
+
+				if (ImGui::BeginTabItem("Primary"))
+				{
+					ImGui::SeparatorText("Primary Weapon");
+					for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++)
+					{
+						if (WeaponStats[i].WeaponClass == WeaponClass::Primary)UI::WeaponChoose((WeaponType)i, m_Map.player.PrimaryWeapon);
+					}
+					ImGui::EndTabItem();
+				}
+
+				if (ImGui::BeginTabItem("Secondary"))
+				{
+					ImGui::SeparatorText("Secondary Weapon");
+					for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++)
+					{
+						if (WeaponStats[i].WeaponClass == WeaponClass::Secondary) {
+							UI::WeaponChoose((WeaponType)i, m_Map.player.SecondaryWeapon);
+						}
+					}
+					ImGui::EndTabItem();
+				}
+
+				if (ImGui::BeginTabItem("Melee"))
+				{
+					ImGui::SeparatorText("Melee Weapon");
+					for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++)
+					{
+						if (WeaponStats[i].WeaponClass == WeaponClass::Melee) {
+							UI::WeaponChoose((WeaponType)i, m_Map.player.MeleeWeapon);
+						}
+					}
+					ImGui::EndTabItem();
+				}
+
+				ImGui::EndTabBar();
+			}
+
+			ImVec2 BackSize = ImGui::CalcTextSize("Save and Go Back");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - BackSize.x) * 0.5f + 300, (ImGui::GetWindowSize().y + BackSize.y + 400) * 0.5f));
+			if (ImGui::Button("Save and Go Back"))
+			{
+				Globals.gameState = GameState::MENU;
+				Globals.settings.Save();
+			}
+			ImGui::End();
+			ImGui::PopStyleVar(5);
+		}
+
+		bool buttonChecks[10] = { false };
 		void SETTINGS_MENU()
 		{
 			const ImGuiViewport* viewport = ImGui::GetMainViewport();
