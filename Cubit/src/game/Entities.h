@@ -24,7 +24,7 @@ namespace wc
     };
 
 	enum class BulletType : uint8_t { Blaster, Revolver, Shotgun, RedCircle };
-	enum class WeaponType : uint8_t { Blaster, Revolver, Shotgun, RedBlaster, Sword };
+	enum class WeaponType : uint8_t { Blaster, Laser, Revolver, Shotgun, RedBlaster, Sword };
 	enum class WeaponClass : uint8_t { Primary, Secondary, Melee, EnemyWeapon };
 
     struct BaseEntity
@@ -116,6 +116,7 @@ namespace wc
         BulletType BulletType = BulletType::Blaster;
         WeaponClass WeaponClass = WeaponClass::Primary;
         uint32_t Damage = 0;
+        bool canZoom = false;
         float FireRate = 0.f;
         float AltFireRate = 0.f;
         float BulletSpeed = 0.f;
@@ -146,11 +147,12 @@ namespace wc
 
     struct Player : public GameEntity
     {
-        WeaponType Weapon = WeaponType::Blaster;
 
-		WeaponType PrimaryWeapon = WeaponType::Blaster;
+		WeaponType PrimaryWeapon = WeaponType::Laser;
 		WeaponType SecondaryWeapon = WeaponType::Shotgun;
 		WeaponType MeleeWeapon = WeaponType::Sword;
+
+        WeaponType Weapon = PrimaryWeapon;
 
         WeaponData Weapons[magic_enum::enum_count<WeaponType>()];
 

@@ -278,6 +278,7 @@ namespace wc
 						if (Type == EntityType::Player)
 						{
 							player.Weapons[(int)WeaponType::Blaster].Ammo = 60;
+							player.Weapons[(int)WeaponType::Laser].Ammo = 10;
 							player.Weapons[(int)WeaponType::Shotgun].Ammo = 12;
 							player.Weapons[(int)WeaponType::Revolver].Ammo = 24;
 							player.Weapon = player.PrimaryWeapon;
@@ -541,7 +542,7 @@ namespace wc
 			}
 		}
 
-		HitInfo Intersect(const Ray& ray, uint32_t startIndex = 0)
+		HitInfo Intersect(const Ray& ray, uint32_t startIndex = 0, EntityType ignoreType = EntityType::UNDEFINED)
 		{
 			HitInfo hitInfo;
 			float t = FLT_MAX;
@@ -591,16 +592,17 @@ namespace wc
 			for (uint32_t i = startIndex; i < Entities.size(); i++)
 			{
 				auto& entity = *Entities[i];
+				if (entity.Type != ignoreType) {
+					auto oHitInfo = aabbIntersection(ray, -entity.Size + entity.Position, entity.Size + entity.Position);
 
-				auto oHitInfo = aabbIntersection(ray, -entity.Size + entity.Position, entity.Size + entity.Position);
-
-				if (oHitInfo.Hit && oHitInfo.t < t)
-				{
-					hitInfo.Hit = true;
-					t = oHitInfo.t;
-					hitInfo.Entity = Entities[i];
-					hitInfo.N = oHitInfo.N;
-					hitInfo.Point = oHitInfo.Point;
+					if (oHitInfo.Hit && oHitInfo.t < t)
+					{
+						hitInfo.Hit = true;
+						t = oHitInfo.t;
+						hitInfo.Entity = Entities[i];
+						hitInfo.N = oHitInfo.N;
+						hitInfo.Point = oHitInfo.Point;
+					}
 				}
 			}
 
@@ -706,16 +708,12 @@ namespace wc
 						DestroyEntity(i);
 					}
 
-
 					//movement
 					float distToPlayer = glm::distance(player.Position, entity.Position);
-					if (distToPlayer < entity.DetectRange)
+					if (distToPlayer < entity.DetectRange && false)
 					{
 						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
-
-						/*if (entity.Position.x > player.Position.x)entity.body->SetLinearVelocity(b2Vec2(-entity.Speed, 0));
-						else entity.body->SetLinearVelocity(b2Vec2(entity.Speed, 0));*/
 					}
 					//attack behavior
 					if (distToPlayer < entity.ShootRange)
@@ -903,11 +901,11 @@ namespace wc
 
 
 			glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-
-			bool Zoom = Mouse::GetMouse(Mouse::RIGHT) != GLFW_RELEASE;
+			
+			bool Zoom = WeaponStats[(int)player.Weapon].canZoom && Mouse::GetMouse(Mouse::RIGHT) != GLFW_RELEASE;
 
 			m_TargetRotation = 0.f;
-			if (Zoom && player.Weapon != WeaponType::Revolver)
+			if (Zoom)
 			{
 				m_TargetPosition = player.Position + dir * 3.f;
 				m_TargetZoom = 0.6f;
@@ -931,8 +929,28 @@ namespace wc
 
 					ma_sound_start(&Globals.gun);
 
-					//SpawnBullet(player.Position + dir * 0.75f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.weapon, (GameEntity*)&player);
-					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
+					SpawnBullet(player.Position + dir * 0.75f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
+				}
+				else if (player.Weapon == WeaponType::Laser) {
+
+					ma_sound_start(&Globals.gun);
+
+					m_Particle.Position = player.Position + dir * 0.55f;
+					auto& vel = player.Body->GetLinearVelocity();
+					m_Particle.ColorBegin = glm::vec4{ 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f } *2.f;
+					m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
+					m_Particle.Velocity = dir;
+					m_Particle.VelocityVariation = dir * 25.f;
+					m_ParticleEmitter.Emit(m_Particle, 500);
+					
+					glm::vec2 shootPos = player.Position + dir * 0.35f;
+					auto hitInfo = Intersect({ shootPos, dir }, 1, EntityType::Bullet);
+
+					if (hitInfo.Hit && hitInfo.Entity) {
+						if(static_cast<GameEntity*>(hitInfo.Entity)->Type > EntityType::Entity)
+							static_cast<GameEntity*>(hitInfo.Entity)->DealDamage(WeaponStats[(int)player.Weapon].Damage);
+					}
+					
 				}
 				else if (player.Weapon == WeaponType::Shotgun)
 				{

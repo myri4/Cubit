@@ -57,6 +57,7 @@ namespace wc
 				auto& blaster = WeaponStats[(int)WeaponType::Blaster];
 				blaster.BulletType = BulletType::Blaster;
 				blaster.WeaponClass = WeaponClass::Primary;
+				blaster.canZoom = true;
 				blaster.Damage = 30;
 				blaster.FireRate = 0.3f;
 				blaster.MaxMag = 15;
@@ -67,6 +68,21 @@ namespace wc
 				blaster.Offset = { 0.25f, -0.15f };
 				blaster.Size = { 1.f, 0.45f };
 				blaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
+			}
+
+			{
+				auto& laser = WeaponStats[(int)WeaponType::Laser];
+				laser.WeaponClass = WeaponClass::Primary;
+				laser.canZoom = true;
+				laser.Damage = 60;
+				laser.FireRate = 1.5f;
+				laser.MaxMag = 5;
+				laser.ReloadSpeed = 2.5f;
+				laser.Range = 50.f;
+				laser.BulletSize = { 0.25f, 0.25f };
+				laser.Offset = { 0.15f, -0.15f };
+				laser.Size = { 1.5f, 0.45f };
+				laser.TextureID = m_RenderData.LoadTexture("assets/textures/LaserGun.png");
 			}
 
 			{
@@ -124,6 +140,7 @@ namespace wc
 				sword.Damage = 50;
 				sword.FireRate = 2.5f;
 				sword.Range = 15.f;
+				sword.Size = { 1.f, 0.45f };
 				sword.TextureID = m_RenderData.LoadTexture("assets/textures/Sword.png");
 			}
 
