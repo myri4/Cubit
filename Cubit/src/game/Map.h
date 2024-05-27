@@ -932,7 +932,7 @@ namespace wc
 					ma_sound_start(&Globals.gun);
 
 					//SpawnBullet(player.Position + dir * 0.75f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.weapon, (GameEntity*)&player);
-					SpawnBullet(player.Position + dir * 0.75f, dir, player.Weapon, (GameEntity*)&player);
+					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
 				}
 				else if (player.Weapon == WeaponType::Shotgun)
 				{
