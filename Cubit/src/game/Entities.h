@@ -211,7 +211,7 @@ namespace wc
         float DetectRange = 15.f;
         uint32_t Damage = 10;
 
-        RedCube() { Type = EntityType::RedCube; Health = 150; Speed = 1.1f; }
+        RedCube() { Type = EntityType::RedCube; Health = 150; Speed = 10.f; }
     };    
 
 	struct Fly : public GameEntity

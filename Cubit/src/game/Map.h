@@ -710,7 +710,7 @@ namespace wc
 
 					//movement
 					float distToPlayer = glm::distance(player.Position, entity.Position);
-					if (distToPlayer < entity.DetectRange && false)
+					if (distToPlayer < entity.DetectRange)
 					{
 						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
