@@ -881,7 +881,18 @@ namespace wc
 				float jumHeight = 8.f;
 				player.JumpForce = glm::sqrt(jumHeight * Gravity * player.Body->GetGravityScale() * -(2.f + player.LinearDamping)) * player.Body->GetMass();
 
-				player.Body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
+				if (player.Weapon == WeaponType::Shotgun) {
+
+					if (!ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyShoot) && !ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyShoot)) {
+						WC_CORE_INFO("jump")
+						player.Body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
+					}
+				}
+				else
+				{
+					WC_CORE_INFO("jump")	
+					player.Body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
+				}
 			}
 
 			if (player.DownContacts > 0)
@@ -954,16 +965,19 @@ namespace wc
 				}
 				else if (player.Weapon == WeaponType::Shotgun)
 				{
+					WC_CORE_ERROR("shotgun")
 					camera.Shake(0.8f);
 
 					glm::vec2 shootPos = player.Position + dir * 0.35f;
-					auto hitInfo = Intersect({ shootPos, dir }, 1);
+					auto hitInfo = Intersect({ shootPos, dir }, 1, EntityType::Bullet);
 
 					if (hitInfo.t <= 5.f)
 					{
-						float invDist = 1.f / glm::max(hitInfo.t, 1.f);
-						auto recoilForce = -dir * player.JumpForce * 2.f * invDist * invDist;
-						player.Body->ApplyLinearImpulseToCenter({ recoilForce.x, recoilForce.y }, true);
+						if (!ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyJump) && !ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump)) {
+							float invDist = 1.f / glm::max(hitInfo.t, 1.f);
+							auto recoilForce = -dir * player.JumpForce * 2.f * invDist * invDist;
+							player.Body->ApplyLinearImpulseToCenter({ recoilForce.x, recoilForce.y }, true);
+						}
 					}
 
 					ma_sound_start(&Globals.shotgun);

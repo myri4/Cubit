@@ -5,7 +5,7 @@ Repeaters: ~
 Filters: ~
 Observers: ~
 Entities:
-  - Position: [1.95704353, 1.55223978]
+  - Position: [2, 2]
     Type: Player
   - Position: [19.8281212, 1.94398713]
     Type: RedCube
