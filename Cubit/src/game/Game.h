@@ -57,7 +57,7 @@ namespace wc
 				auto& blaster = WeaponStats[(int)WeaponType::Blaster];
 				blaster.BulletType = BulletType::Blaster;
 				blaster.WeaponClass = WeaponClass::Primary;
-				blaster.canZoom = true;
+				blaster.CanZoom = true;
 				blaster.Damage = 30;
 				blaster.FireRate = 0.3f;
 				blaster.MaxMag = 15;
@@ -73,7 +73,7 @@ namespace wc
 			{
 				auto& laser = WeaponStats[(int)WeaponType::Laser];
 				laser.WeaponClass = WeaponClass::Primary;
-				laser.canZoom = true;
+				laser.CanZoom = true;
 				laser.Damage = 60;
 				laser.FireRate = 1.5f;
 				laser.MaxMag = 5;
@@ -115,8 +115,10 @@ namespace wc
 				revolver.Range = 25.f;
 				revolver.Offset = { 0.25f, -0.15f };
 				revolver.Size = { 1.f, 0.45f };
+				revolver.BulletPhysical = true;
 				revolver.BulletSpeed = 25.f;
 				revolver.BulletSize = { 0.1f, 0.1f };
+				revolver.BulletBounces = 3;
 				revolver.TextureID = m_RenderData.LoadTexture("assets/textures/Revolver.png");
 			}
 

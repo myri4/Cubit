@@ -116,10 +116,14 @@ namespace wc
         BulletType BulletType = BulletType::Blaster;
         WeaponClass WeaponClass = WeaponClass::Primary;
         uint32_t Damage = 0;
-        bool canZoom = false;
+        bool CanZoom = false;
         float FireRate = 0.f;
         float AltFireRate = 0.f;
+
         float BulletSpeed = 0.f;
+        uint32_t BulletBounces = 0;
+        bool BulletPhysical = false;
+
         float Range = 0.f;
 		float ReloadSpeed = 0.f;
 		bool ReloadByOne = false;
@@ -147,8 +151,7 @@ namespace wc
 
     struct Player : public GameEntity
     {
-
-		WeaponType PrimaryWeapon = WeaponType::Laser;
+		WeaponType PrimaryWeapon = WeaponType::Blaster;
 		WeaponType SecondaryWeapon = WeaponType::Shotgun;
 		WeaponType MeleeWeapon = WeaponType::Sword;
 
@@ -234,6 +237,7 @@ namespace wc
         EntityType HitEntityType = EntityType::UNDEFINED;
 		GameEntity* HitEntity = nullptr;
         GameEntity* SourceEntity = nullptr;
+        uint32_t Bounces = 0;
 
         Bullet() { Type = EntityType::Bullet; }
 
@@ -252,7 +256,7 @@ namespace wc
             b2FixtureDef fixtureDef;
             fixtureDef.density = Density;
             fixtureDef.friction = 0.f;
-            fixtureDef.isSensor = true;
+            fixtureDef.isSensor = !WeaponStats[(int)WeaponType].BulletPhysical;
 
             fixtureDef.userData.pointer = (uintptr_t)this;
 

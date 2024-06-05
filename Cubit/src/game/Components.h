@@ -34,7 +34,6 @@ namespace wc
 	{
 		b2Body* Body = nullptr;
 
-		// @TODO: Fix this contact situation
 		uint32_t UpContacts = 0;
 		uint32_t DownContacts = 0;
 		uint32_t LeftContacts = 0;

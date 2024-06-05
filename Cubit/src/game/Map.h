@@ -36,6 +36,29 @@ namespace wc
 
 	class ContactListener : public b2ContactListener
 	{
+		void BulletHit(GameEntity* entityA, GameEntity* entityB)
+		{
+			if (entityA->Type == EntityType::Bullet)
+			{
+				Bullet& bullet = *(Bullet*)entityA;
+
+				if (bullet.SourceEntity != entityB && entityB->Type != EntityType::Bullet)
+				{
+					bullet.HitEntityType = entityB->Type;
+					if (entityB->Type > EntityType::Entity) bullet.HitEntity = entityB;
+				}
+			}
+		}
+
+		void BulletHitTile(GameEntity* entityA, GameEntity* entityB)
+		{
+			if (entityA && entityA->Type == EntityType::Bullet && !entityB)
+			{
+				Bullet& bullet = *(Bullet*)entityA;
+				bullet.HitEntityType = EntityType::Tile;
+			}
+		}
+
 		void BeginContact(b2Contact* contact) override
 		{
 			b2Fixture* fixtureA = contact->GetFixtureA();
@@ -46,46 +69,19 @@ namespace wc
 
 			GameEntity* entityA = reinterpret_cast<GameEntity*>(fixtureUserDataA.pointer);
 			GameEntity* entityB = reinterpret_cast<GameEntity*>(fixtureUserDataB.pointer);
+							
 			if (entityA && entityB)
 			{
-				if (entityA->Type == EntityType::Bullet)
-				{
-					Bullet& bullet = *(Bullet*)entityA;
-
-					if (bullet.SourceEntity != entityB && entityB->Type != EntityType::Bullet)
-					{
-						bullet.HitEntityType = entityB->Type;
-						if (entityB->Type > EntityType::Entity) bullet.HitEntity = entityB;
-					}
-				}
-
-				if (entityB->Type == EntityType::Bullet)
-				{
-					Bullet& bullet = *(Bullet*)entityB;
-
-					if (bullet.SourceEntity != entityA && entityA->Type != EntityType::Bullet)
-					{
-						bullet.HitEntityType = entityA->Type;
-						if (entityA->Type > EntityType::Entity) bullet.HitEntity = entityA;
-					}
-				}
+				BulletHit(entityA, entityB);
+				BulletHit(entityB, entityA);
 			}
 
-			if (entityA && entityA->Type == EntityType::Bullet && !entityB)
-			{
-				Bullet& bullet = *(Bullet*)entityA;
-				bullet.HitEntityType = EntityType::Tile;
-			}
-
-			if (entityB && entityB->Type == EntityType::Bullet && !entityA)
-			{
-				Bullet& bullet = *(Bullet*)entityB;
-				bullet.HitEntityType = EntityType::Tile;
-			}
+			BulletHitTile(entityA, entityB);
+			BulletHitTile(entityB, entityA);
 
 			b2Vec2 bNormal = contact->GetManifold()->localNormal;
 			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
-			if (entityA && entityA->Type > EntityType::Entity)
+			if (entityA && (entityA->Type > EntityType::Entity || entityA->Type == EntityType::Bullet))
 			{
 				if (fixtureB->GetType() == b2Shape::e_chain)
 				{
@@ -97,7 +93,7 @@ namespace wc
 				}
 			}
 
-			if (entityB && entityB->Type > EntityType::Entity)
+			if (entityB && (entityB->Type > EntityType::Entity || entityB->Type == EntityType::Bullet))
 			{
 				if (fixtureA->GetType() == b2Shape::e_chain)
 				{
@@ -124,7 +120,7 @@ namespace wc
 			b2Vec2 bNormal = contact->GetManifold()->localNormal;
 			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
 
-			if (entityA && entityA->Type > EntityType::Entity)
+			if (entityA && (entityA->Type > EntityType::Entity || entityA->Type == EntityType::Bullet))
 			{
 				if (fixtureB->GetType() == b2Shape::e_chain)
 				{
@@ -136,7 +132,7 @@ namespace wc
 				}
 			}
 
-			if (entityB && entityB->Type > EntityType::Entity)
+			if (entityB && (entityB->Type > EntityType::Entity || entityB->Type == EntityType::Bullet))
 			{
 				if (fixtureA->GetType() == b2Shape::e_chain)
 				{
@@ -642,6 +638,8 @@ namespace wc
 			bullet->WeaponType = weaponType;
 			bullet->Density = 0.f;
 			bullet->LinearDamping = 0.f;
+			bullet->Bounces = weaponInfo.BulletBounces;
+
 			bullet->CreateBody(PhysicsWorld);
 			Entities.emplace_back(bullet);
 		}
@@ -797,34 +795,51 @@ namespace wc
 							player.DealDamage(weapon.Damage);
 						}
 
-						if (bullet.BulletType == BulletType::Blaster && bullet.HitEntityType > EntityType::Entity)
+						if (bullet.HitEntityType > EntityType::Entity)
 						{
-							ma_sound_start(&Globals.damageEnemy);
-							GameEntity* shotEnt = bullet.HitEntity;
-							shotEnt->DealDamage(weapon.Damage);
+							if (bullet.BulletType == BulletType::Blaster)
+							{
+								ma_sound_start(&Globals.damageEnemy);
+								GameEntity* shotEnt = bullet.HitEntity;
+								shotEnt->DealDamage(weapon.Damage);
 
-							m_Particle.LifeTime = 0.35f;
-							m_Particle.ColorBegin = glm::vec4(0.f, 1.f, 0.f, 1.f) * 2.f;
-							m_Particle.ColorEnd = glm::vec4(0.f, 1.f, 0.f, 1.f);
-							m_Particle.Position = shotEnt->Position;
-							m_Particle.Velocity = glm::vec2(0.5f);
-							m_Particle.VelocityVariation = glm::normalize(shotEnt->Position - player.Position) * 2.5f;
-							m_ParticleEmitter.Emit(m_Particle, 6);
+								m_Particle.LifeTime = 0.35f;
+								m_Particle.ColorBegin = glm::vec4(0.f, 1.f, 0.f, 1.f) * 2.f;
+								m_Particle.ColorEnd = glm::vec4(0.f, 1.f, 0.f, 1.f);
+								m_Particle.Position = shotEnt->Position;
+								m_Particle.Velocity = glm::vec2(0.5f);
+								m_Particle.VelocityVariation = glm::normalize(shotEnt->Position - player.Position) * 2.5f;
+								m_ParticleEmitter.Emit(m_Particle, 6);
+							}
+
+							if (bullet.BulletType == BulletType::Shotgun)
+							{
+								GameEntity* shotEnt = bullet.HitEntity;
+								shotEnt->DealDamage(weapon.Damage);
+							}
+
+							if (bullet.BulletType == BulletType::Revolver)
+							{
+								GameEntity* shotEnt = bullet.HitEntity;
+								shotEnt->DealDamage(weapon.Damage);
+							}
 						}
 
-						if (bullet.BulletType == BulletType::Shotgun && bullet.HitEntityType > EntityType::Entity)
+						if (bullet.Bounces == 0) DestroyEntity(i);
+						else
 						{
-							GameEntity* shotEnt = bullet.HitEntity;
-							shotEnt->DealDamage(weapon.Damage);
-						}
+							glm::vec2 normal = glm::vec2(0.f);
+							if (bullet.UpContacts) normal = glm::vec2(0.f, 1.f);
+							if (bullet.DownContacts) normal = glm::vec2(0.f, -1.f);
+							if (bullet.LeftContacts) normal = glm::vec2(-1.f, 0.f);
+							if (bullet.RightContacts) normal = glm::vec2(1.f, 0.f);
 
-						if (bullet.BulletType == BulletType::Revolver && bullet.HitEntityType > EntityType::Entity)
-						{
-							GameEntity* shotEnt = bullet.HitEntity;
-							shotEnt->DealDamage(weapon.Damage);
-						}
+							bullet.Direction = glm::reflect(bullet.Direction, normal);
+							bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * bullet.Speed, bullet.Direction.y * bullet.Speed));
+							bullet.Bounces--;
 
-						DestroyEntity(i);
+							WC_CORE_INFO("boun {} {}", normal.x, normal.y)
+						}
 					}
 					else if (glm::distance(bullet.ShotPos, bullet.Position) > weapon.Range)
 					{
@@ -902,7 +917,7 @@ namespace wc
 
 			glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 			
-			bool Zoom = WeaponStats[(int)player.Weapon].canZoom && Mouse::GetMouse(Mouse::RIGHT) != GLFW_RELEASE;
+			bool Zoom = WeaponStats[(int)player.Weapon].CanZoom && Mouse::GetMouse(Mouse::RIGHT) != GLFW_RELEASE;
 
 			m_TargetRotation = 0.f;
 			if (Zoom)
