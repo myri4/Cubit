@@ -90,6 +90,7 @@ namespace wc
 					if (normal == glm::vec2(0.f, 1.f)) entityA->DownContacts++;
 					if (normal == glm::vec2(1.f, 0.f)) entityA->LeftContacts++;
 					if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts++;
+					//WC_CORE_INFO("Normal: x:{} y:{}", bNormal.x, bNormal.y);
 				}
 			}
 
@@ -102,6 +103,7 @@ namespace wc
 					if (normal == glm::vec2(0.f, 1.f)) entityB->DownContacts++;
 					if (normal == glm::vec2(1.f, 0.f)) entityB->LeftContacts++;
 					if (normal == glm::vec2(-1.f, 0.f)) entityB->RightContacts++;
+					//WC_CORE_INFO("Normal: x:{} y:{}", bNormal.x, bNormal.y);
 				}
 			}
 		}
@@ -765,7 +767,7 @@ namespace wc
 					Bullet& bullet = *(Bullet*)e;
 					WeaponInfo& weapon = WeaponStats[(int)bullet.WeaponType];
 
-					if (bullet.HitEntityType != EntityType::UNDEFINED)
+					if (bullet.HitEntityType > EntityType::Entity)
 					{
 						if (bullet.BulletType == BulletType::RedCircle && bullet.HitEntityType == EntityType::Player)
 						{
@@ -825,26 +827,35 @@ namespace wc
 							}
 						}
 
-						if (bullet.Bounces == 0) DestroyEntity(i);
-						else
-						{
-							glm::vec2 normal = glm::vec2(0.f);
-							if (bullet.UpContacts) normal = glm::vec2(0.f, 1.f);
-							if (bullet.DownContacts) normal = glm::vec2(0.f, -1.f);
-							if (bullet.LeftContacts) normal = glm::vec2(-1.f, 0.f);
-							if (bullet.RightContacts) normal = glm::vec2(1.f, 0.f);
-
-							bullet.Direction = glm::reflect(bullet.Direction, normal);
-							bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * bullet.Speed, bullet.Direction.y * bullet.Speed));
-							bullet.Bounces--;
-
-							WC_CORE_INFO("boun {} {}", normal.x, normal.y)
-						}
+						DestroyEntity(i);
+						
 					}
 					else if (glm::distance(bullet.ShotPos, bullet.Position) > weapon.Range)
 					{
 						DestroyEntity(i);
 					}
+
+					if (bullet.Contacts != 0) 
+					{
+						if (bullet.Bounces == 0) DestroyEntity(i);
+						else
+						{
+							glm::vec2 normal = glm::vec2(0.f);
+							glm::vec2 hitPos = glm::vec2(0.f);
+							HitInfo hit = Intersect({ bullet.Position - bullet.Direction, bullet.Direction }, Entities.size());
+							
+							if (hit.Hit) {
+								normal = hit.N;
+								hitPos = hit.Point;
+							}
+
+							bullet.Direction = glm::reflect(bullet.Direction, normal);
+							bullet.Body->SetTransform(b2Vec2(bullet.Direction.x * 0.35f + hitPos.x, bullet.Direction.y * 0.35f + hitPos.y), 0.f);
+							bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * bullet.Speed, bullet.Direction.y * bullet.Speed));
+							bullet.Bounces--;
+						}
+					}
+					
 				}
 				break;
 				default:
@@ -940,7 +951,8 @@ namespace wc
 				{
 					std::random_device rd;
 					std::mt19937 gen(rd());
-					std::uniform_real_distribution<float> dis(-0.08f, 0.12f);
+					glm::vec2 offset = WeaponStats[(int)WeaponType::Blaster].Offset;
+					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
 					ma_sound_start(&Globals.gun);
 
@@ -950,22 +962,22 @@ namespace wc
 
 					ma_sound_start(&Globals.gun);
 
-					m_Particle.Position = player.Position + dir * 0.55f;
-					auto& vel = player.Body->GetLinearVelocity();
-					m_Particle.ColorBegin = glm::vec4{ 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f } *2.f;
-					m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
-					m_Particle.Velocity = dir;
-					m_Particle.VelocityVariation = dir * 25.f;
-					m_ParticleEmitter.Emit(m_Particle, 500);
-					
 					glm::vec2 shootPos = player.Position + dir * 0.35f;
 					auto hitInfo = Intersect({ shootPos, dir }, 1, EntityType::Bullet);
 
-					if (hitInfo.Hit && hitInfo.Entity) {
-						if(static_cast<GameEntity*>(hitInfo.Entity)->Type > EntityType::Entity)
-							static_cast<GameEntity*>(hitInfo.Entity)->DealDamage(WeaponStats[(int)player.Weapon].Damage);
+					if (glm::distance(hitInfo.Point, player.Position) < WeaponStats[(int)WeaponType::Laser].Range) {
+						if (hitInfo.Hit && hitInfo.Entity) {
+							if (static_cast<GameEntity*>(hitInfo.Entity)->Type > EntityType::Entity)
+								static_cast<GameEntity*>(hitInfo.Entity)->DealDamage(WeaponStats[(int)player.Weapon].Damage);
+						}
+
+						m_Particle.Position = hitInfo.Point;
+						m_Particle.ColorBegin = glm::vec4{ 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f } *2.f;
+						m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
+						m_Particle.Velocity = -dir;
+						m_Particle.VelocityVariation = -dir * 3.5f;
+						m_ParticleEmitter.Emit(m_Particle, 25);
 					}
-					
 				}
 				else if (player.Weapon == WeaponType::Shotgun)
 				{
@@ -984,7 +996,8 @@ namespace wc
 					ma_sound_start(&Globals.shotgun);
 					std::random_device rd;
 					std::mt19937 gen(rd());
-					std::uniform_real_distribution<float> dis(-0.35f, 0.35f);
+					glm::vec2 offset = WeaponStats[(int)WeaponType::Shotgun].Offset;
+					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
 					for (uint32_t i = 0; i < 10; i++)
 					{
@@ -1003,7 +1016,8 @@ namespace wc
 				{
 					std::random_device rd;
 					std::mt19937 gen(rd());
-					std::uniform_real_distribution<float> dis(-0.08f, 0.12f);
+					glm::vec2 offset = WeaponStats[(int)WeaponType::Revolver].Offset;
+					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
 					ma_sound_start(&Globals.gun);
 					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);

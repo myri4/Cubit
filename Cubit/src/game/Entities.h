@@ -152,7 +152,7 @@ namespace wc
     struct Player : public GameEntity
     {
 		WeaponType PrimaryWeapon = WeaponType::Blaster;
-		WeaponType SecondaryWeapon = WeaponType::Shotgun;
+		WeaponType SecondaryWeapon = WeaponType::Revolver;
 		WeaponType MeleeWeapon = WeaponType::Sword;
 
         WeaponType Weapon = PrimaryWeapon;
@@ -252,6 +252,9 @@ namespace wc
 
             b2CircleShape shape;
             shape.m_radius = Size.x;
+
+            //b2PolygonShape shape;
+            //shape.SetAsBox(Size.x, Size.y);
 
             b2FixtureDef fixtureDef;
             fixtureDef.density = Density;
