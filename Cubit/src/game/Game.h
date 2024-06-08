@@ -65,8 +65,9 @@ namespace wc
 				blaster.Range = 50.f;
 				blaster.BulletSpeed = 25.f;
 				blaster.BulletSize = { 0.25f, 0.25f };
-				blaster.Offset = { -0.08f, 0.12f };
-				blaster.Size = { 1.f, 0.45f };
+				blaster.Recoil = { 0.25f, -0.15f };
+				blaster.RenderOffset = { 0.25f, -0.15f };
+				blaster.RenderSize = { 1.f, 0.45f };
 				blaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			}
 
@@ -80,8 +81,9 @@ namespace wc
 				laser.ReloadSpeed = 2.5f;
 				laser.Range = 50.f;
 				laser.BulletSize = { 0.25f, 0.25f };
-				laser.Offset = { 0.0f, -0.0f };
-				laser.Size = { 1.5f, 0.45f };
+				laser.Recoil = { 0.15f, -0.15f };
+				laser.RenderOffset = { 0.0f, -0.0f };
+				laser.RenderSize = { 1.5f, 0.45f };
 				laser.TextureID = m_RenderData.LoadTexture("assets/textures/LaserGun.png");
 			}
 
@@ -97,8 +99,9 @@ namespace wc
 				shotgun.Range = 2.5f;
 				shotgun.BulletSpeed = 25.f;
 				shotgun.BulletSize = { 0.1f, 0.1f };
-				shotgun.Offset = { 0.35f, -0.35f };
-				shotgun.Size = { 1.f, 0.45f };
+				shotgun.Recoil = { 0.25f, -0.15f };
+				shotgun.RenderOffset = { 0.25f, -0.15f };
+				shotgun.RenderSize = { 1.f, 0.45f };
 				shotgun.TextureID = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
 			}
 
@@ -113,12 +116,11 @@ namespace wc
 				revolver.ReloadSpeed = 0.5f;
 				revolver.ReloadByOne = true;
 				revolver.Range = 25.f;
-				revolver.Offset = { 0.25f, -0.15f };
-				revolver.Size = { 1.f, 0.45f };
-				revolver.BulletPhysical = false;
+				revolver.RenderOffset = { 0.25f, -0.15f };
+				revolver.RenderSize = { 1.f, 0.45f };
 				revolver.BulletSpeed = 25.f;
 				revolver.BulletSize = { 0.1f, 0.1f };
-				revolver.BulletBounces = 1;
+				revolver.BulletBounces = 3;
 				revolver.TextureID = m_RenderData.LoadTexture("assets/textures/Revolver.png");
 			}
 
@@ -131,8 +133,8 @@ namespace wc
 				redBlaster.Range = 50.f;
 				redBlaster.BulletSpeed = 25.f;
 				redBlaster.BulletSize = { 0.25f, 0.25f };
-				redBlaster.Offset = { 0.25f, -0.15f };
-				redBlaster.Size = { 1.f, 0.45f };
+				redBlaster.RenderOffset = { 0.25f, -0.15f };
+				redBlaster.RenderSize = { 1.f, 0.45f };
 				redBlaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			}
 
@@ -142,7 +144,7 @@ namespace wc
 				sword.Damage = 50;
 				sword.FireRate = 2.5f;
 				sword.Range = 15.f;
-				sword.Size = { 1.f, 0.45f };
+				sword.RenderSize = { 1.f, 0.45f };
 				sword.TextureID = m_RenderData.LoadTexture("assets/textures/Sword.png");
 			}
 

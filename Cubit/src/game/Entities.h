@@ -122,17 +122,17 @@ namespace wc
 
         float BulletSpeed = 0.f;
         uint32_t BulletBounces = 0;
-        bool BulletPhysical = false;
+        glm::vec2 BulletSize;
 
         float Range = 0.f;
 		float ReloadSpeed = 0.f;
 		bool ReloadByOne = false;
 		uint32_t MaxMag = 0;
 
-        glm::vec2 Size;
-        glm::vec2 Offset;
+        glm::vec2 RenderSize;
+        glm::vec2 RenderOffset;
 
-        glm::vec2 BulletSize;
+        glm::vec2 Recoil;
 
         uint32 TextureID = 0;
     };
@@ -248,6 +248,8 @@ namespace wc
             bodyDef.position.Set(Position.x, Position.y);
             bodyDef.fixedRotation = true;
             bodyDef.bullet = true;
+            bodyDef.gravityScale = 0.f;
+            bodyDef.linearVelocity = b2Vec2(Direction.x * Speed, Direction.y * Speed);
             Body = PhysicsWorld->CreateBody(&bodyDef);
 
             b2CircleShape shape;
@@ -257,16 +259,18 @@ namespace wc
             //shape.SetAsBox(Size.x, Size.y);
 
             b2FixtureDef fixtureDef;
-            fixtureDef.density = Density;
+            fixtureDef.density = 0.01f;
             fixtureDef.friction = 0.f;
-            fixtureDef.isSensor = !WeaponStats[(int)WeaponType].BulletPhysical;
 
             fixtureDef.userData.pointer = (uintptr_t)this;
 
             fixtureDef.shape = &shape;
-            Body->CreateFixture(&fixtureDef); 
-            Body->SetLinearVelocity(b2Vec2(Direction.x * Speed, Direction.y * Speed));
-            Body->SetGravityScale(0.f);
+            Body->CreateFixture(&fixtureDef);
+            b2MassData massData;
+			massData.center = Body->GetMassData().center;
+			massData.I = Body->GetMassData().I;
+            massData.mass = 0.01f;
+            Body->SetMassData(&massData);
         }
     };
 }

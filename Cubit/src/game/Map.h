@@ -45,17 +45,29 @@ namespace wc
 				if (bullet.SourceEntity != entityB && entityB->Type != EntityType::Bullet)
 				{
 					bullet.HitEntityType = entityB->Type;
-					if (entityB->Type > EntityType::Entity) bullet.HitEntity = entityB;
+					if (entityB->Type > EntityType::Entity)
+					{
+						bullet.HitEntity = entityB;
+						//entityB->Body->ApplyLinearImpulseToCenter(-bullet.Body->GetLinearVelocity(), true);						
+					}
 				}
 			}
 		}
 
-		void BulletHitTile(GameEntity* entityA, GameEntity* entityB)
+		void BulletHitTile(GameEntity* entityA, GameEntity* entityB, glm::vec2 normal)
 		{
 			if (entityA && entityA->Type == EntityType::Bullet && !entityB)
 			{
 				Bullet& bullet = *(Bullet*)entityA;
 				bullet.HitEntityType = EntityType::Tile;
+
+				if (bullet.Bounces > 0)
+				{
+					bullet.Direction = glm::reflect(bullet.Direction, normal);
+					bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * bullet.Speed, bullet.Direction.y * bullet.Speed));
+					bullet.HitEntityType = EntityType::UNDEFINED;
+					bullet.Bounces--;
+				}
 			}
 		}
 
@@ -70,17 +82,18 @@ namespace wc
 			GameEntity* entityA = reinterpret_cast<GameEntity*>(fixtureUserDataA.pointer);
 			GameEntity* entityB = reinterpret_cast<GameEntity*>(fixtureUserDataB.pointer);
 							
+			b2Vec2 bNormal = contact->GetManifold()->localNormal;
+			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
+
 			if (entityA && entityB)
 			{
 				BulletHit(entityA, entityB);
 				BulletHit(entityB, entityA);
 			}
 
-			BulletHitTile(entityA, entityB);
-			BulletHitTile(entityB, entityA);
+			BulletHitTile(entityA, entityB, normal);
+			BulletHitTile(entityB, entityA, normal);
 
-			b2Vec2 bNormal = contact->GetManifold()->localNormal;
-			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
 			if (entityA && (entityA->Type > EntityType::Entity || entityA->Type == EntityType::Bullet))
 			{
 				if (fixtureB->GetType() == b2Shape::e_chain)
@@ -90,7 +103,6 @@ namespace wc
 					if (normal == glm::vec2(0.f, 1.f)) entityA->DownContacts++;
 					if (normal == glm::vec2(1.f, 0.f)) entityA->LeftContacts++;
 					if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts++;
-					//WC_CORE_INFO("Normal: x:{} y:{}", bNormal.x, bNormal.y);
 				}
 			}
 
@@ -103,7 +115,6 @@ namespace wc
 					if (normal == glm::vec2(0.f, 1.f)) entityB->DownContacts++;
 					if (normal == glm::vec2(1.f, 0.f)) entityB->LeftContacts++;
 					if (normal == glm::vec2(-1.f, 0.f)) entityB->RightContacts++;
-					//WC_CORE_INFO("Normal: x:{} y:{}", bNormal.x, bNormal.y);
 				}
 			}
 		}
@@ -830,31 +841,12 @@ namespace wc
 						DestroyEntity(i);
 						
 					}
+					else if (bullet.HitEntityType == EntityType::Tile && bullet.Bounces == 0) DestroyEntity(i);
 					else if (glm::distance(bullet.ShotPos, bullet.Position) > weapon.Range)
 					{
 						DestroyEntity(i);
 					}
 
-					if (bullet.Contacts != 0) 
-					{
-						if (bullet.Bounces == 0) DestroyEntity(i);
-						else
-						{
-							glm::vec2 normal = glm::vec2(0.f);
-							glm::vec2 hitPos = glm::vec2(0.f);
-							HitInfo hit = Intersect({ bullet.Position - bullet.Direction, bullet.Direction }, Entities.size());
-							
-							if (hit.Hit) {
-								normal = hit.N;
-								hitPos = hit.Point;
-							}
-
-							bullet.Direction = glm::reflect(bullet.Direction, normal);
-							bullet.Body->SetTransform(b2Vec2(bullet.Direction.x * 0.35f + hitPos.x, bullet.Direction.y * 0.35f + hitPos.y), 0.f);
-							bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * bullet.Speed, bullet.Direction.y * bullet.Speed));
-							bullet.Bounces--;
-						}
-					}
 					
 				}
 				break;
@@ -951,7 +943,7 @@ namespace wc
 				{
 					std::random_device rd;
 					std::mt19937 gen(rd());
-					glm::vec2 offset = WeaponStats[(int)WeaponType::Blaster].Offset;
+					auto& offset = WeaponStats[(int)WeaponType::Blaster].Recoil;
 					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
 					ma_sound_start(&Globals.gun);
@@ -996,7 +988,7 @@ namespace wc
 					ma_sound_start(&Globals.shotgun);
 					std::random_device rd;
 					std::mt19937 gen(rd());
-					glm::vec2 offset = WeaponStats[(int)WeaponType::Shotgun].Offset;
+					auto& offset = WeaponStats[(int)WeaponType::Shotgun].Recoil;
 					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
 					for (uint32_t i = 0; i < 10; i++)
@@ -1016,7 +1008,7 @@ namespace wc
 				{
 					std::random_device rd;
 					std::mt19937 gen(rd());
-					glm::vec2 offset = WeaponStats[(int)WeaponType::Revolver].Offset;
+					auto& offset = WeaponStats[(int)WeaponType::Revolver].Recoil;
 					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
 					ma_sound_start(&Globals.gun);
@@ -1215,7 +1207,7 @@ namespace wc
 				auto& weapon = WeaponStats[(int)player.Weapon];
 
 				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-				glm::vec2 offset = weapon.Offset;
+				glm::vec2 offset = weapon.RenderOffset;
 				float angle = atan2(dir.y, dir.x);
 				if (dir.x < 0.f)
 				{
@@ -1225,7 +1217,7 @@ namespace wc
 				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(player.Position, 0.f)) *
 					glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, dir.x < 0.f ? -1.f : 1.f }) *
 					glm::translate(glm::mat4(1.f), glm::vec3(offset, 0.f)) * glm::scale(glm::mat4(1.f),
-						{ (dir.x < 0.f ? -1.f : 1.f) * weapon.Size.x, weapon.Size.y, 1.f });
+						{ (dir.x < 0.f ? -1.f : 1.f) * weapon.RenderSize.x, weapon.RenderSize.y, 1.f });
 
 				m_RenderData.DrawQuad(transform, weapon.TextureID);
 			}
