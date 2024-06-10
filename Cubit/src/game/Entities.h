@@ -120,7 +120,9 @@ namespace wc
         float FireRate = 0.f;
         float AltFireRate = 0.f;
 
+        glm::vec4 BulletColor = { 0, 0, 0, 0 };
         float BulletSpeed = 0.f;
+        bool isBulletSensor = true; //physical body or a sensor
         uint32_t BulletBounces = 0;
         glm::vec2 BulletSize;
 
@@ -186,7 +188,7 @@ namespace wc
 			}
 			else
 			{
-				weapon.Timer = weaponStats.ReloadSpeed;
+				if (weapon.Magazine < weaponStats.MaxMag)weapon.Timer = weaponStats.ReloadSpeed;
 				if (weapon.Ammo >= weaponStats.MaxMag - weapon.Magazine) 
                 {
 					weapon.Ammo -= weaponStats.MaxMag - weapon.Magazine;
@@ -234,10 +236,13 @@ namespace wc
         WeaponType WeaponType = WeaponType::Blaster;
         glm::vec2 ShotPos;
 
+        glm::vec4 Color = { 0, 0, 0, 0 };
+
         EntityType HitEntityType = EntityType::UNDEFINED;
 		GameEntity* HitEntity = nullptr;
         GameEntity* SourceEntity = nullptr;
         uint32_t Bounces = 0;
+        bool isSensor = true;
 
         Bullet() { Type = EntityType::Bullet; }
 
@@ -261,6 +266,7 @@ namespace wc
             b2FixtureDef fixtureDef;
             fixtureDef.density = 0.01f;
             fixtureDef.friction = 0.f;
+            fixtureDef.isSensor = isSensor;
 
             fixtureDef.userData.pointer = (uintptr_t)this;
 

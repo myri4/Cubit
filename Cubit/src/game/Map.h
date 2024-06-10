@@ -42,15 +42,12 @@ namespace wc
 			{
 				Bullet& bullet = *(Bullet*)entityA;
 
-				if (bullet.SourceEntity != entityB && entityB->Type != EntityType::Bullet)
-				{
-					bullet.HitEntityType = entityB->Type;
-					if (entityB->Type > EntityType::Entity)
-					{
-						bullet.HitEntity = entityB;
-						//entityB->Body->ApplyLinearImpulseToCenter(-bullet.Body->GetLinearVelocity(), true);						
-					}
-				}
+				bullet.HitEntityType = entityB->Type;
+				bullet.HitEntity = entityB;
+				//if (entityB->Type > EntityType::Entity)
+				//{
+					//entityB->Body->ApplyLinearImpulseToCenter(-bullet.Body->GetLinearVelocity(), true);						
+				//}
 			}
 		}
 
@@ -647,6 +644,8 @@ namespace wc
 			bullet->Size = weaponInfo.BulletSize;
 			bullet->Speed = weaponInfo.BulletSpeed;
 			bullet->Direction = direction;
+			bullet->isSensor = weaponInfo.isBulletSensor;
+			bullet->Color = weaponInfo.BulletColor;
 			bullet->BulletType = weaponInfo.BulletType;
 			bullet->WeaponType = weaponType;
 			bullet->Density = 0.f;
@@ -778,8 +777,14 @@ namespace wc
 					Bullet& bullet = *(Bullet*)e;
 					WeaponInfo& weapon = WeaponStats[(int)bullet.WeaponType];
 
-					if (bullet.HitEntityType > EntityType::Entity)
+					if (bullet.BulletType == BulletType::RedCircle) {
+						bullet.Body->SetLinearVelocity(b2Vec2(0, 0));
+					}
+
+					if (bullet.HitEntityType > EntityType::UNDEFINED)
 					{
+						GameEntity* shotEnt = bullet.HitEntity;
+
 						if (bullet.BulletType == BulletType::RedCircle && bullet.HitEntityType == EntityType::Player)
 						{
 							std::random_device rd;
@@ -812,9 +817,10 @@ namespace wc
 						{
 							if (bullet.BulletType == BulletType::Blaster)
 							{
-								ma_sound_start(&Globals.damageEnemy);
-								GameEntity* shotEnt = bullet.HitEntity;
-								shotEnt->DealDamage(weapon.Damage);
+								if (shotEnt != bullet.SourceEntity) {
+									shotEnt->DealDamage(weapon.Damage);
+									ma_sound_start(&Globals.damageEnemy);
+								}
 
 								m_Particle.LifeTime = 0.35f;
 								m_Particle.ColorBegin = glm::vec4(0.f, 1.f, 0.f, 1.f) * 2.f;
@@ -827,25 +833,41 @@ namespace wc
 
 							if (bullet.BulletType == BulletType::Shotgun)
 							{
-								GameEntity* shotEnt = bullet.HitEntity;
-								shotEnt->DealDamage(weapon.Damage);
+								if (shotEnt != bullet.SourceEntity)shotEnt->DealDamage(weapon.Damage);
 							}
 
 							if (bullet.BulletType == BulletType::Revolver)
 							{
-								GameEntity* shotEnt = bullet.HitEntity;
-								shotEnt->DealDamage(weapon.Damage);
+								if (shotEnt != bullet.SourceEntity)shotEnt->DealDamage(weapon.Damage);
 							}
 						}
-
-						DestroyEntity(i);
+						
+						if (!bullet.isSensor && bullet.HitEntity->Type == EntityType::Bullet) {
+							Bullet& hitBullet = *(Bullet*)bullet.HitEntity;
+							if (!hitBullet.isSensor)
+							{
+								//animation
+								m_Particle.LifeTime = 0.45f;
+								m_Particle.ColorBegin = bullet.Color;
+								m_Particle.ColorEnd = hitBullet.Color;
+								m_Particle.Position = bullet.Position;
+								m_Particle.Velocity = glm::vec2(0.0f);
+								m_Particle.VelocityVariation = glm::vec2(0.0f);
+								m_ParticleEmitter.Emit(m_Particle, 6);
+								DestroyEntity(i);
+							}
+						}
+						else if (shotEnt != bullet.SourceEntity && bullet.HitEntity->Type != EntityType::Bullet) {
+							DestroyEntity(i);
+						}
 						
 					}
-					else if (bullet.HitEntityType == EntityType::Tile && bullet.Bounces == 0) DestroyEntity(i);
-					else if (glm::distance(bullet.ShotPos, bullet.Position) > weapon.Range)
+					else 
 					{
-						DestroyEntity(i);
+						if (bullet.HitEntityType == EntityType::Tile && bullet.Bounces == 0) DestroyEntity(i);
+						if (glm::distance(bullet.Position, bullet.ShotPos) > weapon.Range) DestroyEntity(i);
 					}
+					
 
 					
 				}
@@ -934,8 +956,7 @@ namespace wc
 				m_TargetZoom = 1.f;
 			}
 
-			if (ImGui::IsKeyPressed(ImGuiKey_R))
-				player.ReloadWeapon();
+			if (ImGui::IsKeyPressed(ImGuiKey_R))player.ReloadWeapon();
 
 			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.CanShoot())
 			{
@@ -948,7 +969,7 @@ namespace wc
 
 					ma_sound_start(&Globals.gun);
 
-					SpawnBullet(player.Position + dir * 0.75f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
+					SpawnBullet(player.Position + dir * 0.5f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
 				}
 				else if (player.Weapon == WeaponType::Laser) {
 
@@ -975,7 +996,7 @@ namespace wc
 				{
 					camera.Shake(0.8f);
 
-					glm::vec2 shootPos = player.Position + dir * 0.35f;
+					glm::vec2 shootPos = player.Position + dir * 0.5f;
 					auto hitInfo = Intersect({ shootPos, dir }, 1);
 
 					if (hitInfo.t <= 5.f)
@@ -1012,7 +1033,7 @@ namespace wc
 					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
 					ma_sound_start(&Globals.gun);
-					SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
+					SpawnBullet(player.Position + dir * 0.5f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
 				}
 
 				player.Weapons[(int)player.Weapon].Magazine--;
@@ -1171,12 +1192,7 @@ namespace wc
 				if (entity.Type == EntityType::Bullet)
 				{
 					Bullet& bullet = *(Bullet*)(Entities[i]);
-					glm::vec4 bulletColor = glm::vec4(0.f);
-					if (bullet.BulletType == BulletType::Blaster) bulletColor = glm::vec4(0.f, 1.f, 0.f, 1.f);
-					if (bullet.BulletType == BulletType::Revolver) bulletColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
-					if (bullet.BulletType == BulletType::Shotgun) bulletColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
-					if (bullet.BulletType == BulletType::RedCircle) bulletColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
-					m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bulletColor * 1.3f);
+					m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bullet.Color * 1.3f);
 				}
 				else
 				{

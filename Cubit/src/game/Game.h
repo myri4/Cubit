@@ -63,6 +63,7 @@ namespace wc
 				blaster.MaxMag = 15;
 				blaster.ReloadSpeed = 1.5f;
 				blaster.Range = 50.f;
+				blaster.BulletColor = { 0.f, 1.f, 0.f, 1.f };
 				blaster.BulletSpeed = 25.f;
 				blaster.BulletSize = { 0.25f, 0.25f };
 				blaster.Recoil = { 0.25f, -0.15f };
@@ -96,7 +97,8 @@ namespace wc
 				shotgun.MaxMag = 4;
 				shotgun.ReloadSpeed = 0.5f;
 				shotgun.ReloadByOne = true;
-				shotgun.Range = 2.5f;
+				shotgun.Range = 5.5f;
+				shotgun.BulletColor = { 1.f, 1.f, 0.f, 1.f };
 				shotgun.BulletSpeed = 25.f;
 				shotgun.BulletSize = { 0.1f, 0.1f };
 				shotgun.Recoil = { 0.25f, -0.15f };
@@ -118,6 +120,8 @@ namespace wc
 				revolver.Range = 25.f;
 				revolver.RenderOffset = { 0.25f, -0.15f };
 				revolver.RenderSize = { 1.f, 0.45f };
+				revolver.isBulletSensor = false;
+				revolver.BulletColor = { 1.f, 1.f, 0.f, 1.f };
 				revolver.BulletSpeed = 25.f;
 				revolver.BulletSize = { 0.1f, 0.1f };
 				revolver.BulletBounces = 3;
@@ -131,9 +135,11 @@ namespace wc
 				redBlaster.Damage = 5;
 				redBlaster.FireRate = 0.3f;
 				redBlaster.Range = 50.f;
+				redBlaster.BulletColor = { 1.f, 0, 0, 1.f };
 				redBlaster.BulletSpeed = 25.f;
 				redBlaster.BulletSize = { 0.25f, 0.25f };
 				redBlaster.RenderOffset = { 0.25f, -0.15f };
+				redBlaster.isBulletSensor = false;
 				redBlaster.RenderSize = { 1.f, 0.45f };
 				redBlaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			}
