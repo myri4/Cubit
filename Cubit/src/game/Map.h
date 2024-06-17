@@ -644,7 +644,7 @@ namespace wc
 			bullet->Size = weaponInfo.BulletSize;
 			bullet->Speed = weaponInfo.BulletSpeed;
 			bullet->Direction = direction;
-			bullet->isSensor = weaponInfo.isBulletSensor;
+			bullet->IsSensor = weaponInfo.IsBulletSensor;
 			bullet->Color = weaponInfo.BulletColor;
 			bullet->BulletType = weaponInfo.BulletType;
 			bullet->WeaponType = weaponType;
@@ -652,6 +652,7 @@ namespace wc
 			bullet->LinearDamping = 0.f;
 			bullet->Bounces = weaponInfo.BulletBounces;
 
+			//@TODO: maybe create the body here?(also don't forget to change the pointer to point to the bullet)
 			bullet->CreateBody(PhysicsWorld);
 			Entities.emplace_back(bullet);
 		}
@@ -720,7 +721,7 @@ namespace wc
 
 					//movement
 					float distToPlayer = glm::distance(player.Position, entity.Position);
-					if (distToPlayer < entity.DetectRange && false)
+					if (distToPlayer < entity.DetectRange)
 					{
 						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
 						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
@@ -776,10 +777,6 @@ namespace wc
 				{
 					Bullet& bullet = *(Bullet*)e;
 					WeaponInfo& weapon = WeaponStats[(int)bullet.WeaponType];
-
-					if (bullet.BulletType == BulletType::RedCircle) {
-						bullet.Body->SetLinearVelocity(b2Vec2(0, 0));
-					}
 
 					if (bullet.HitEntityType > EntityType::UNDEFINED)
 					{
@@ -842,9 +839,9 @@ namespace wc
 							}
 						}
 						
-						if (!bullet.isSensor && bullet.HitEntity->Type == EntityType::Bullet) {
+						if (!bullet.IsSensor && bullet.HitEntity->Type == EntityType::Bullet) {
 							Bullet& hitBullet = *(Bullet*)bullet.HitEntity;
-							if (!hitBullet.isSensor)
+							if (!hitBullet.IsSensor)
 							{
 								//animation
 								m_Particle.LifeTime = 0.45f;
@@ -865,10 +862,9 @@ namespace wc
 					else 
 					{
 						if (bullet.HitEntityType == EntityType::Tile && bullet.Bounces == 0) DestroyEntity(i);
-						if (glm::distance(bullet.Position, bullet.ShotPos) > weapon.Range) DestroyEntity(i);
 					}
 					
-
+					if (glm::distance(bullet.Position, bullet.ShotPos) > weapon.Range) DestroyEntity(i);
 					
 				}
 				break;

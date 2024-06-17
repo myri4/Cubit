@@ -120,7 +120,7 @@ namespace wc
 				revolver.Range = 25.f;
 				revolver.RenderOffset = { 0.25f, -0.15f };
 				revolver.RenderSize = { 1.f, 0.45f };
-				revolver.isBulletSensor = false;
+				revolver.IsBulletSensor = false;
 				revolver.BulletColor = { 1.f, 1.f, 0.f, 1.f };
 				revolver.BulletSpeed = 25.f;
 				revolver.BulletSize = { 0.1f, 0.1f };
@@ -139,7 +139,6 @@ namespace wc
 				redBlaster.BulletSpeed = 25.f;
 				redBlaster.BulletSize = { 0.25f, 0.25f };
 				redBlaster.RenderOffset = { 0.25f, -0.15f };
-				redBlaster.isBulletSensor = false;
 				redBlaster.RenderSize = { 1.f, 0.45f };
 				redBlaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			}

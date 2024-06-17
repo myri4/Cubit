@@ -57,6 +57,16 @@ namespace wc
         }
     };
 
+    struct EntityProperties
+    {
+		float Density = 55.f;
+		float LinearDamping = 1.4f;
+		float Speed = 7.f;
+
+		uint32_t StartHealth = 100;
+		uint32_t MaxHealth = 100;
+    };
+
     struct GameEntity : public DynamicEntity
     {
         // Properties
@@ -122,7 +132,7 @@ namespace wc
 
         glm::vec4 BulletColor = { 0, 0, 0, 0 };
         float BulletSpeed = 0.f;
-        bool isBulletSensor = true; //physical body or a sensor
+        bool IsBulletSensor = true; //physical body or a sensor
         uint32_t BulletBounces = 0;
         glm::vec2 BulletSize;
 
@@ -242,7 +252,7 @@ namespace wc
 		GameEntity* HitEntity = nullptr;
         GameEntity* SourceEntity = nullptr;
         uint32_t Bounces = 0;
-        bool isSensor = true;
+        bool IsSensor = true;
 
         Bullet() { Type = EntityType::Bullet; }
 
@@ -266,7 +276,7 @@ namespace wc
             b2FixtureDef fixtureDef;
             fixtureDef.density = 0.01f;
             fixtureDef.friction = 0.f;
-            fixtureDef.isSensor = isSensor;
+            fixtureDef.isSensor = IsSensor;
 
             fixtureDef.userData.pointer = (uintptr_t)this;
 
