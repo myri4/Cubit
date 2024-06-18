@@ -244,49 +244,17 @@ namespace wc
         glm::vec2 Direction;
         BulletType BulletType;
         WeaponType WeaponType = WeaponType::Blaster;
-        glm::vec2 ShotPos;
 
-        glm::vec4 Color = { 0, 0, 0, 0 };
+        glm::vec4 Color;
 
         EntityType HitEntityType = EntityType::UNDEFINED;
 		GameEntity* HitEntity = nullptr;
         GameEntity* SourceEntity = nullptr;
         uint32_t Bounces = 0;
-        bool IsSensor = true;
+        float DistanceTraveled = 0.f;
 
         Bullet() { Type = EntityType::Bullet; }
 
-        void CreateBody(b2World* PhysicsWorld) override
-        {
-            b2BodyDef bodyDef;
-            bodyDef.type = b2_dynamicBody;
-            bodyDef.position.Set(Position.x, Position.y);
-            bodyDef.fixedRotation = true;
-            bodyDef.bullet = true;
-            bodyDef.gravityScale = 0.f;
-            bodyDef.linearVelocity = b2Vec2(Direction.x * Speed, Direction.y * Speed);
-            Body = PhysicsWorld->CreateBody(&bodyDef);
-
-            b2CircleShape shape;
-            shape.m_radius = Size.x;
-
-            //b2PolygonShape shape;
-            //shape.SetAsBox(Size.x, Size.y);
-
-            b2FixtureDef fixtureDef;
-            fixtureDef.density = 0.01f;
-            fixtureDef.friction = 0.f;
-            fixtureDef.isSensor = IsSensor;
-
-            fixtureDef.userData.pointer = (uintptr_t)this;
-
-            fixtureDef.shape = &shape;
-            Body->CreateFixture(&fixtureDef);
-            b2MassData massData;
-			massData.center = Body->GetMassData().center;
-			massData.I = Body->GetMassData().I;
-            massData.mass = 0.01f;
-            Body->SetMassData(&massData);
-        }
+        bool IsSensor() { return WeaponStats[(int)WeaponType].IsBulletSensor; }
     };
 }

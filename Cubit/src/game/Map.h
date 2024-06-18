@@ -640,11 +640,9 @@ namespace wc
 			Bullet* bullet = new Bullet();
 			bullet->SourceEntity = src;
 			bullet->Position = position;
-			bullet->ShotPos = position;
 			bullet->Size = weaponInfo.BulletSize;
 			bullet->Speed = weaponInfo.BulletSpeed;
 			bullet->Direction = direction;
-			bullet->IsSensor = weaponInfo.IsBulletSensor;
 			bullet->Color = weaponInfo.BulletColor;
 			bullet->BulletType = weaponInfo.BulletType;
 			bullet->WeaponType = weaponType;
@@ -652,8 +650,34 @@ namespace wc
 			bullet->LinearDamping = 0.f;
 			bullet->Bounces = weaponInfo.BulletBounces;
 
-			//@TODO: maybe create the body here?(also don't forget to change the pointer to point to the bullet)
-			bullet->CreateBody(PhysicsWorld);
+			{
+				b2BodyDef bodyDef;
+				bodyDef.type = b2_dynamicBody;
+				bodyDef.position.Set(bullet->Position.x, bullet->Position.y);
+				bodyDef.fixedRotation = true;
+				bodyDef.bullet = true;
+				bodyDef.gravityScale = 0.f;
+				bodyDef.linearVelocity = b2Vec2(bullet->Direction.x * bullet->Speed, bullet->Direction.y * bullet->Speed);
+				bullet->Body = PhysicsWorld->CreateBody(&bodyDef);
+
+				b2CircleShape shape;
+				shape.m_radius = bullet->Size.x;
+
+				b2FixtureDef fixtureDef;
+				fixtureDef.density = 0.01f;
+				fixtureDef.friction = 0.f;
+				fixtureDef.isSensor = weaponInfo.IsBulletSensor;
+
+				fixtureDef.userData.pointer = (uintptr_t)bullet;
+
+				fixtureDef.shape = &shape;
+				bullet->Body->CreateFixture(&fixtureDef);
+				b2MassData massData;
+				massData.center = bullet->Body->GetMassData().center;
+				massData.I = bullet->Body->GetMassData().I;
+				massData.mass = 0.01f;
+				bullet->Body->SetMassData(&massData);
+			}
 			Entities.emplace_back(bullet);
 		}
 
@@ -777,7 +801,8 @@ namespace wc
 				{
 					Bullet& bullet = *(Bullet*)e;
 					WeaponInfo& weapon = WeaponStats[(int)bullet.WeaponType];
-
+					bullet.DistanceTraveled += bullet.Speed * SimulationTime;
+					bool destroy = false;
 					if (bullet.HitEntityType > EntityType::UNDEFINED)
 					{
 						GameEntity* shotEnt = bullet.HitEntity;
@@ -839,9 +864,9 @@ namespace wc
 							}
 						}
 						
-						if (!bullet.IsSensor && bullet.HitEntity->Type == EntityType::Bullet) {
+						if (!bullet.IsSensor() && bullet.HitEntity->Type == EntityType::Bullet) {
 							Bullet& hitBullet = *(Bullet*)bullet.HitEntity;
-							if (!hitBullet.IsSensor)
+							if (!hitBullet.IsSensor())
 							{
 								//animation
 								m_Particle.LifeTime = 0.45f;
@@ -851,20 +876,24 @@ namespace wc
 								m_Particle.Velocity = glm::vec2(0.0f);
 								m_Particle.VelocityVariation = glm::vec2(0.0f);
 								m_ParticleEmitter.Emit(m_Particle, 6);
-								DestroyEntity(i);
+								destroy = true;
 							}
 						}
-						else if (shotEnt != bullet.SourceEntity && bullet.HitEntity->Type != EntityType::Bullet) {
-							DestroyEntity(i);
-						}
-						
+						else if (shotEnt != bullet.SourceEntity && bullet.HitEntity->Type != EntityType::Bullet) 
+						{
+							destroy = true;
+						}						
 					}
 					else 
 					{
-						if (bullet.HitEntityType == EntityType::Tile && bullet.Bounces == 0) DestroyEntity(i);
+						if (bullet.HitEntityType == EntityType::Tile && bullet.Bounces == 0) destroy = true;
 					}
 					
-					if (glm::distance(bullet.Position, bullet.ShotPos) > weapon.Range) DestroyEntity(i);
+					if (bullet.DistanceTraveled > weapon.Range) destroy = true;
+					if (bullet.Position.x <= 0.f || bullet.Position.x >= Size.x + 1.f ||
+						bullet.Position.y <= 0.f || bullet.Position.y >= Size.y + 1.f) destroy = true;
+					
+					if (destroy) DestroyEntity(i);
 					
 				}
 				break;
