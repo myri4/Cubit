@@ -61,6 +61,7 @@ namespace wc
 			//YAML_SAVE_VAR(settings, HideParticles);
 			YAML_SAVE_VAR(settings, CRTEffect);
 			YAML_SAVE_VAR(settings, Bloom);
+			YAML_SAVE_VAR(settings, Vignete);
 			YAML_SAVE_VAR(settings, Brighness);
 			YAML_SAVE_VAR(settings, Background);
 
@@ -102,6 +103,7 @@ namespace wc
 			//YAML_LOAD_VAR(settings, HideParticles);
 			YAML_LOAD_VAR(settings, CRTEffect);
 			YAML_LOAD_VAR(settings, Bloom);
+			YAML_LOAD_VAR(settings, Vignete);
 			YAML_LOAD_VAR(settings, Brighness);
 			YAML_LOAD_VAR(settings, Background);
 

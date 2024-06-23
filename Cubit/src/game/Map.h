@@ -972,6 +972,8 @@ namespace wc
 			m_TargetRotation = 0.f;
 			if (Zoom)
 			{
+				//auto offset = dir * 8.f;
+				//offset.y = glm::clamp(offset.y, -3.f, 3.f);
 				m_TargetPosition = player.Position + dir * 3.f;
 				m_TargetZoom = 0.6f;
 			}
@@ -1180,7 +1182,7 @@ namespace wc
 			Update();
 
 			LevelTime += Globals.deltaTime;
-			m_TargetPosition = glm::clamp(m_TargetPosition, glm::vec2(8, 4), glm::vec2(Size) - glm::vec2(8, 4));
+			//m_TargetPosition = glm::clamp(m_TargetPosition, glm::vec2(8, 4), glm::vec2(Size) - glm::vec2(8, 4));
 
 			camera.Position += glm::vec3((m_TargetPosition - glm::vec2(camera.Position)) * 11.5f * Globals.deltaTime, 0.f);
 			camera.Rotation += (m_TargetRotation - camera.Rotation) * 11.5f * Globals.deltaTime;

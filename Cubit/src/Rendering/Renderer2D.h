@@ -73,11 +73,6 @@ namespace wc
 			float Falloff = 7.f;
 		}ChromaSettings;
 
-		bool CRTEffectEnable = false;
-		bool BloomEnable = false;
-		bool Vignete = false;
-		float Brighness = 1.f;
-		bool RenderBackground = true;
 	public:
 		auto GetRenderImageID() { return m_ImageID; }
 		auto GetRenderImage() { return m_Framebuffer.attachments[0].image; }
@@ -320,7 +315,7 @@ namespace wc
 			//if (!m_IndexCount && !m_LineVertexCount) return;
 
 			time += Globals.deltaTime;
-			if (RenderBackground)
+			if (Globals.settings.Background)
 			{
 				CommandBuffer& cmd = m_ComputeCmd[CURRENT_FRAME];
 				cmd.Reset();
@@ -403,7 +398,7 @@ namespace wc
 
 				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-				if (RenderBackground)
+				if (Globals.settings.Background)
 				{
 					submit.pWaitSemaphores = m_BackgroundSemaphore[CURRENT_FRAME].GetPointer();
 					submit.waitSemaphoreCount = 1;
@@ -421,7 +416,7 @@ namespace wc
 				CommandBuffer& cmd = m_ComputeCmd[CURRENT_FRAME];
 				cmd.Reset();
 				cmd.Begin();
-				if (BloomEnable)
+				if (Globals.settings.Bloom)
 				{
 					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_BloomShader.GetPipeline());
 					uint32_t counter = 0;
@@ -485,7 +480,7 @@ namespace wc
 					{
 						uint32_t Bloom;
 					}m_Data;
-					m_Data.Bloom = BloomEnable;
+					m_Data.Bloom = Globals.settings.Bloom;
 					m_CompositeShader.PushConstants(cmd, sizeof(m_Data), &m_Data);
 					cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
 				}
@@ -507,9 +502,9 @@ namespace wc
 					float Brighness;
 				} m_Data;
 				m_Data.time = time;
-				m_Data.CRT = CRTEffectEnable;
-				m_Data.Vignete = Vignete;
-				m_Data.Brighness = Brighness;
+				m_Data.CRT = Globals.settings.CRTEffect;
+				m_Data.Vignete = Globals.settings.Vignete;
+				m_Data.Brighness = Globals.settings.Brighness;
 
 				m_CRTShader.PushConstants(cmd, sizeof(m_Data), &m_Data);
 				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));

@@ -198,9 +198,9 @@ namespace wc
 			ImGui::SetCursorPosX(10.f);
 			ImGui::TextColored(color, std::format("Current Level: {}", m_LevelID).c_str());
 			ImGui::SetCursorPosX(10.f);
-			ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.player.Weapons[(int)m_Map.player.MeleeWeapon].Timer).c_str());
-			ImGui::SetCursorPosX(10.f);
 			ImGui::TextColored(color, std::format("Ammo: {}/{}", m_Map.player.Weapons[(int)m_Map.player.Weapon].Magazine, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
+			//ImGui::SetCursorPosX(10.f);
+			//ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.player.Weapons[(int)m_Map.player.MeleeWeapon].Timer).c_str());
 			//ImGui::SetCursorPosX(10.f);
 			//ImGui::TextColored(color, std::format("Steps: {}", m_Map.nSteps).c_str());
 			//ImGui::SetCursorPosX(10.f);
@@ -406,10 +406,13 @@ namespace wc
 					ImGui::Combo("Window Size", &Globals.settings.iWindowSize, windowSizes, IM_ARRAYSIZE(windowSizes));
 					UI::Checkbox("Fullscreen", Globals.settings.Fullscreen); UI::HelpMarker("Requires Restart");
 					UI::Checkbox("VSync", Globals.settings.VSync); UI::HelpMarker("Requires Restart");
-					ImGui::SliderFloat("Brightness", &Globals.settings.Brighness, 1, 10);
 					UI::Separator("Game");
+					ImGui::SliderFloat("Brightness", &Globals.settings.Brighness, 0.f, 1.f);
+					UI::Checkbox("Screen Effects", Globals.settings.CRTEffect);
+					UI::Checkbox("Bloom", Globals.settings.Bloom);
+					UI::Checkbox("Vignete", Globals.settings.Vignete);
+					UI::Checkbox("Background", Globals.settings.Background);
 					//UI::Checkbox("Hide Particles", Globals.settings.HideParticles);
-					//UI::Checkbox("Screen Effects", Globals.settings.ScreenEffects);
 
 					ImGui::EndTabItem();
 				}
