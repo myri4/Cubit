@@ -270,6 +270,7 @@
     <ClInclude Include="src\game\ParticleSystem.h" />
     <ClInclude Include="src\game\Raycasting.h" />
     <ClInclude Include="src\game\Tile.h" />
+    <ClInclude Include="src\game\Weapons.h" />
     <ClInclude Include="src\Globals.h" />
     <ClInclude Include="src\Rendering\BloomEffect.h" />
     <ClInclude Include="src\Rendering\Font.h" />

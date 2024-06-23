@@ -7,10 +7,11 @@
 #include <imgui/imgui.h>
 #include <wc/Utils/YAML.h>
 
-
 namespace wc
 {
 	using KeyType = int32_t; // @TODO: Fix the entire input system and change this to uint
+
+	enum class GraphicsOption : uint8_t { OFF, PERF, QUALITY };
 
 	struct Settings
 	{
@@ -21,9 +22,13 @@ namespace wc
 		bool Fullscreen = true;
 		bool VSync = false;
 
-		bool HideParticles = false;
-		bool ScreenEffects = true;
-		float Brighness = 0.f;
+		// Graphics
+		GraphicsOption ChromatiAbberation = GraphicsOption::PERF;
+		bool CRTEffect = true;
+		bool Bloom = true;
+		bool Vignete = true;
+		float Brighness = 1.f;
+		bool Background = false;
 
 		// Audio
 		int MasterVolume = 50;
@@ -53,9 +58,11 @@ namespace wc
 			YAML_SAVE_VAR(settings, VSync);
 
 			// Screen effects
-			YAML_SAVE_VAR(settings, HideParticles);
-			YAML_SAVE_VAR(settings, ScreenEffects);
+			//YAML_SAVE_VAR(settings, HideParticles);
+			YAML_SAVE_VAR(settings, CRTEffect);
+			YAML_SAVE_VAR(settings, Bloom);
 			YAML_SAVE_VAR(settings, Brighness);
+			YAML_SAVE_VAR(settings, Background);
 
 			YAML_SAVE_VAR(settings, MasterVolume);
 			YAML_SAVE_VAR(settings, MusicVolume);
@@ -92,9 +99,11 @@ namespace wc
 			YAML_LOAD_VAR(settings, Fullscreen);
 			YAML_LOAD_VAR(settings, VSync);
 
-			YAML_LOAD_VAR(settings, HideParticles);
-			YAML_LOAD_VAR(settings, ScreenEffects);
+			//YAML_LOAD_VAR(settings, HideParticles);
+			YAML_LOAD_VAR(settings, CRTEffect);
+			YAML_LOAD_VAR(settings, Bloom);
 			YAML_LOAD_VAR(settings, Brighness);
+			YAML_LOAD_VAR(settings, Background);
 
 			YAML_LOAD_VAR(settings, MasterVolume);
 			YAML_LOAD_VAR(settings, MusicVolume);

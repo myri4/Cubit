@@ -36,7 +36,7 @@ namespace wc
 
 	class ContactListener : public b2ContactListener
 	{
-		void BulletHit(GameEntity* entityA, GameEntity* entityB)
+		void BulletHit(Entity* entityA, Entity* entityB)
 		{
 			if (entityA->Type == EntityType::Bullet)
 			{
@@ -51,7 +51,7 @@ namespace wc
 			}
 		}
 
-		void BulletHitTile(GameEntity* entityA, GameEntity* entityB, glm::vec2 normal)
+		void BulletHitTile(Entity* entityA, Entity* entityB, glm::vec2 normal)
 		{
 			if (entityA && entityA->Type == EntityType::Bullet && !entityB)
 			{
@@ -76,8 +76,8 @@ namespace wc
 			b2FixtureUserData fixtureUserDataA = fixtureA->GetUserData();
 			b2FixtureUserData fixtureUserDataB = fixtureB->GetUserData();
 
-			GameEntity* entityA = reinterpret_cast<GameEntity*>(fixtureUserDataA.pointer);
-			GameEntity* entityB = reinterpret_cast<GameEntity*>(fixtureUserDataB.pointer);
+			Entity* entityA = reinterpret_cast<Entity*>(fixtureUserDataA.pointer);
+			Entity* entityB = reinterpret_cast<Entity*>(fixtureUserDataB.pointer);
 							
 			b2Vec2 bNormal = contact->GetManifold()->localNormal;
 			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
@@ -124,8 +124,8 @@ namespace wc
 			b2FixtureUserData fixtureUserDataA = fixtureA->GetUserData();
 			b2FixtureUserData fixtureUserDataB = fixtureB->GetUserData();
 
-			GameEntity* entityA = reinterpret_cast<GameEntity*>(fixtureUserDataA.pointer);
-			GameEntity* entityB = reinterpret_cast<GameEntity*>(fixtureUserDataB.pointer);
+			Entity* entityA = reinterpret_cast<Entity*>(fixtureUserDataA.pointer);
+			Entity* entityB = reinterpret_cast<Entity*>(fixtureUserDataB.pointer);
 
 			b2Vec2 bNormal = contact->GetManifold()->localNormal;
 			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
@@ -334,7 +334,7 @@ namespace wc
 
 			for (uint32_t i = 0; i < Entities.size(); i++)
 			{
-				GameEntity* e = (GameEntity*)Entities[i];
+				Entity* e = (Entity*)Entities[i];
 				e->CreateBody(PhysicsWorld);
 			}
 
@@ -634,7 +634,7 @@ namespace wc
 			}
 		}
 
-		void SpawnBullet(glm::vec2 position, glm::vec2 direction, WeaponType weaponType, GameEntity* src)
+		void SpawnBullet(glm::vec2 position, glm::vec2 direction, WeaponType weaponType, Entity* src)
 		{
 			auto& weaponInfo = WeaponStats[(int)weaponType];
 			Bullet* bullet = new Bullet();
@@ -805,7 +805,7 @@ namespace wc
 					bool destroy = false;
 					if (bullet.HitEntityType > EntityType::UNDEFINED)
 					{
-						GameEntity* shotEnt = bullet.HitEntity;
+						Entity* shotEnt = bullet.HitEntity;
 
 						if (bullet.BulletType == BulletType::RedCircle && bullet.HitEntityType == EntityType::Player)
 						{
@@ -994,7 +994,7 @@ namespace wc
 
 					ma_sound_start(&Globals.gun);
 
-					SpawnBullet(player.Position + dir * 0.5f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
+					SpawnBullet(player.Position + dir * 0.5f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
 				}
 				else if (player.Weapon == WeaponType::Laser) {
 
@@ -1005,8 +1005,8 @@ namespace wc
 
 					if (glm::distance(hitInfo.Point, player.Position) < WeaponStats[(int)WeaponType::Laser].Range) {
 						if (hitInfo.Hit && hitInfo.Entity) {
-							if (static_cast<GameEntity*>(hitInfo.Entity)->Type > EntityType::Entity)
-								static_cast<GameEntity*>(hitInfo.Entity)->DealDamage(WeaponStats[(int)player.Weapon].Damage);
+							if (static_cast<Entity*>(hitInfo.Entity)->Type > EntityType::Entity)
+								static_cast<Entity*>(hitInfo.Entity)->DealDamage(WeaponStats[(int)player.Weapon].Damage);
 						}
 
 						m_Particle.Position = hitInfo.Point;
@@ -1039,7 +1039,7 @@ namespace wc
 
 					for (uint32_t i = 0; i < 10; i++)
 					{
-						SpawnBullet(shootPos, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
+						SpawnBullet(shootPos, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
 						auto& vel = player.Body->GetLinearVelocity();
@@ -1058,7 +1058,7 @@ namespace wc
 					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
 					ma_sound_start(&Globals.gun);
-					SpawnBullet(player.Position + dir * 0.5f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
+					SpawnBullet(player.Position + dir * 0.5f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
 				}
 
 				player.Weapons[(int)player.Weapon].Magazine--;
@@ -1094,7 +1094,7 @@ namespace wc
 					{
 						glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 
-						SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (GameEntity*)&player);
+						SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
 						player.Weapons[(int)player.Weapon].Magazine--;
 						player.Weapons[(int)player.Weapon].Timer = 0.2f;
 					}
@@ -1212,7 +1212,7 @@ namespace wc
 
 			for (int i = 0; i < Entities.size(); i++)
 			{
-				GameEntity& entity = *(GameEntity*)(Entities[i]);
+				Entity& entity = *(Entity*)(Entities[i]);
 
 				if (entity.Type == EntityType::Bullet)
 				{
@@ -1278,7 +1278,7 @@ namespace wc
 	public:
 		glm::uvec3 Size = glm::uvec3(1);
 
-		std::vector<GameEntity*> Entities;
+		std::vector<Entity*> Entities;
 
 		Player player;
 

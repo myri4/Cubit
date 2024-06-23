@@ -14,6 +14,15 @@
 
 namespace wc
 {
+	struct Synchronizer
+	{
+	private:
+		std::vector<Semaphore> m_Semaphores;
+
+	public:
+	};
+
+
 	class Renderer2D
 	{
 		glm::vec2 m_RenderSize;
@@ -63,6 +72,12 @@ namespace wc
 			float Blur = 0.25f;
 			float Falloff = 7.f;
 		}ChromaSettings;
+
+		bool CRTEffectEnable = false;
+		bool BloomEnable = false;
+		bool Vignete = false;
+		float Brighness = 1.f;
+		bool RenderBackground = true;
 	public:
 		auto GetRenderImageID() { return m_ImageID; }
 		auto GetRenderImage() { return m_Framebuffer.attachments[0].image; }
@@ -91,7 +106,7 @@ namespace wc
 			return glm::vec2(screenX, screenY);
 		}
 
-		// Intitializes size-independant data
+		// Initializes size-independent data
 		void Init(OrthographicCamera& cameraptr)
 		{			
 			camera = &cameraptr;
@@ -305,6 +320,7 @@ namespace wc
 			//if (!m_IndexCount && !m_LineVertexCount) return;
 
 			time += Globals.deltaTime;
+			if (RenderBackground)
 			{
 				CommandBuffer& cmd = m_ComputeCmd[CURRENT_FRAME];
 				cmd.Reset();
@@ -387,8 +403,11 @@ namespace wc
 
 				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-				submit.pWaitSemaphores = m_BackgroundSemaphore[CURRENT_FRAME].GetPointer();
-				submit.waitSemaphoreCount = 1;
+				if (RenderBackground)
+				{
+					submit.pWaitSemaphores = m_BackgroundSemaphore[CURRENT_FRAME].GetPointer();
+					submit.waitSemaphoreCount = 1;
+				}
 
 				submit.pSignalSemaphores = m_RtoPPSemaphore[CURRENT_FRAME].GetPointer();
 				submit.signalSemaphoreCount = 1;
@@ -402,75 +421,96 @@ namespace wc
 				CommandBuffer& cmd = m_ComputeCmd[CURRENT_FRAME];
 				cmd.Reset();
 				cmd.Begin();
-				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_BloomShader.GetPipeline());
-				uint32_t counter = 0;
-
-				BloomBufferSettings settings;
-				settings.Params = glm::vec4(BloomThreshold, BloomThreshold - BloomKnee, BloomKnee * 2.f, 0.25f / BloomKnee);
-				m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
-				cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
-				counter++;
-				cmd.Dispatch(glm::ceil(glm::vec2(m_BloomBuffers[0].image.GetSize()) / glm::vec2(m_ComputeWorkGroupSize)));
-
-				settings.Mode = (int)BloomMode::Downsample;
-				for (uint32_t currentMip = 1; currentMip < m_BloomMipLevels; currentMip++)
+				if (BloomEnable)
 				{
-					glm::vec2 dispatchSize = glm::ceil((glm::vec2)m_BloomBuffers[0].image.GetMipSize(currentMip) / glm::vec2(m_ComputeWorkGroupSize));
+					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_BloomShader.GetPipeline());
+					uint32_t counter = 0;
 
-					// Ping 
-					settings.LOD = float(currentMip - 1);
+					BloomBufferSettings settings;
+					settings.Params = glm::vec4(BloomThreshold, BloomThreshold - BloomKnee, BloomKnee * 2.f, 0.25f / BloomKnee);
+					m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
+					counter++;
+					cmd.Dispatch(glm::ceil(glm::vec2(m_BloomBuffers[0].image.GetSize()) / glm::vec2(m_ComputeWorkGroupSize)));
+
+					settings.Mode = (int)BloomMode::Downsample;
+					for (uint32_t currentMip = 1; currentMip < m_BloomMipLevels; currentMip++)
+					{
+						glm::vec2 dispatchSize = glm::ceil((glm::vec2)m_BloomBuffers[0].image.GetMipSize(currentMip) / glm::vec2(m_ComputeWorkGroupSize));
+
+						// Ping 
+						settings.LOD = float(currentMip - 1);
+						m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+
+						cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
+						counter++;
+						cmd.Dispatch(dispatchSize);
+
+						// Pong 
+						settings.LOD = float(currentMip);
+						m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+
+						cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
+						counter++;
+						cmd.Dispatch(dispatchSize);
+					}
+
+					// First Upsample		
+					settings.LOD = float(m_BloomMipLevels - 2);
+					settings.Mode = (int)BloomMode::UpsampleFirst;
 					m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
 
 					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
 					counter++;
-					cmd.Dispatch(dispatchSize);
 
-					// Pong 
-					settings.LOD = float(currentMip);
-					m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+					cmd.Dispatch(glm::ceil((glm::vec2)m_BloomBuffers[2].image.GetMipSize(m_BloomMipLevels - 1) / glm::vec2(m_ComputeWorkGroupSize)));
 
-					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
-					counter++;
-					cmd.Dispatch(dispatchSize);
+					settings.Mode = (int)BloomMode::Upsample;
+					for (int currentMip = m_BloomMipLevels - 2; currentMip >= 0; currentMip--)
+					{
+						settings.LOD = float(currentMip);
+						m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+
+						cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
+						counter++;
+
+						cmd.Dispatch(glm::ceil((glm::vec2)m_BloomBuffers[2].image.GetMipSize(currentMip) / glm::vec2(m_ComputeWorkGroupSize)));
+					}
 				}
 
-				// First Upsample		
-				settings.LOD = float(m_BloomMipLevels - 2);
-				settings.Mode = (int)BloomMode::UpsampleFirst;
-				m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
-
-				cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
-				counter++;
-
-				cmd.Dispatch(glm::ceil((glm::vec2)m_BloomBuffers[2].image.GetMipSize(m_BloomMipLevels - 1) / glm::vec2(m_ComputeWorkGroupSize)));
-
-				settings.Mode = (int)BloomMode::Upsample;
-				for (int currentMip = m_BloomMipLevels - 2; currentMip >= 0; currentMip--)
 				{
-					settings.LOD = float(currentMip);
-					m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
-
-					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
-					counter++;
-
-					cmd.Dispatch(glm::ceil((glm::vec2)m_BloomBuffers[2].image.GetMipSize(currentMip) / glm::vec2(m_ComputeWorkGroupSize)));
+					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_CompositeShader.GetPipelineLayout(), m_CompositeSet);
+					m_CompositeShader.Bind(cmd);
+					struct
+					{
+						uint32_t Bloom;
+					}m_Data;
+					m_Data.Bloom = BloomEnable;
+					m_CompositeShader.PushConstants(cmd, sizeof(m_Data), &m_Data);
+					cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
 				}
 
-				cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_CompositeShader.GetPipelineLayout(), m_CompositeSet);
-				m_CompositeShader.Bind(cmd);
-				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
-
-				cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_ChromaShader.GetPipelineLayout(), m_ChromaSet);
-				m_ChromaShader.Bind(cmd);
-				m_ChromaShader.PushConstants(cmd, sizeof(ChromaSettings), &ChromaSettings);
-				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
+				if (true)
+				{
+					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_ChromaShader.GetPipelineLayout(), m_ChromaSet);
+					m_ChromaShader.Bind(cmd);
+					m_ChromaShader.PushConstants(cmd, sizeof(ChromaSettings), &ChromaSettings);
+					cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
+				}
 
 				cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_CRTShader.GetPipelineLayout(), m_CRTSet);
 				m_CRTShader.Bind(cmd);
 				struct {
 					float time = 0.f;
+					uint32_t CRT;
+					uint32_t Vignete;
+					float Brighness;
 				} m_Data;
 				m_Data.time = time;
+				m_Data.CRT = CRTEffectEnable;
+				m_Data.Vignete = Vignete;
+				m_Data.Brighness = Brighness;
+
 				m_CRTShader.PushConstants(cmd, sizeof(m_Data), &m_Data);
 				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
 

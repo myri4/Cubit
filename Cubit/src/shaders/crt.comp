@@ -9,6 +9,9 @@ layout (push_constant) uniform Uniforms
 {
     // Settings
     float time;
+	uint CRT;
+	uint Vignete;
+	float Brighness;
 };
 
 const float bend = 4.f;
@@ -36,15 +39,23 @@ void main()
 	vec2 uv = vec2(float(invocID.x) / imgSize.x, float(invocID.y) / imgSize.y);
 	vec2 texCoords = uv;
 	texCoords += (1.f / imgSize) * 0.5f;
-	texCoords = crt(texCoords);
+	if (CRT == 1) texCoords = crt(texCoords);
 	
 	vec3 result = texture(finalTexture, texCoords).rgb;
 	
-	vec2 screenSpace = texCoords * imgSize;
-	result.rgb -= sin((screenSpace.y + (time * 29.0))) * 0.02; // scanline
-	
-	vec2 V  = 1.f - 2.f * uv;  
-	result *= 1.25f * vec3(1.f - smoothstep(0.1f, 1.8f, length(V * V))); // vigneting
-	  
+	if (CRT == 1)
+	{
+		vec2 screenSpace = texCoords * imgSize;
+		result.rgb -= sin((screenSpace.y + (time * 29.0))) * 0.02; // scanline	
+	}
+
+	if (Vignete == 1)
+	{
+		vec2 V  = 1.f - 2.f * uv;  
+		result *= 1.25f * vec3(1.f - smoothstep(0.1f, 1.8f, length(V * V))); // vigneting
+	}
+
+	result.rgb *= Brighness;
+
 	imageStore(o_Image, invocID, vec4(result, 1.f));
 }

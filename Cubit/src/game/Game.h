@@ -408,8 +408,8 @@ namespace wc
 					UI::Checkbox("VSync", Globals.settings.VSync); UI::HelpMarker("Requires Restart");
 					ImGui::SliderFloat("Brightness", &Globals.settings.Brighness, 1, 10);
 					UI::Separator("Game");
-					UI::Checkbox("Hide Particles", Globals.settings.HideParticles);
-					UI::Checkbox("Screen Effects", Globals.settings.ScreenEffects);
+					//UI::Checkbox("Hide Particles", Globals.settings.HideParticles);
+					//UI::Checkbox("Screen Effects", Globals.settings.ScreenEffects);
 
 					ImGui::EndTabItem();
 				}
