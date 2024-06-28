@@ -90,7 +90,6 @@ namespace wc
             bodyDef.type = b2_dynamicBody;
             bodyDef.position.Set(Position.x, Position.y);
             bodyDef.fixedRotation = true;
-            WC_CORE_INFO("type: {} & Density: {}", Type, EntityStats[(int)Type].Density)
             bodyDef.linearDamping = EntityStats[(int)Type].LinearDamping;//
             Body = PhysicsWorld->CreateBody(&bodyDef);
 

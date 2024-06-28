@@ -163,7 +163,7 @@ namespace wc
 				redBlaster.FireRate = 0.3f;
 				redBlaster.Range = 50.f;
 				redBlaster.BulletColor = { 1.f, 0, 0, 1.f };
-				redBlaster.BulletSpeed = 25.f;
+				redBlaster.BulletSpeed = 0.f;
 				redBlaster.BulletSize = { 0.25f, 0.25f };
 				redBlaster.RenderOffset = { 0.25f, -0.15f };
 				redBlaster.RenderSize = { 1.f, 0.45f };

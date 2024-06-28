@@ -62,7 +62,7 @@ namespace wc
 				if (bullet.Bounces > 0)
 				{
 					bullet.Direction = glm::reflect(bullet.Direction, normal);
-					bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * EntityStats[(int)bullet.Type].Speed, bullet.Direction.y * EntityStats[(int)bullet.Type].Speed));
+					bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * WeaponStats[(int)bullet.WeaponType].BulletSpeed, bullet.Direction.y * WeaponStats[(int)bullet.WeaponType].BulletSpeed));
 					bullet.HitEntityType = EntityType::UNDEFINED;
 					bullet.Bounces--;
 				}
@@ -756,11 +756,9 @@ namespace wc
 						DestroyEntity(i);
 					}
 
-					if(player.JumpForce != 2656.3132f && 0.f)WC_CORE_ERROR(player.JumpForce);
-
 					//movement
 					float distToPlayer = glm::distance(player.Position, entity.Position);
-					if (distToPlayer < entity.DetectRange)
+					if (distToPlayer < entity.DetectRange && false)
 					{
 						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-EntityStats[(int)entity.Type].Speed, 0), true);
 						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed, 0), true);
@@ -962,7 +960,7 @@ namespace wc
 			{
 				// @NOTE: if gravity is changed we should update this
 				float jumHeight = 8.f;
-				player.JumpForce = glm::sqrt(jumHeight * Gravity * player.Body->GetGravityScale() * -(2.f + EntityStats[(int)EntityType::Player].Speed)) * player.Body->GetMass();
+				player.JumpForce = glm::sqrt(jumHeight * Gravity * player.Body->GetGravityScale() * -(2.f + EntityStats[(int)EntityType::Player].LinearDamping)) * player.Body->GetMass();
 
 				player.Body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
 			}
