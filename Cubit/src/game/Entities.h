@@ -65,14 +65,14 @@ namespace wc
 		uint32_t MaxHealth = 100;
     };
 
+    EntityProperties EntityStats[magic_enum::enum_count<EntityType>()];
+
     struct Entity : public DynamicEntity
     {
         // Properties
-        float Density = 55.f;
-        float LinearDamping = 1.4f;        
-        float Speed = 7.f;
 
         uint32_t StartHealth = 100;
+        //uint32_t MaxHealth = Properties.MaxHealth;
         glm::vec2 HitBoxSize = glm::vec2(0.5f);
 
         uint32_t Health = 100;
@@ -90,7 +90,8 @@ namespace wc
             bodyDef.type = b2_dynamicBody;
             bodyDef.position.Set(Position.x, Position.y);
             bodyDef.fixedRotation = true;
-            bodyDef.linearDamping = LinearDamping;
+            WC_CORE_INFO("type: {} & Density: {}", Type, EntityStats[(int)Type].Density)
+            bodyDef.linearDamping = EntityStats[(int)Type].LinearDamping;//
             Body = PhysicsWorld->CreateBody(&bodyDef);
 
             b2PolygonShape shape;
@@ -98,7 +99,7 @@ namespace wc
 
 
             b2FixtureDef fixtureDef;
-            fixtureDef.density = Density;
+            fixtureDef.density = EntityStats[(int)Type].Density;//
             fixtureDef.friction = 0.f;
 
             fixtureDef.userData.pointer = (uintptr_t)this;
@@ -167,7 +168,7 @@ namespace wc
         Player()
         {
             Type = EntityType::Player;
-            Density = 100.f;
+            //Density = 100.f;
         }
     };
     	
@@ -177,8 +178,9 @@ namespace wc
         float ShootRange = 8.f;
         float DetectRange = 15.f;
         uint32_t Damage = 10;
+        //float Speed = EntityStats[(int)EntityType::RedCube].Speed;
 
-        RedCube() { Type = EntityType::RedCube; Health = 150; Speed = 1.1f; }
+        RedCube() { Type = EntityType::RedCube; Health = 150;}
     };    
 
 	struct Fly : public Entity
@@ -188,7 +190,7 @@ namespace wc
 		float DetectRange = 10.f;
 		uint32_t Damage = 5;
 
-		Fly() { Type = EntityType::Fly; Health = 50; Speed = 1.5f; }
+		Fly() { Type = EntityType::Fly; Health = 50;}
 	};
 
     struct Bullet : public Entity

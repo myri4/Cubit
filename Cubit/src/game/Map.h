@@ -44,6 +44,7 @@ namespace wc
 
 				bullet.HitEntityType = entityB->Type;
 				bullet.HitEntity = entityB;
+			
 				//if (entityB->Type > EntityType::Entity)
 				//{
 					//entityB->Body->ApplyLinearImpulseToCenter(-bullet.Body->GetLinearVelocity(), true);						
@@ -61,10 +62,20 @@ namespace wc
 				if (bullet.Bounces > 0)
 				{
 					bullet.Direction = glm::reflect(bullet.Direction, normal);
-					bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * bullet.Speed, bullet.Direction.y * bullet.Speed));
+					bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * EntityStats[(int)bullet.Type].Speed, bullet.Direction.y * EntityStats[(int)bullet.Type].Speed));
 					bullet.HitEntityType = EntityType::UNDEFINED;
 					bullet.Bounces--;
 				}
+			}
+		}
+
+		void BulletClear(Entity* entity)
+		{
+			if (entity->Type == EntityType::Bullet)
+			{
+				Bullet& bullet = *(Bullet*)entity;
+				bullet.HitEntityType = EntityType::UNDEFINED;
+				bullet.HitEntity = nullptr;
 			}
 		}
 
@@ -132,6 +143,7 @@ namespace wc
 
 			if (entityA && (entityA->Type > EntityType::Entity || entityA->Type == EntityType::Bullet))
 			{
+				//BulletClear(entityA);
 				if (fixtureB->GetType() == b2Shape::e_chain)
 				{
 					entityA->Contacts--;
@@ -144,6 +156,7 @@ namespace wc
 
 			if (entityB && (entityB->Type > EntityType::Entity || entityB->Type == EntityType::Bullet))
 			{
+				//BulletClear(entityB);
 				if (fixtureA->GetType() == b2Shape::e_chain)
 				{
 					entityB->Contacts--;
@@ -641,13 +654,13 @@ namespace wc
 			bullet->SourceEntity = src;
 			bullet->Position = position;
 			bullet->Size = weaponInfo.BulletSize;
-			bullet->Speed = weaponInfo.BulletSpeed;
+			//bullet->Speed = weaponInfo.BulletSpeed;
 			bullet->Direction = direction;
 			bullet->Color = weaponInfo.BulletColor;
 			bullet->BulletType = weaponInfo.BulletType;
 			bullet->WeaponType = weaponType;
-			bullet->Density = 0.f;
-			bullet->LinearDamping = 0.f;
+			//bullet->Density = 0.f;
+			//bullet->LinearDamping = 0.f;
 			bullet->Bounces = weaponInfo.BulletBounces;
 
 			{
@@ -657,7 +670,7 @@ namespace wc
 				bodyDef.fixedRotation = true;
 				bodyDef.bullet = true;
 				bodyDef.gravityScale = 0.f;
-				bodyDef.linearVelocity = b2Vec2(bullet->Direction.x * bullet->Speed, bullet->Direction.y * bullet->Speed);
+				bodyDef.linearVelocity = b2Vec2(bullet->Direction.x * weaponInfo.BulletSpeed, bullet->Direction.y * weaponInfo.BulletSpeed);
 				bullet->Body = PhysicsWorld->CreateBody(&bodyDef);
 
 				b2CircleShape shape;
@@ -730,7 +743,7 @@ namespace wc
 			for (uint32_t i = 0; i < Entities.size(); i++)
 			{
 				auto& e = Entities[i];
-
+				
 				switch (e->Type)
 				{
 				case EntityType::RedCube:
@@ -743,12 +756,14 @@ namespace wc
 						DestroyEntity(i);
 					}
 
+					if(player.JumpForce != 2656.3132f && 0.f)WC_CORE_ERROR(player.JumpForce);
+
 					//movement
 					float distToPlayer = glm::distance(player.Position, entity.Position);
 					if (distToPlayer < entity.DetectRange)
 					{
-						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
-						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
+						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-EntityStats[(int)entity.Type].Speed, 0), true);
+						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed, 0), true);
 					}
 					//attack behavior
 					if (distToPlayer < entity.ShootRange)
@@ -781,8 +796,8 @@ namespace wc
 					float distToPlayer = glm::distance(player.Position, entity.Position);
 					if (distToPlayer < entity.DetectRange)
 					{
-						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-entity.Speed, 0), true);
-						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(entity.Speed, 0), true);
+						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-EntityStats[(int)entity.Type].Speed, 0), true);
+						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed, 0), true);
 
 					}
 					//attack behavior
@@ -801,7 +816,7 @@ namespace wc
 				{
 					Bullet& bullet = *(Bullet*)e;
 					WeaponInfo& weapon = WeaponStats[(int)bullet.WeaponType];
-					bullet.DistanceTraveled += bullet.Speed * SimulationTime;
+					bullet.DistanceTraveled += weapon.BulletSpeed * SimulationTime;
 					bool destroy = false;
 					if (bullet.HitEntityType > EntityType::UNDEFINED)
 					{
@@ -847,7 +862,7 @@ namespace wc
 								m_Particle.LifeTime = 0.35f;
 								m_Particle.ColorBegin = glm::vec4(0.f, 1.f, 0.f, 1.f) * 2.f;
 								m_Particle.ColorEnd = glm::vec4(0.f, 1.f, 0.f, 1.f);
-								m_Particle.Position = shotEnt->Position;
+								m_Particle.Position = bullet.Position;
 								m_Particle.Velocity = glm::vec2(0.5f);
 								m_Particle.VelocityVariation = glm::normalize(shotEnt->Position - player.Position) * 2.5f;
 								m_ParticleEmitter.Emit(m_Particle, 6);
@@ -862,8 +877,11 @@ namespace wc
 							{
 								if (shotEnt != bullet.SourceEntity)shotEnt->DealDamage(weapon.Damage);
 							}
+
+							if (bullet.HitEntity == bullet.SourceEntity && bullet.Bounces != WeaponStats[(int)bullet.WeaponType].BulletBounces)destroy = true;
 						}
 						
+
 						if (!bullet.IsSensor() && bullet.HitEntity->Type == EntityType::Bullet) {
 							Bullet& hitBullet = *(Bullet*)bullet.HitEntity;
 							if (!hitBullet.IsSensor())
@@ -906,7 +924,7 @@ namespace wc
 		void FixedUpdate()
 		{
 			if (player.MoveDir != 0.f)
-				player.Body->ApplyLinearImpulseToCenter({ player.MoveDir * player.Speed * player.Body->GetMass() / 10.f * (player.DownContacts > 0 ? 1.f : AirSpeedFactor), 0.f }, true);
+				player.Body->ApplyLinearImpulseToCenter({ player.MoveDir * EntityStats[(int)EntityType::Player].Speed * player.Body->GetMass() / 10.f * (player.DownContacts > 0 ? 1.f : AirSpeedFactor), 0.f}, true);
 
 			UpdateAIFixed();
 		}
@@ -944,7 +962,7 @@ namespace wc
 			{
 				// @NOTE: if gravity is changed we should update this
 				float jumHeight = 8.f;
-				player.JumpForce = glm::sqrt(jumHeight * Gravity * player.Body->GetGravityScale() * -(2.f + player.LinearDamping)) * player.Body->GetMass();
+				player.JumpForce = glm::sqrt(jumHeight * Gravity * player.Body->GetGravityScale() * -(2.f + EntityStats[(int)EntityType::Player].Speed)) * player.Body->GetMass();
 
 				player.Body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
 			}

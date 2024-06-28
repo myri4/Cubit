@@ -53,6 +53,33 @@ namespace wc
 			m_Tileset.Load();
 
 			m_Map.SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
+
+			{
+			//	auto& redcube = EntityStats[(int)EntityType::RedCube];
+			//	redcube.Density = 55.f;
+			}
+
+			{
+				auto& redcube = EntityStats[(int)EntityType::RedCube];
+				redcube.Density = 55.f;
+				redcube.Speed = 7.f;
+				redcube.LinearDamping = 1.8f;
+			}
+			
+			{
+				auto& fly = EntityStats[(int)EntityType::Fly];
+				fly.Density = 35.f;
+				fly.Speed = 7.f;
+				fly.LinearDamping = 1.8f;
+			}
+
+			{
+				auto& player = EntityStats[(int)EntityType::Player];
+				player.Density = 100.f;
+				player.Speed = 7.f;
+				player.LinearDamping = 1.5f;
+			}
+
 			{
 				auto& blaster = WeaponStats[(int)WeaponType::Blaster];
 				blaster.BulletType = BulletType::Blaster;
