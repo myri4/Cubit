@@ -32,6 +32,9 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
 
+#include <SoLoud/soloud.h>
+#include <SoLoud/soloud_wav.h>
+
 #pragma warning(pop)
 
 namespace wc

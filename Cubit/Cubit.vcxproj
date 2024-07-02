@@ -138,7 +138,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(ProjectDir)vendor\libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;spirv-cross-core.lib;box2d.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>soloud_static.lib;glfw3.lib;spirv-cross-core.lib;box2d.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuild>
       <Command>"$(VULKAN_SDK)\Bin\glslc.exe" -std=450core -I"$(ProjectDir)src\shaders\include" -o "$(ProjectDir)assets\shaders\%(Filename)%(Extension)" -O0 "%(FullPath)"</Command>
@@ -166,7 +166,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(ProjectDir)vendor\libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;spirv-cross-core.lib;box2d.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>soloud_static.lib;glfw3.lib;spirv-cross-core.lib;box2d.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuild>
       <Command>"$(VULKAN_SDK)\Bin\glslc.exe" -std=450core -I"$(ProjectDir)src\shaders\include" -o "$(ProjectDir)assets\shaders\%(Filename)%(Extension)" -O0 "%(FullPath)"</Command>
