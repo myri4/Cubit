@@ -872,6 +872,7 @@ namespace wc
 								}
 
 								m_Particle.LifeTime = 0.35f;
+								m_Particle.SizeBegin = bullet.Size.x * 2.f;
 								m_Particle.ColorBegin = glm::vec4(0.f, 1.f, 0.f, 1.f) * 2.f;
 								m_Particle.ColorEnd = glm::vec4(0.f, 1.f, 0.f, 1.f);
 								m_Particle.Position = bullet.Position;

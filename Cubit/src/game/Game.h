@@ -217,16 +217,19 @@ namespace wc
 		{
 			auto color = ImVec4(57 / 255.f, 255 / 255.f, 20 / 255.f, 1.f);
 			ImGui::SetWindowFontScale(0.5f);
-			ImGui::SetCursorPos(ImVec2(10.f, 10.f));
-			ImGui::TextColored(color, std::format("FPS: {}", int(1.f / Globals.deltaTime)).c_str());
-			ImGui::SetCursorPosX(10.f);
-			ImGui::TextColored(color, std::format("Enemy count: {}", m_Map.EnemyCount).c_str());
-			ImGui::SetCursorPosX(10.f);
-			ImGui::TextColored(color, std::format("Level Time: {:.2f} sec.", m_Map.LevelTime).c_str());
+
+			ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2 - 75);
+			ImGui::TextColored(color, std::format("{:.2f} sec.", m_Map.LevelTime).c_str());
+
+
+			ImGui::SetCursorPos(ImVec2(10.f, ImGui::GetWindowSize().y - 70.f));
+			ImGui::TextColored(color, std::format("Enemies: {}", m_Map.EnemyCount).c_str());
 			ImGui::SetCursorPosX(10.f);
 			ImGui::TextColored(color, std::format("Current Level: {}", m_LevelID).c_str());
-			ImGui::SetCursorPosX(10.f);
-			ImGui::TextColored(color, std::format("Ammo: {}/{}", m_Map.player.Weapons[(int)m_Map.player.Weapon].Magazine, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
+			
+			ImGui::SetWindowFontScale(1.2f);
+			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x - 255.f, ImGui::GetWindowSize().y - 70.f));
+			ImGui::TextColored(color, std::format("{}/{}", m_Map.player.Weapons[(int)m_Map.player.Weapon].Magazine, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
 			//ImGui::SetCursorPosX(10.f);
 			//ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.player.Weapons[(int)m_Map.player.MeleeWeapon].Timer).c_str());
 			//ImGui::SetCursorPosX(10.f);
@@ -234,11 +237,11 @@ namespace wc
 			//ImGui::SetCursorPosX(10.f);
 			//ImGui::TextColored(color, std::format("Clamped steps: {}", glm::min(m_Map.nSteps, m_Map.MAX_STEPS)).c_str());
 
-			ImGui::SetCursorPosX(10.f);
 			//big hp-bar
 			ImGui::SetWindowFontScale(0.2f);
 			ImGui::SetCursorPos(ImVec2(0, ImGui::GetWindowSize().y - 10));
-			//ImGui::ProgressBar((float)m_Map.player.Health / m_Map.player.StartHealth, ImVec2(ImGui::GetWindowSize().x, 10), std::format("HP: {}", m_Map.player.Health).c_str());
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, color);
+			ImGui::ProgressBar((float)m_Map.player.Health / m_Map.player.StartHealth, ImVec2(ImGui::GetWindowSize().x, 10), std::format("{}", m_Map.player.Health).c_str());
 
 			ImGui::SetWindowFontScale(1.f);
 		}
