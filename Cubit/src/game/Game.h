@@ -163,7 +163,8 @@ namespace wc
 				redBlaster.FireRate = 0.3f;
 				redBlaster.Range = 50.f;
 				redBlaster.BulletColor = { 1.f, 0, 0, 1.f };
-				redBlaster.BulletSpeed = 0.f;
+				redBlaster.BulletSpeed = 25.f;
+				redBlaster.Recoil = { 0.25f, -0.15f };
 				redBlaster.BulletSize = { 0.25f, 0.25f };
 				redBlaster.RenderOffset = { 0.25f, -0.15f };
 				redBlaster.RenderSize = { 1.f, 0.45f };
@@ -260,7 +261,6 @@ namespace wc
 			ImGui::Begin("MENU", NULL, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
 			ImGui::SetCursorPos(ImVec2(0, 0));
 
-
 			ImGui::SetWindowFontScale(2.f);
 			char buf[128];
 			sprintf(buf, "%c Cubit %c", "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3], "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3]);
@@ -323,8 +323,16 @@ namespace wc
 
 			ImGui::SetWindowFontScale(1.f);
 			ImVec2 ResumeSize = ImGui::CalcTextSize("Resume");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ResumeSize.x) * 0.5f, (ImGui::GetWindowSize().y - ResumeSize.y) * 0.5f + 100));
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ResumeSize.x) * 0.5f, (ImGui::GetWindowSize().y - ResumeSize.y) * 0.5f));
 			if (ImGui::Button("Resume"))Globals.gameState = GameState::PLAY;
+
+			ImVec2 ResetSize = ImGui::CalcTextSize("Reset");
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ResumeSize.x) * 0.5f, (ImGui::GetWindowSize().y - ResumeSize.y) * 0.5f + 100));
+			if (ImGui::Button("Reset")) {
+				m_Map.ResetLevel();
+				Globals.gameState = GameState::PLAY;
+			}
+
 			ImVec2 SettingsSize = ImGui::CalcTextSize("Settings");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - SettingsSize.x) * 0.5f, (ImGui::GetWindowSize().y - SettingsSize.y) * 0.5f + 200));
 			if (ImGui::Button("Settings")) {

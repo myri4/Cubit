@@ -26,6 +26,8 @@ namespace wc
 	{
 		Settings settings;
 
+		std::string levelName = "";
+
 		//sound
 		const int music_fade_time_mls = 500;
 

@@ -178,6 +178,8 @@ namespace wc
 			if (IsLoaded()) WC_CORE_WARN("Forgot to free the scene");
 		}
 
+		std::string levelPath;
+
 		void Allocate()
 		{
 			if (IsLoaded()) Free();
@@ -261,6 +263,7 @@ namespace wc
 			Reset();
 
 			std::ifstream file(filepath);
+			levelPath = filepath;
 
 			file >> Size.x >> Size.y >> Size.z;
 			Allocate();
@@ -335,6 +338,11 @@ namespace wc
 			CreatePhysicsWorld();
 
 			camera.Position = glm::vec3(player.Position, 0.f);			
+		}
+
+		void ResetLevel() {
+			LoadFull(levelPath);
+			camera.Position = glm::vec3(player.Position, 0.f);
 		}
 
 		float Gravity = -9.8f;
@@ -769,8 +777,14 @@ namespace wc
 						if (entity.AttackTimer <= 0 && entity.Alive())
 						{
 							//shoot
+							std::random_device rd;
+							std::mt19937 gen(rd());
+							auto& offset = WeaponStats[(int)WeaponType::RedBlaster].Recoil;
+							std::uniform_real_distribution<float> dis(offset.x, offset.y);
+
 							glm::vec2 dir = glm::normalize(player.Position - entity.Position);
-							SpawnBullet(entity.Position + dir * 0.5f, dir, WeaponType::RedBlaster, e);
+							//SpawnBullet(entity.Position + dir * 0.5f, dir, WeaponType::RedBlaster, e);
+							SpawnBullet(entity.Position + dir * 0.5f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), WeaponType::RedBlaster, e);
 
 							entity.AttackTimer = 2.f;
 						}
@@ -954,7 +968,6 @@ namespace wc
 
 			else if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeySecondaryWeapon))
 				player.Weapon = player.SecondaryWeapon;
-
 
 			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump) && player.DownContacts != 0)
 			{
