@@ -756,7 +756,9 @@ namespace wc
 				{
 				case EntityType::RedCube:
 				{
-					RedCube& entity = *(RedCube*)e;	
+					RedCube& entity = *(RedCube*)e;
+
+					glm::vec2 direction = glm::normalize(player.Position - entity.Position);
 
 					if (!entity.Alive())
 					{
@@ -764,13 +766,47 @@ namespace wc
 						DestroyEntity(i);
 					}
 
+					auto hitInfo = Intersect({ entity.Position , direction }, Entities.size());
+
+
 					//movement
 					float distToPlayer = glm::distance(player.Position, entity.Position);
-					if (distToPlayer < entity.DetectRange && false)
-					{
-						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-EntityStats[(int)entity.Type].Speed, 0), true);
-						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed, 0), true);
+
+					auto movementRayLeftDown = Intersect({ entity.Position, glm::normalize(glm::vec2(-1.f,-1.f)) }, Entities.size());
+
+					auto movementRayRightDown = Intersect({ entity.Position, glm::normalize(glm::vec2(1.f,-1.f)) }, Entities.size());
+
+					auto movementRayRightUp = Intersect({ entity.Position, glm::normalize(glm::vec2(1.f,1.f)) }, Entities.size());
+
+					auto movementRayLeftUp = Intersect({ entity.Position, glm::normalize(glm::vec2(-1.f,1.f)) }, Entities.size());
+
+
+					auto jumpingRayLeft = Intersect({ entity.Position, glm::normalize(glm::vec2(-1.f, 0.f)) * 1.5f }, Entities.size());
+
+					auto jumpingRayRight = Intersect({ entity.Position, glm::normalize(glm::vec2(1.f, 0.f)) * 1.5f }, Entities.size());
+
+					if (distToPlayer < entity.DetectRange) {
+						//platform movement
+						if (movementRayLeftDown.t > 1.f && entity.DownContacts > 0.f)
+							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed, 0.f), true);
+						else if (movementRayRightDown.t > 1.f && entity.DownContacts > 0.f)
+							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-EntityStats[(int)entity.Type].Speed, 0.f), true);
+
+						else if (movementRayLeftDown.t < 1.f && entity.DownContacts > 0.f && movementRayRightDown.t < 1.f)
+							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed * direction.x, 0.f), true);
+
+						//jumping behavior
+						if (!movementRayLeftUp.Hit && !movementRayRightUp.Hit) {
+							if (jumpingRayLeft.t < 1.f && entity.DownContacts > 0.f)
+								entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-40.f, 200.f), true);
+
+
+							else if (jumpingRayRight.t < 1.f && entity.DownContacts > 0.f)
+								entity.Body->ApplyLinearImpulseToCenter(b2Vec2(40.f, 200.f), true);
+						}
+
 					}
+
 					//attack behavior
 					if (distToPlayer < entity.ShootRange)
 					{
