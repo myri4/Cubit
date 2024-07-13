@@ -511,7 +511,15 @@ namespace wc
 
         void SetSizeLimits(glm::ivec2 minSize, glm::ivec2 maxSize) { glfwSetWindowSizeLimits(m_Window, minSize.x, minSize.y, maxSize.x, maxSize.y); }
 
+        void Maximize() { glfwMaximizeWindow(m_Window); }
+
+        void Restore() { glfwRestoreWindow(m_Window); }
+
         void SetCursorMode(int value) { glfwSetInputMode(m_Window, GLFW_CURSOR, value); }
+
+        void Focus() { glfwFocusWindow(m_Window); }
+
+        void RequestAttention() { glfwRequestWindowAttention(m_Window); }
 
 		void SetMonitor() 
         {

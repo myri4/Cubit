@@ -32,6 +32,8 @@ namespace wc
 	//enum class BodyType { Static = 0, Dynamic, Kinematic };
 	struct Rigidbody2DComponent
 	{
+		glm::vec2 PrevPos;
+
 		b2Body* Body = nullptr;
 
 		uint32_t UpContacts = 0;

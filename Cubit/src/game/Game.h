@@ -65,13 +65,6 @@ namespace wc
 				redcube.Speed = 7.f;
 				redcube.LinearDamping = 1.8f;
 			}
-			
-			{
-				auto& fly = EntityStats[(int)EntityType::Fly];
-				fly.Density = 35.f;
-				fly.Speed = 7.f;
-				fly.LinearDamping = 1.8f;
-			}
 
 			{
 				auto& player = EntityStats[(int)EntityType::Player];
@@ -442,8 +435,8 @@ namespace wc
 					ImGui::SeparatorText("Window");
 					const char* windowSizes[] = { "1920x1080", "1366x768", "1280x1024", "1024x768", "1280x720" };
 					ImGui::Combo("Window Size", &Globals.settings.iWindowSize, windowSizes, IM_ARRAYSIZE(windowSizes));
-					UI::Checkbox("Fullscreen", Globals.settings.Fullscreen); UI::HelpMarker("Requires Restart");
-					UI::Checkbox("VSync", Globals.settings.VSync); UI::HelpMarker("Requires Restart");
+					UI::Checkbox("Fullscreen", Globals.settings.Fullscreen);
+					UI::Checkbox("VSync", Globals.settings.VSync);
 					UI::Separator("Game");
 					ImGui::SliderFloat("Brightness", &Globals.settings.Brighness, 0.f, 1.f);
 					UI::Checkbox("Screen Effects", Globals.settings.CRTEffect);
@@ -497,6 +490,9 @@ namespace wc
 			{
 				Globals.gameState = GameState::MENU;
 				Globals.settings.Save();
+				Globals.window.SetSize(Globals.settings.WindowSize);
+				Globals.window.RequestAttention();
+				Globals.window.resized = true;
 			}
 			ImGui::End();
 			ImGui::PopStyleVar(5);

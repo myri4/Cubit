@@ -20,7 +20,6 @@ namespace wc
         Bullet,
         Entity,
         RedCube,
-        Fly,
 
         Player,
     };	
@@ -44,9 +43,7 @@ namespace wc
 
 		inline void UpdatePosition(float alpha) // @NOTE: We don't interpolate angles yet
 		{
-			auto bPos = glm::vec2(Body->GetPosition().x, Body->GetPosition().y);
-
-			Position = glm::mix(Position, bPos, alpha);
+			
 		}
 
         void LoadMapBase(const YAML::Node& node)
@@ -180,17 +177,7 @@ namespace wc
         //float Speed = EntityStats[(int)EntityType::RedCube].Speed;
 
         RedCube() { Type = EntityType::RedCube; Health = 150;}
-    };    
-
-	struct Fly : public Entity
-	{
-		float AttackTimer = 5.f;
-		float ShootRange = 4.f;
-		float DetectRange = 10.f;
-		uint32_t Damage = 5;
-
-		Fly() { Type = EntityType::Fly; Health = 50;}
-	};
+    };
 
     struct Bullet : public Entity
     {

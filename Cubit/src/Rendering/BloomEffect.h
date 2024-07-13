@@ -134,11 +134,13 @@ namespace wc
 			});
 	}
 
-	void CreateBloom(ImageView imageView)
+	void InitBloom()
 	{
 		m_BloomShader.Create("assets/shaders/bloom.comp");
+	}
 
-
+	void CreateBloom(ImageView imageView)
+	{
 		GenerateBloomDescriptor(m_BloomBuffers[0].imageViews[0], imageView);
 
 		for (uint32_t currentMip = 1; currentMip < m_BloomMipLevels; currentMip++) {

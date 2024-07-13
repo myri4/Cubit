@@ -25,6 +25,8 @@ namespace wc
 
 	class Renderer2D
 	{
+		glm::vec2 m_TileSize = glm::vec2(16.f, 9.f); // @TODO: maybe rename?
+
 		glm::vec2 m_RenderSize;
 		float m_AspectRatio = 16.f / 9.f;
 
@@ -81,8 +83,8 @@ namespace wc
 		auto GetRenderSize() const { return m_RenderSize; }
 		auto GetAspectRatio() const { return m_AspectRatio; }
 
-		auto GetHalfSize() const { return m_RenderSize / (2.f * 64.f) * camera->Zoom; }
-		auto GetHalfSize(glm::vec2 size) const { return size / (2.f * 64.f) * camera->Zoom; }
+		auto GetHalfSize() const { return m_TileSize * camera->Zoom; }
+		auto GetHalfSize(glm::vec2 size) const { return size * camera->Zoom; }
 
 		auto ScreenToWorld(glm::vec2 coords) const
 		{
@@ -105,6 +107,8 @@ namespace wc
 		void Init(OrthographicCamera& cameraptr)
 		{			
 			camera = &cameraptr;
+
+			InitBloom();
 			
 			m_BackgroundShader.Create("assets/shaders/background.comp");
 			descriptorAllocator.allocate(m_BackgroundSet, m_BackgroundShader.GetDescriptorLayout());
@@ -176,14 +180,14 @@ namespace wc
 				textureInfo.width = m_RenderSize.x;
 				textureInfo.height = m_RenderSize.y;
 				textureInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-				BackgroundTexture = renderData.AllocateTexture(textureInfo);
+				if (BackgroundTexture == 0) BackgroundTexture = renderData.AllocateTexture(textureInfo);
 			}
 
 			SyncContext::immediate_submit([&](VkCommandBuffer cmd) {
 				for (int i = 0; i < ARRAYSIZE(m_FinalImage); i++)
 					m_FinalImage[i].setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-				renderData.Textures[BackgroundTexture].GetImage().setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+				if (BackgroundTexture == 0) renderData.Textures[BackgroundTexture].GetImage().setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 			});
 
 			CreateBloomImages(m_RenderSize, m_Framebuffer.attachments[0].image.GetMipLevelCount());
@@ -536,6 +540,8 @@ namespace wc
 
 			m_Shader.Destroy();
 			m_LineShader.Destroy();
+
+			m_ScreenSampler.Destroy();
 
 			for (int i = 0; i < ARRAYSIZE(m_FinalImage); i++)
 			{

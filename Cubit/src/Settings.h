@@ -80,6 +80,8 @@ namespace wc
 			YAML_SAVE_VAR(settings, KeySecondaryWeapon);
 			YAML_SAVE_VAR(settings, KeyFastSwich);
 
+			ChooseWindowSize();
+
 			YAMLUtils::SaveFile("settings.txt", settings);
 		}
 
@@ -122,6 +124,13 @@ namespace wc
 			YAML_LOAD_VAR(settings, KeySecondaryWeapon);
 			YAML_LOAD_VAR(settings, KeyFastSwich);
 
+			ChooseWindowSize();
+		}
+
+		private:
+
+		void ChooseWindowSize()
+		{
 			if (iWindowSize == 0)
 				WindowSize = { 1920, 1080 };
 			else if (iWindowSize == 1)

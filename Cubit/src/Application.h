@@ -25,8 +25,11 @@ namespace wc
 			}
 
 			VulkanContext::GetLogicalDevice().WaitIdle();
-			//Globals.window.DestoySwapchain();
-			//Globals.window.CreateSwapchain(VulkanContext::GetPhysicalDevice(), VulkanContext::GetLogicalDevice(), VulkanContext::GetInstance());
+			Globals.window.DestoySwapchain();
+			Globals.window.CreateSwapchain(VulkanContext::GetPhysicalDevice(), VulkanContext::GetLogicalDevice(), VulkanContext::GetInstance(), Globals.settings.VSync);
+
+			// Resize renderers
+			game.Resize(Globals.window.GetSize());
 		}
 		//----------------------------------------------------------------------------------------------------------------------
 		void OnCreate() 
@@ -39,7 +42,7 @@ namespace wc
 			windowInfo.Width = Globals.settings.WindowSize.x;
 			windowInfo.Height = Globals.settings.WindowSize.y;
 			windowInfo.VSync = Globals.settings.VSync;
-			windowInfo.Resizeable = false && !Globals.settings.Fullscreen;
+			windowInfo.Resizeable = true;
 			windowInfo.AppName = "CUBIT";
 			windowInfo.StartMode = Globals.settings.Fullscreen ? WindowMode::Fullscreen : WindowMode::Normal;
 			Globals.window.Create(windowInfo);
@@ -72,7 +75,8 @@ namespace wc
 		{
 			Globals.window.PoolEvents();
 
-			if (Globals.window.resized) Resize();
+			if (Globals.window.resized)
+				Resize();
 
 			if (ImGui::IsKeyPressed(ImGuiKey_Escape)) 
 			{

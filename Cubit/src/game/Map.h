@@ -317,14 +317,6 @@ namespace wc
 
 							EnemyCount++;
 						}
-						else if (Type == EntityType::Fly)
-						{
-							Fly* e = new Fly();
-							e->LoadMapBase(metaData);
-							Entities.emplace_back(e);
-
-							EnemyCount++;
-						}
 					}
 				}
 
@@ -724,17 +716,6 @@ namespace wc
 					if (entity.AttackTimer > 0.f) entity.AttackTimer -= Globals.deltaTime;
 				}
 				break;
-
-				case EntityType::Fly:
-				{
-					Fly& entity = *(Fly*)e;
-
-					entity.Body->SetGravityScale(0.f);
-
-					if (entity.AttackTimer > 0.f) entity.AttackTimer -= Globals.deltaTime;
-				}
-				break;
-
 				case EntityType::Bullet:
 				{
 
@@ -825,38 +806,6 @@ namespace wc
 							entity.AttackTimer = 2.f;
 						}
 					}
-				}
-				break;
-
-				case EntityType::Fly: 
-				{
-					Fly& entity = *(Fly*)e;
-
-					entity.Body->SetGravityScale(0.f);
-
-					if (!entity.Alive())
-					{
-						EnemyCount--;
-						DestroyEntity(i);
-					}
-
-					//movement
-					float distToPlayer = glm::distance(player.Position, entity.Position);
-					if (distToPlayer < entity.DetectRange)
-					{
-						if (entity.Position.x > player.Position.x) entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-EntityStats[(int)entity.Type].Speed, 0), true);
-						else entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed, 0), true);
-
-					}
-					//attack behavior
-					if (distToPlayer < entity.ShootRange)
-					{
-						if (entity.AttackTimer <= 0 && entity.Alive())
-						{
-							WC_CORE_INFO("Fly Attack");
-						}
-					}
-
 				}
 				break;
 
@@ -1180,7 +1129,7 @@ namespace wc
 					for (uint32_t i = 0; i < Entities.size(); i++)
 					{
 						auto& entity = *Entities[i];
-						if (entity.Type == EntityType::RedCube || entity.Type == EntityType::Fly)
+						if (entity.Type == EntityType::RedCube)
 						{
 							float dist = glm::distance(entity.Position, player.Position);
 							if (dist < WeaponStats[(int)player.MeleeWeapon].Range)
@@ -1208,7 +1157,7 @@ namespace wc
 		{
 			const int32_t velocityIterations = 8;
 			const int32_t positionIterations = 3;
-			const int32_t MAX_STEPS = 5;
+			const int32_t MAX_STEPS = 1;
 
 			AccumulatedTime += Globals.deltaTime;
 
@@ -1220,17 +1169,26 @@ namespace wc
 			{
 				AccumulatedTime -= nStepsClamped * SimulationTime;
 
+				float AccumulatedTimeRatio = AccumulatedTime / SimulationTime;
+
+				for (auto& entity : Entities)
+					entity->PrevPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
+
 				for (int i = 0; i < nStepsClamped; i++)
 				{
 					FixedUpdate();
+
 					PhysicsWorld->Step(SimulationTime, velocityIterations, positionIterations);
+				}
+
+				for (auto& entity : Entities)
+				{
+					auto bPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
+
+					entity->Position = glm::mix(entity->PrevPos, bPos, AccumulatedTimeRatio);
 				}
 			}
 
-			float AccumulatedTimeRatio = AccumulatedTime / SimulationTime;
-
-			for (auto& entity : Entities)
-				entity->UpdatePosition(AccumulatedTimeRatio);
 
 			if (player.DashCD > 0.f) player.DashCD -= Globals.deltaTime;
 
@@ -1289,10 +1247,29 @@ namespace wc
 				}
 				else
 				{
+					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
+					
 					if (entity.Type != EntityType::Player)
+					{
 						m_RenderData.DrawString(std::format("HP: {}", entity.Health), font, entity.Position + glm::vec2(-0.5f, 1.f), glm::vec4(1.f, 0, 0, 1.f));
 
-					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::RedCube || entity.Type == EntityType::Fly ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
+						auto& weapon = WeaponStats[(int)WeaponType::Blaster];
+
+						glm::vec2 dir = glm::normalize(player.Position - entity.Position);
+						glm::vec2 offset = weapon.RenderOffset;
+						float angle = atan2(dir.y, dir.x);
+						if (dir.x < 0.f)
+						{
+							angle = glm::pi<float>() - angle;
+							offset.x *= -1.f;
+						}
+						glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(entity.Position, 0.f)) *
+							glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, dir.x < 0.f ? -1.f : 1.f }) *
+							glm::translate(glm::mat4(1.f), glm::vec3(offset, 0.f)) * glm::scale(glm::mat4(1.f),
+								{ (dir.x < 0.f ? -1.f : 1.f) * weapon.RenderSize.x, weapon.RenderSize.y, 1.f });
+
+						m_RenderData.DrawQuad(transform, weapon.TextureID);
+					}
 				}
 			}
 
