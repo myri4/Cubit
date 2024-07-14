@@ -1167,29 +1167,6 @@ namespace wc
 			const int32_t nStepsClamped = glm::min(nSteps, MAX_STEPS);
 
 			UpdateAI();
-			/*if (nStepsClamped > 0)
-			{
-				AccumulatedTime -= nStepsClamped * SimulationTime;
-
-				float AccumulatedTimeRatio = AccumulatedTime / SimulationTime;
-
-				for (auto& entity : Entities)
-					entity->PrevPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
-
-				for (int i = 0; i < nStepsClamped; i++)
-				{
-					FixedUpdate();
-
-					PhysicsWorld->Step(SimulationTime, velocityIterations, positionIterations);
-				}
-
-				for (auto& entity : Entities)
-				{
-					auto bPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
-
-					entity->Position = glm::mix(bPos, entity->PrevPos, AccumulatedTimeRatio);
-				}
-			}*/
 
 			while (AccumulatedTime >= SimulationTime)
 			{
