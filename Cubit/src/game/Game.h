@@ -41,8 +41,8 @@ namespace wc
 	protected:
 		Map m_Map;
 		uint32_t m_LevelID = 0;
-
 	public:	
+		bool Overlay = true;
 
 		void Create(glm::vec2 renderSize)
 		{
@@ -132,7 +132,7 @@ namespace wc
 				revolver.MaxMag = 6;
 				revolver.ReloadSpeed = 0.5f;
 				revolver.ReloadByOne = true;
-				revolver.Range = 25.f;
+				revolver.Range = 125.f;
 				revolver.RenderOffset = { 0.25f, -0.15f };
 				revolver.RenderSize = { 1.f, 0.45f };
 				revolver.IsBulletSensor = false;
@@ -305,7 +305,7 @@ namespace wc
 
 			ImGui::SetNextWindowBgAlpha(0.75f);
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
-			UI_Data();
+			if (Overlay) UI_Data();
 
 			ImGui::SetWindowFontScale(1.25f);
 			ImVec2 PausedSize = ImGui::CalcTextSize("! PAUSED !");
@@ -438,6 +438,7 @@ namespace wc
 					UI::Checkbox("Bloom", Globals.settings.Bloom);
 					UI::Checkbox("Vignete", Globals.settings.Vignete);
 					UI::Checkbox("Background", Globals.settings.Background);
+					UI::Checkbox("Overlay", Overlay);
 					//UI::Checkbox("Hide Particles", Globals.settings.HideParticles);
 
 					ImGui::EndTabItem();
@@ -573,7 +574,7 @@ namespace wc
 			
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::Begin("Screen Render", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
-			UI_Data();
+			if (Overlay) UI_Data();
 
 			//glm::vec2 pos = m_Renderer.WorldToScreen(m_Map.player.Position - (glm::vec2)m_Map.camera.Position - m_Map.player.Size.x);
 			//ImGui::SetCursorPos(ImVec2(pos.x, pos.y));

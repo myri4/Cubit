@@ -1167,7 +1167,7 @@ namespace wc
 			const int32_t nStepsClamped = glm::min(nSteps, MAX_STEPS);
 
 			UpdateAI();
-			if (nStepsClamped > 0)
+			/*if (nStepsClamped > 0)
 			{
 				AccumulatedTime -= nStepsClamped * SimulationTime;
 
@@ -1187,9 +1187,31 @@ namespace wc
 				{
 					auto bPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
 
-					entity->Position = glm::mix(entity->PrevPos, bPos, AccumulatedTimeRatio);
+					entity->Position = glm::mix(bPos, entity->PrevPos, AccumulatedTimeRatio);
 				}
+			}*/
+
+			while (AccumulatedTime >= SimulationTime)
+			{
+				for (auto& entity : Entities)
+					entity->PrevPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
+
+				FixedUpdate();
+
+				PhysicsWorld->Step(SimulationTime, velocityIterations, positionIterations);
+
+				AccumulatedTime -= SimulationTime;
 			}
+
+			const float alpha = AccumulatedTime / SimulationTime;
+
+			for (auto& entity : Entities)
+			{
+				auto bPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
+
+				entity->Position = bPos * alpha + entity->PrevPos * (1.f - alpha);
+			}
+
 
 
 			if (player.DashCD > 0.f) player.DashCD -= Globals.deltaTime;
