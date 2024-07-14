@@ -131,13 +131,7 @@ namespace wc
 			ma_sound_init_from_file(&Globals.music_engine, "assets/sound/music/win.wav", 0, 0, 0, &Globals.music_win);
 			ma_sound_set_looping(&Globals.music_menu, true);
 			ma_sound_set_looping(&Globals.music_main, true);
-
-
-			ma_sound_init_from_file(&Globals.sfx_engine, "assets/sound/sfx/shotgun.wav", 0, 0, 0, &Globals.shotgun);
-			ma_sound_init_from_file(&Globals.sfx_engine, "assets/sound/sfx/gun.wav", 0, 0, 0, &Globals.gun);
-			ma_sound_init_from_file(&Globals.sfx_engine, "assets/sound/sfx/sword_swing.wav", 0, 0, 0, &Globals.swordSwing);
-			ma_sound_init_from_file(&Globals.sfx_engine, "assets/sound/sfx/damage_enemy.wav", 0, 0, 0, &Globals.damageEnemy);
-
+								
 			ma_engine_set_volume(&Globals.music_engine, Globals.settings.MasterVolume);
 			ma_engine_set_volume(&Globals.music_engine, (Globals.settings.MusicVolume / 100.f) * (Globals.settings.MasterVolume / 100.f));
 			ma_engine_set_volume(&Globals.sfx_engine, (Globals.settings.SFXVolume / 100.f) * (Globals.settings.MasterVolume / 100.f));

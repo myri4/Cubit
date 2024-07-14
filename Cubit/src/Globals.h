@@ -38,10 +38,10 @@ namespace wc
 		ma_sound music_GameOver;
 		ma_sound music_win;
 
-		ma_sound shotgun;
-		ma_sound gun;
-		ma_sound swordSwing;
-		ma_sound damageEnemy;
+		std::string shotgun = "assets/sound/sfx/shotgun.wav";
+		std::string gun = "assets/sound/sfx/gun.wav";
+		std::string swordSwing = "assets/sound/sfx/sword_swing.wav";
+		std::string damageEnemy = "assets/sound/sfx/damage_enemy.wav";
 
 		ma_engine sfx_engine;
 		ma_engine music_engine;

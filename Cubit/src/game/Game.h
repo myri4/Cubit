@@ -55,11 +55,6 @@ namespace wc
 			m_Map.SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
 
 			{
-			//	auto& redcube = EntityStats[(int)EntityType::RedCube];
-			//	redcube.Density = 55.f;
-			}
-
-			{
 				auto& redcube = EntityStats[(int)EntityType::RedCube];
 				redcube.Density = 55.f;
 				redcube.Speed = 7.f;

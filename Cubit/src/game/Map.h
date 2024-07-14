@@ -843,7 +843,7 @@ namespace wc
 								Entities.emplace_back(em);
 							}
 
-							ma_sound_start(&Globals.damageEnemy);
+							ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
 							player.DealDamage(weapon.Damage);
 						}
 
@@ -851,9 +851,10 @@ namespace wc
 						{
 							if (bullet.BulletType == BulletType::Blaster)
 							{
-								if (shotEnt != bullet.SourceEntity) {
+								if (shotEnt != bullet.SourceEntity) 
+								{
 									shotEnt->DealDamage(weapon.Damage);
-									ma_sound_start(&Globals.damageEnemy);
+									ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
 								}
 
 								m_Particle.LifeTime = 0.35f;
@@ -868,15 +869,15 @@ namespace wc
 
 							if (bullet.BulletType == BulletType::Shotgun)
 							{
-								if (shotEnt != bullet.SourceEntity)shotEnt->DealDamage(weapon.Damage);
+								if (shotEnt != bullet.SourceEntity) shotEnt->DealDamage(weapon.Damage);
 							}
 
 							if (bullet.BulletType == BulletType::Revolver)
 							{
-								if (shotEnt != bullet.SourceEntity)shotEnt->DealDamage(weapon.Damage);
+								if (shotEnt != bullet.SourceEntity) shotEnt->DealDamage(weapon.Damage);
 							}
 
-							if (bullet.HitEntity == bullet.SourceEntity && bullet.Bounces != WeaponStats[(int)bullet.WeaponType].BulletBounces)destroy = true;
+							if (bullet.HitEntity == bullet.SourceEntity && bullet.Bounces != WeaponStats[(int)bullet.WeaponType].BulletBounces) destroy = true;
 						}
 						
 
@@ -1009,13 +1010,13 @@ namespace wc
 					auto& offset = WeaponStats[(int)WeaponType::Blaster].Recoil;
 					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
-					ma_sound_start(&Globals.gun);
+					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
 
 					SpawnBullet(player.Position + dir * 0.5f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
 				}
-				else if (player.Weapon == WeaponType::Laser) {
-
-					ma_sound_start(&Globals.gun);
+				else if (player.Weapon == WeaponType::Laser) 
+				{
+					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
 
 					glm::vec2 shootPos = player.Position + dir * 0.35f;
 					auto hitInfo = Intersect({ shootPos, dir }, 1, EntityType::Bullet);
@@ -1048,7 +1049,7 @@ namespace wc
 						player.Body->ApplyLinearImpulseToCenter({ recoilForce.x, recoilForce.y }, true);
 					}
 
-					ma_sound_start(&Globals.shotgun);
+					ma_engine_play_sound(&Globals.sfx_engine, Globals.shotgun.c_str(), nullptr);
 					std::random_device rd;
 					std::mt19937 gen(rd());
 					auto& offset = WeaponStats[(int)WeaponType::Shotgun].Recoil;
@@ -1074,7 +1075,7 @@ namespace wc
 					auto& offset = WeaponStats[(int)WeaponType::Revolver].Recoil;
 					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
-					ma_sound_start(&Globals.gun);
+					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
 					SpawnBullet(player.Position + dir * 0.5f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
 				}
 
@@ -1091,7 +1092,7 @@ namespace wc
 
 				if (player.Weapon == WeaponType::Revolver)
 				{
-					ma_sound_start(&Globals.gun);
+					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
 
 					player.Weapons[(int)player.Weapon].AltFireTimer = 1.2f;
 					player.Weapons[(int)player.Weapon].Timer = 0.f;
@@ -1109,6 +1110,7 @@ namespace wc
 
 					if (player.CanShoot())
 					{
+						ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
 						glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 
 						SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
@@ -1123,7 +1125,7 @@ namespace wc
 			{
 				if (player.MeleeWeapon == WeaponType::Sword)
 				{
-					ma_sound_start(&Globals.swordSwing);
+					ma_engine_play_sound(&Globals.sfx_engine, Globals.swordSwing.c_str(), nullptr);
 					m_RotateSword = true;
 
 					for (uint32_t i = 0; i < Entities.size(); i++)
