@@ -79,7 +79,7 @@ namespace wc
 				blaster.ReloadSpeed = 1.5f;
 				blaster.Range = 50.f;
 				blaster.BulletColor = { 0.f, 1.f, 0.f, 1.f };
-				blaster.BulletSpeed = 25.f;
+				blaster.BulletSpeed = 45.f;
 				blaster.BulletSize = { 0.25f, 0.25f };
 				blaster.Recoil = { 0.25f, -0.15f };
 				blaster.RenderOffset = { 0.25f, -0.15f };
@@ -112,6 +112,7 @@ namespace wc
 				shotgun.MaxMag = 4;
 				shotgun.ReloadSpeed = 0.5f;
 				shotgun.ReloadByOne = true;
+				shotgun.CanZoom = true;
 				shotgun.Range = 5.5f;
 				shotgun.BulletColor = { 1.f, 1.f, 0.f, 1.f };
 				shotgun.BulletSpeed = 25.f;
@@ -137,7 +138,7 @@ namespace wc
 				revolver.RenderSize = { 1.f, 0.45f };
 				revolver.IsBulletSensor = false;
 				revolver.BulletColor = { 1.f, 1.f, 0.f, 1.f };
-				revolver.BulletSpeed = 25.f;
+				revolver.BulletSpeed = 45.f;
 				revolver.BulletSize = { 0.1f, 0.1f };
 				revolver.BulletBounces = 3;
 				revolver.TextureID = m_RenderData.LoadTexture("assets/textures/Revolver.png");
@@ -151,7 +152,7 @@ namespace wc
 				redBlaster.FireRate = 0.3f;
 				redBlaster.Range = 50.f;
 				redBlaster.BulletColor = { 1.f, 0, 0, 1.f };
-				redBlaster.BulletSpeed = 25.f;
+				redBlaster.BulletSpeed = 45.f;
 				redBlaster.Recoil = { 0.25f, -0.15f };
 				redBlaster.BulletSize = { 0.25f, 0.25f };
 				redBlaster.RenderOffset = { 0.25f, -0.15f };
