@@ -11,8 +11,7 @@ namespace wc
 	class Application 
 	{
 		GameInstance game;
-		//----------------------------------------------------------------------------------------------------------------------
-		bool IsEngineOK() { return Globals.window.IsOpen(); }
+
 		//----------------------------------------------------------------------------------------------------------------------
 		void Resize() 
 		{
@@ -336,7 +335,7 @@ namespace wc
 		{
 			OnCreate();
 
-			while (IsEngineOK())
+			while (Globals.window.IsOpen())
 			{
 				OnInput();
 
