@@ -217,8 +217,13 @@ namespace wc
 			ImGui::TextColored(color, std::format("Current Level: {}", m_LevelID).c_str());
 			
 			ImGui::SetWindowFontScale(1.2f);
-			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x - 255.f, ImGui::GetWindowSize().y - 70.f));
-			ImGui::TextColored(color, std::format("{}/{}", m_Map.player.Weapons[(int)m_Map.player.Weapon].Magazine, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
+			float offset = 0.f;
+			if (m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo >= 100)offset = 305.f;
+			else offset = 255.f;
+			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x - offset, ImGui::GetWindowSize().y - 70.f));
+			int mag = m_Map.player.Weapons[(int)m_Map.player.Weapon].Magazine;
+			if (mag >= 10) ImGui::TextColored(color, std::format("{}/{}", mag, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
+			else ImGui::TextColored(color, std::format("  {}/{}", mag, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
 			//ImGui::SetCursorPosX(10.f);
 			//ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.player.Weapons[(int)m_Map.player.MeleeWeapon].Timer).c_str());
 			//ImGui::SetCursorPosX(10.f);
@@ -319,7 +324,7 @@ namespace wc
 			if (ImGui::Button("Resume"))Globals.gameState = GameState::PLAY;
 
 			ImVec2 ResetSize = ImGui::CalcTextSize("Reset");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ResumeSize.x) * 0.5f, (ImGui::GetWindowSize().y - ResumeSize.y) * 0.5f + 100));
+			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ResetSize.x) * 0.5f, (ImGui::GetWindowSize().y - ResetSize.y) * 0.5f + 100));
 			if (ImGui::Button("Reset")) {
 				m_Map.ResetLevel();
 				Globals.gameState = GameState::PLAY;

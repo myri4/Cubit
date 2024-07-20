@@ -1,0 +1,35 @@
+Gravity: [0, -9.80000019]
+TopDown: true
+Tileset: scripts/debug.tileset
+Repeaters: ~
+Filters: ~
+Observers: ~
+Entities:
+  - Position: [3.00782418, 2.42070389]
+    Type: Player
+  - Position: [11.7234383, 4.27082062]
+    Type: EyeballEnemy
+  - Position: [26.8781261, 5.99731636]
+    Type: EyeballEnemy
+  - Position: [44.9875031, 10.8133545]
+    Type: EyeballEnemy
+  - Position: [66.4328156, 1.90823579]
+    Type: EyeballEnemy
+  - Position: [96.6828156, 5.41486979]
+    Type: EyeballEnemy
+  - Position: [95.5984421, 3.72561073]
+    Type: EyeballEnemy
+  - Position: [90.1656418, 1.45389748]
+    Type: EyeballEnemy
+  - Position: [88.1640778, 16.5380669]
+    Type: EyeballEnemy
+  - Position: [61.565609, 26.8404617]
+    Type: EyeballEnemy
+  - Position: [55.9968758, 25.2673988]
+    Type: EyeballEnemy
+  - Position: [11.2406273, 25.0707645]
+    Type: EyeballEnemy
+  - Position: [38.671875, 27.7253189]
+    Type: EyeballEnemy
+  - Position: [18.6656246, 18.3852253]
+    Type: EyeballEnemy

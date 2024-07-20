@@ -299,10 +299,10 @@ namespace wc
 
 						if (Type == EntityType::Player)
 						{
-							player.Weapons[(int)WeaponType::Blaster].Ammo = 600;
-							player.Weapons[(int)WeaponType::Laser].Ammo = 100;
-							player.Weapons[(int)WeaponType::Shotgun].Ammo = 120;
-							player.Weapons[(int)WeaponType::Revolver].Ammo = 240;
+							player.Weapons[(int)WeaponType::Blaster].Ammo = 60;
+							player.Weapons[(int)WeaponType::Laser].Ammo = 10;
+							player.Weapons[(int)WeaponType::Shotgun].Ammo = 12;
+							player.Weapons[(int)WeaponType::Revolver].Ammo = 24;
 							player.Weapon = player.PrimaryWeapon;
 
 							for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++) player.Weapons[i].Magazine = WeaponStats[i].MaxMag;
@@ -745,6 +745,8 @@ namespace wc
 					if (!entity.Alive())
 					{
 						EnemyCount--;
+						player.Weapons[(int)player.PrimaryWeapon].Ammo += WeaponStats[(int)player.PrimaryWeapon].MaxMag * 0.8f;
+						player.Weapons[(int)player.SecondaryWeapon].Ammo += WeaponStats[(int)player.PrimaryWeapon].MaxMag * 0.8f;
 						DestroyEntity(i);
 					}
 
