@@ -245,10 +245,7 @@ namespace wc
 		{
 			AccumulatedTime = 0.f;
 			EnemyCount = 0;
-			LevelTime = 0.f;
 			//stopping sword animation
-			m_RotateSword = false;
-			m_SwordRotation = 0.f;
 
 			m_ParticleEmitter.Reset();
 
@@ -327,15 +324,7 @@ namespace wc
 		void LoadFull(const std::string& filepath) // @TODO: Rename?
 		{
 			Load(filepath);
-			CreatePhysicsWorld();
-
-			camera.Position = glm::vec3(player.Position, 0.f);			
-		}
-
-		void ResetLevel() {
-			LoadFull(levelPath);
-			camera.Position = glm::vec3(player.Position, 0.f);
-		}
+			CreatePhysicsWorld();		}
 
 		float Gravity = -9.8f;
 		void CreatePhysicsWorld()
@@ -931,233 +920,6 @@ namespace wc
 			UpdateAIFixed();
 		}
 
-		void InputGame()
-		{
-			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyLeft)) player.MoveDir = -1.f;
-			else if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyRight)) player.MoveDir = 1.f;
-			else player.MoveDir = 0.f;
-
-			if (player.MoveDir != 0.f)
-			{
-				if (Key::GetKey(Key::LeftShift) == GLFW_PRESS && player.DashCD <= 0.f)
-				{
-					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
-					player.Body->ApplyLinearImpulseToCenter({ 50.f * player.Body->GetMass() * player.MoveDir, 0.f }, true);
-					player.DashCD = 2.f;
-				}
-			}
-
-			if (ImGui::IsKeyReleased((ImGuiKey)Globals.settings.KeyFastSwich))
-			{
-				if (player.Weapon == player.PrimaryWeapon) player.Weapon = player.SecondaryWeapon;
-				else player.Weapon = player.PrimaryWeapon;
-			}
-
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMainWeapon))
-				player.Weapon = player.PrimaryWeapon;
-
-			else if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeySecondaryWeapon))
-				player.Weapon = player.SecondaryWeapon;
-
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump) && player.DownContacts != 0)
-			{
-				// @NOTE: if gravity is changed we should update this
-				float jumHeight = 8.f;
-				player.JumpForce = glm::sqrt(jumHeight * Gravity * player.Body->GetGravityScale() * -(2.f + EntityStats[(int)EntityType::Player].LinearDamping)) * player.Body->GetMass();
-
-				player.Body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
-			}
-
-			if (player.DownContacts > 0)
-			{
-				auto vel = player.Body->GetLinearVelocity();
-
-				player.Body->SetGravityScale(1.f);
-
-				vel.x -= DragStrength * vel.x * Globals.deltaTime;
-
-				if (abs(vel.x) < 0.01f) vel.x = 0.f;
-
-				player.Body->SetLinearVelocity(vel);
-			}
-
-			if (player.Body->GetLinearVelocity().y < 0.f) player.Body->SetGravityScale(2.5f);
-
-
-			glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-			
-			bool Zoom = WeaponStats[(int)player.Weapon].CanZoom && Mouse::GetMouse(Mouse::RIGHT) != GLFW_RELEASE;
-
-			m_TargetRotation = 0.f;
-			if (Zoom)
-			{
-				//auto offset = dir * 8.f;
-				//offset.y = glm::clamp(offset.y, -3.f, 3.f);
-				m_TargetPosition = player.Position + dir * 3.f;
-				m_TargetZoom = 0.6f;
-			}
-			else
-			{
-				m_TargetPosition = player.Position;
-				m_TargetZoom = 1.f;
-			}
-
-			if (ImGui::IsKeyPressed(ImGuiKey_R))player.ReloadWeapon();
-
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.CanShoot())
-			{
-				if (player.Weapon == WeaponType::Blaster)
-				{
-					std::random_device rd;
-					std::mt19937 gen(rd());
-					auto& offset = WeaponStats[(int)WeaponType::Blaster].Recoil;
-					std::uniform_real_distribution<float> dis(offset.x, offset.y);
-
-					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
-
-					SpawnBullet(player.Position + dir * 0.5f, Zoom ? dir : RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
-				}
-				else if (player.Weapon == WeaponType::Laser) 
-				{
-					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
-
-					glm::vec2 shootPos = player.Position + dir * 0.35f;
-					auto hitInfo = Intersect({ shootPos, dir }, 1, EntityType::Bullet);
-
-					if (glm::distance(hitInfo.Point, player.Position) < WeaponStats[(int)WeaponType::Laser].Range) {
-						if (hitInfo.Hit && hitInfo.Entity) {
-							if (static_cast<Entity*>(hitInfo.Entity)->Type > EntityType::Entity)
-								static_cast<Entity*>(hitInfo.Entity)->DealDamage(WeaponStats[(int)player.Weapon].Damage);
-						}
-
-						m_Particle.Position = hitInfo.Point;
-						m_Particle.ColorBegin = glm::vec4{ 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f } *2.f;
-						m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
-						m_Particle.Velocity = -dir;
-						m_Particle.VelocityVariation = -dir * 3.5f;
-						m_ParticleEmitter.Emit(m_Particle, 25);
-					}
-				}
-				else if (player.Weapon == WeaponType::Shotgun)
-				{
-					camera.Shake(0.8f);
-
-					glm::vec2 shootPos = player.Position + dir * 0.5f;
-					auto hitInfo = Intersect({ shootPos, dir }, 1);
-
-					if (hitInfo.t <= 5.f)
-					{
-						float invDist = 1.f / glm::max(hitInfo.t, 1.f);
-						auto recoilForce = -dir * player.JumpForce * 2.f * invDist * invDist;
-						player.Body->ApplyLinearImpulseToCenter({ recoilForce.x, recoilForce.y }, true);
-					}
-
-					ma_engine_play_sound(&Globals.sfx_engine, Globals.shotgun.c_str(), nullptr);
-					std::random_device rd;
-					std::mt19937 gen(rd());
-					auto& offset = WeaponStats[(int)WeaponType::Shotgun].Recoil;
-					std::uniform_real_distribution<float> dis(offset.x, offset.y);
-
-					for (uint32_t i = 0; i < 10; i++)
-					{
-						SpawnBullet(shootPos, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
-
-						m_Particle.Position = player.Position + dir * 0.55f;
-						auto& vel = player.Body->GetLinearVelocity();
-						m_Particle.ColorBegin = glm::vec4{ 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f } *2.f;
-						m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
-						m_Particle.Velocity = glm::vec2(vel.x, vel.y) * 0.45f;
-						m_Particle.VelocityVariation = glm::normalize(player.Position + RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))) * 0.85f - player.Position) * 5.f;
-						m_ParticleEmitter.Emit(m_Particle, 5);
-					}
-				}
-				else if (player.Weapon == WeaponType::Revolver)
-				{
-					std::random_device rd;
-					std::mt19937 gen(rd());
-					auto& offset = WeaponStats[(int)WeaponType::Revolver].Recoil;
-					std::uniform_real_distribution<float> dis(offset.x, offset.y);
-
-					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
-					SpawnBullet(player.Position + dir * 0.5f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
-				}
-
-				player.Weapons[(int)player.Weapon].Magazine--;
-				player.ResetWeaponTimer();
-			}
-
-			//alt fire
-			if (ImGui::IsKeyDown(ImGuiKey_MouseRight) && player.CanShoot())
-			{
-				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-
-				player.ResetWeaponTimer(false);
-
-				if (player.Weapon == WeaponType::Revolver)
-				{
-					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
-
-					player.Weapons[(int)player.Weapon].AltFireTimer = 1.2f;
-					player.Weapons[(int)player.Weapon].Timer = 0.f;
-				}
-			}
-
-			//revolver alt fire
-			if (player.Weapons[(int)player.Weapon].AltFireTimer > 0.f && player.CanShoot())
-			{
-				if (player.Weapon == WeaponType::Revolver) 
-				{
-					std::random_device rd;
-					std::mt19937 gen(rd());
-					std::uniform_real_distribution<float> dis(-0.25f, 0.25f);
-
-					if (player.CanShoot())
-					{
-						ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
-						glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-
-						SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
-						player.Weapons[(int)player.Weapon].Magazine--;
-						player.Weapons[(int)player.Weapon].Timer = 0.2f;
-					}
-				}
-			}
-
-
-			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyMelee) && player.CanMelee()) 
-			{
-				if (player.MeleeWeapon == WeaponType::Sword)
-				{
-					ma_engine_play_sound(&Globals.sfx_engine, Globals.swordSwing.c_str(), nullptr);
-					m_RotateSword = true;
-
-					for (uint32_t i = 0; i < Entities.size(); i++)
-					{
-						auto& entity = *Entities[i];
-						if (entity.Type == EntityType::RedCube)
-						{
-							float dist = glm::distance(entity.Position, player.Position);
-							if (dist < WeaponStats[(int)player.MeleeWeapon].Range)
-							{
-								glm::vec2 direction = glm::normalize(entity.Position - player.Position);
-
-								auto hitInfo = Intersect({ player.Position, direction }, Entities.size()); // We skip entity intersection
-
-								if ((hitInfo.Hit && dist <= hitInfo.t) || !hitInfo.Hit)
-								{
-									auto vel = glm::sign(direction.x) * 15.f * entity.Body->GetMass();
-									entity.Body->ApplyLinearImpulseToCenter(b2Vec2(vel, 0.f), true);
-									entity.DealDamage(WeaponStats[(int)player.MeleeWeapon].Damage);
-								}
-							}
-						}
-					}
-				}
-
-				player.ResetMeleeTimer();
-			}
-		}
-
 		void Update()
 		{
 			const int32_t velocityIterations = 8;
@@ -1200,122 +962,6 @@ namespace wc
 			}
 		}
 
-		void UpdateGame()
-		{
-			Update();
-
-			LevelTime += Globals.deltaTime;
-			//m_TargetPosition = glm::clamp(m_TargetPosition, glm::vec2(8, 4), glm::vec2(Size) - glm::vec2(8, 4));
-
-			camera.Position += glm::vec3((m_TargetPosition - glm::vec2(camera.Position)) * 11.5f * Globals.deltaTime, 0.f);
-			camera.Rotation += (m_TargetRotation - camera.Rotation) * 11.5f * Globals.deltaTime;
-			if (camera.Zoom != m_TargetZoom)
-			{
-				camera.Zoom += (m_TargetZoom - camera.Zoom) * 11.5f * Globals.deltaTime;
-				camera.Update(m_Renderer.GetHalfSize());
-			}
-			m_Renderer.ChromaSettings.Falloff += (m_TargetChromaFallOff - m_Renderer.ChromaSettings.Falloff) * 11.5f * Globals.deltaTime;
-
-			m_ParticleEmitter.OnUpdate();
-
-			if (!player.Alive()) Globals.gameState = GameState::DEATH;
-			if (EnemyCount == 0) Globals.gameState = GameState::WIN;
-		}
-
-		void RenderGame()
-		{
-			m_RenderData.ViewProjection = glm::ortho(-0.5f, 0.5f, -0.5f, 0.5f, -1.f, 1.f);
-			m_RenderData.DrawQuad({ 0.f, 0.f, 0.f }, { 1.f, 1.f }, m_Renderer.BackgroundTexture);
-			m_RenderData.ViewProjection = camera.GetViewProjectionMatrix();
-						
-			for (uint32_t x = 0; x < Size.x; x++)
-				for (uint32_t y = 0; y < Size.y; y++)
-				{
-					TileID tileID = GetTile({ x,y, 0 });
-					if (tileID != 0) m_RenderData.DrawQuad({ x, y , 0.f }, { 1.f, 1.f }, 0, glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
-				}
-
-			for (int i = 0; i < Entities.size(); i++)
-			{
-				Entity& entity = *(Entity*)(Entities[i]);
-
-				if (entity.Type == EntityType::Bullet)
-				{
-					Bullet& bullet = *(Bullet*)(Entities[i]);
-					m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bullet.Color * 1.3f);
-				}
-				else
-				{
-					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
-					
-					if (entity.Type != EntityType::Player)
-					{
-						m_RenderData.DrawString(std::format("HP: {}", entity.Health), font, entity.Position + glm::vec2(-0.5f, 1.f), glm::vec4(1.f, 0, 0, 1.f));
-
-						auto& weapon = WeaponStats[(int)WeaponType::Blaster];
-
-						glm::vec2 dir = glm::normalize(player.Position - entity.Position);
-						glm::vec2 offset = weapon.RenderOffset;
-						float angle = atan2(dir.y, dir.x);
-						if (dir.x < 0.f)
-						{
-							angle = glm::pi<float>() - angle;
-							offset.x *= -1.f;
-						}
-						glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(entity.Position, 0.f)) *
-							glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, dir.x < 0.f ? -1.f : 1.f }) *
-							glm::translate(glm::mat4(1.f), glm::vec3(offset, 0.f)) * glm::scale(glm::mat4(1.f),
-								{ (dir.x < 0.f ? -1.f : 1.f) * weapon.RenderSize.x, weapon.RenderSize.y, 1.f });
-
-						m_RenderData.DrawQuad(transform, weapon.TextureID);
-					}
-				}
-			}
-
-			if (m_RotateSword)
-			{
-				m_SwordRotation += (2.f * glm::pi<float>() - m_SwordRotation) * 11.5f * Globals.deltaTime;
-
-				if (m_SwordRotation >= 2.f * glm::pi<float>() - 0.1f)
-				{
-					m_SwordRotation = 0.f;
-					m_RotateSword = false;
-				}
-				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(player.Position, 0.f)) *
-					glm::rotate(glm::mat4(1.f), m_SwordRotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f),
-						glm::vec3{ 0.14f, 1.f, 0.5f } * 6.f);
-
-				m_RenderData.DrawQuad(transform, SwordTexture);
-			}
-			else
-			{
-				auto& weapon = WeaponStats[(int)player.Weapon];
-
-				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-				glm::vec2 offset = weapon.RenderOffset;
-				float angle = atan2(dir.y, dir.x);
-				if (dir.x < 0.f)
-				{
-					angle = glm::pi<float>() - angle;
-					offset.x *= -1.f;
-				}
-				glm::mat4 transform = glm::translate(glm::mat4(1.f), glm::vec3(player.Position, 0.f)) *
-					glm::rotate(glm::mat4(1.f), angle, { 0.f, 0.f, dir.x < 0.f ? -1.f : 1.f }) *
-					glm::translate(glm::mat4(1.f), glm::vec3(offset, 0.f)) * glm::scale(glm::mat4(1.f),
-						{ (dir.x < 0.f ? -1.f : 1.f) * weapon.RenderSize.x, weapon.RenderSize.y, 1.f });
-
-				m_RenderData.DrawQuad(transform, weapon.TextureID);
-			}
-
-			glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-			glm::vec2 shootPos = player.Position + dir * 0.35f;
-
-			m_ParticleEmitter.OnRender(m_RenderData);
-
-			m_Renderer.Flush(m_RenderData);
-			m_RenderData.Reset();
-		}
-
 		uint32_t Get1DSize() { return m_Size; }
 		TileID* GetData() { return m_Data; }
 
@@ -1330,26 +976,14 @@ namespace wc
 
 		uint32_t EnemyCount = 0;
 
-		OrthographicCamera camera;
-
 		float DragStrength = 2.f;
 		float AirSpeedFactor = 0.7f;
-		uint32_t SwordTexture = 0;
-		Font font;
 
-		bool m_RotateSword = false;
-		float m_SwordRotation = 0.f;
+		
 		float AccumulatedTime = 0.f;
-
-		float LevelTime = 0.f;
 	private:
 		TileID* m_Data = nullptr;
-		uint32_t m_Size = 1;
-
-		glm::vec2 m_TargetPosition;
-		float m_TargetRotation = 0.f;
-		float m_TargetZoom = 1.f;
-		float m_TargetChromaFallOff = 10.f;
+		uint32_t m_Size = 1;		
 
 
 		const float SimulationTime = 1.f / 60.f;

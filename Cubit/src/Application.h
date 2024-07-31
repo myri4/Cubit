@@ -225,7 +225,7 @@ namespace wc
 
 			uint32_t swapchainImageIndex = 0;
 
-			VkResult result = Globals.window.AcquireNextImage(swapchainImageIndex, SyncContext::GetImageAvaibleSemaphore(), VK_NULL_HANDLE, 10);
+			VkResult result = Globals.window.AcquireNextImage(swapchainImageIndex, SyncContext::GetImageAvaibleSemaphore());
 
 			if (result == VK_ERROR_OUT_OF_DATE_KHR)
 			{
