@@ -173,7 +173,7 @@ namespace wc
         float AttackTimer = 2.f; 
         float ShootRange = 8.f;
         float DetectRange = 15.f;
-        uint32_t Damage = 10;
+        //uint32_t Damage = 10;
         //float Speed = EntityStats[(int)EntityType::RedCube].Speed;
 
         RedCube() { Type = EntityType::RedCube; Health = 150;}
@@ -196,5 +196,10 @@ namespace wc
         Bullet() { Type = EntityType::Bullet; }
 
         bool IsSensor() { return WeaponStats[(int)WeaponType].IsBulletSensor; }
+
+		bool HitAnyEntity() { return HitEntityType > EntityType::UNDEFINED; }
+		bool DidHitEntity() { return HitEntityType > EntityType::Entity; } // To prevent name collision
+		bool HitBullet() { return HitEntityType == EntityType::Bullet; }
+		bool HitTile() { return HitEntityType == EntityType::Tile; }
     };
 }

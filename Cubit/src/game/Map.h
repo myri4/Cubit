@@ -34,6 +34,11 @@ namespace wc
 	ParticleProps m_Particle;
 	ParticleProps m_SummonParticle;
 
+	enum class GameEvent
+	{
+
+	};
+
 	class ContactListener : public b2ContactListener
 	{
 		void BulletHit(Entity* entityA, Entity* entityB)
@@ -178,6 +183,26 @@ namespace wc
 			if (IsLoaded()) WC_CORE_WARN("Forgot to free the scene");
 		}
 
+		bool IsLoaded() const { return m_Data != nullptr; }
+
+		void SetTile(const glm::uvec3& coords, TileID tile) { m_Data[to1D(coords, Size)] = tile; }
+
+		TileID GetTile(uint32_t id) { return m_Data[id]; }
+
+		TileID GetTile(const glm::uvec3& coords) { return m_Data[to1D(coords, Size)]; }
+
+		TileID GetTileSafe(const glm::ivec3& coords)
+		{
+			if (!IsLoaded()) return 0;
+			for (uint32_t i = 0; i < 2; i++) if (coords[i] < 0 || coords[i] >= int(Size[i])) return 0;
+			return GetTile(coords);
+		}
+
+		uint32_t Get1DSize() { return m_Size; }
+		TileID* GetData() { return m_Data; }
+
+		auto GetAccumulatedTime() { return AccumulatedTime; }
+
 		std::string levelPath;
 
 		void Allocate()
@@ -224,28 +249,12 @@ namespace wc
 
 			delete e;
 			Entities.erase(Entities.begin() + i);
-		}
-
-		bool IsLoaded() const { return m_Data != nullptr; }
-
-		void SetTile(const glm::uvec3& coords, TileID tile) { m_Data[to1D(coords, Size)] = tile; }
-
-		TileID GetTile(uint32_t id) { return m_Data[id]; }
-
-		TileID GetTile(const glm::uvec3& coords) { return m_Data[to1D(coords, Size)]; }
-
-		TileID GetTileSafe(const glm::ivec3& coords)
-		{
-			if (!IsLoaded()) return 0;
-			for (uint32_t i = 0; i < 2; i++) if (coords[i] < 0 || coords[i] >= int(Size[i])) return 0;
-			return GetTile(coords);
-		}
+		}		
 
 		void Reset()
 		{
 			AccumulatedTime = 0.f;
 			EnemyCount = 0;
-			//stopping sword animation
 
 			m_ParticleEmitter.Reset();
 
@@ -324,7 +333,8 @@ namespace wc
 		void LoadFull(const std::string& filepath) // @TODO: Rename?
 		{
 			Load(filepath);
-			CreatePhysicsWorld();		}
+			CreatePhysicsWorld();
+		}
 
 		float Gravity = -9.8f;
 		void CreatePhysicsWorld()
@@ -550,12 +560,11 @@ namespace wc
 			}
 		}
 
-		HitInfo Intersect(const Ray& ray, uint32_t startIndex = 0, EntityType ignoreType = EntityType::UNDEFINED)
+		HitInfo IntersectMap(const Ray& ray, float maxDist = 0.f)
 		{
 			HitInfo hitInfo;
-			float t = FLT_MAX;
 
-			float fMaxDistance = 36.f;
+			float fMaxDistance = maxDist <= 0.f ? glm::length(glm::vec2(Size)) : maxDist;
 
 			glm::vec2 vRayLength1D;
 			auto& vRayStart = ray.Origin;
@@ -590,32 +599,53 @@ namespace wc
 				if (tileID > 0)
 				{
 					hitInfo.Hit = true;
-					t = fDistance;
 					hitInfo.N = glm::vec2(vMapLastCheck - vMapCheck);
 					bTileFound = true;
 				}
 				vMapLastCheck = vMapCheck;
 			}
 
+			hitInfo.t = fDistance;
+			hitInfo.Point = ray.Origin + hitInfo.t * ray.Direction;
+
+			return hitInfo;
+		}
+
+		HitInfo IntersectEntities(const Ray& ray, uint32_t startIndex = 0, EntityType ignoreType = EntityType::UNDEFINED)
+		{
+			HitInfo hitInfo;
+			float t = FLT_MAX;
+
 			for (uint32_t i = startIndex; i < Entities.size(); i++)
 			{
 				auto& entity = *Entities[i];
-				if (entity.Type != ignoreType) {
-					auto oHitInfo = aabbIntersection(ray, -entity.Size + entity.Position, entity.Size + entity.Position);
+				if (entity.Type == ignoreType) continue;
 
-					if (oHitInfo.Hit && oHitInfo.t < t)
-					{
-						hitInfo.Hit = true;
-						t = oHitInfo.t;
-						hitInfo.Entity = Entities[i];
-						hitInfo.N = oHitInfo.N;
-						hitInfo.Point = oHitInfo.Point;
-					}
+				auto oHitInfo = aabbIntersection(ray, -entity.Size + entity.Position, entity.Size + entity.Position);
+
+				if (oHitInfo.Hit && oHitInfo.t < t)
+				{
+					hitInfo.Hit = true;
+					t = oHitInfo.t;
+					hitInfo.Entity = Entities[i];
+					hitInfo.N = oHitInfo.N;
+					hitInfo.Point = oHitInfo.Point;
 				}
 			}
 
-			hitInfo.Point = ray.Origin + t * ray.Direction;
 			hitInfo.t = t;
+			hitInfo.Point = ray.Origin + hitInfo.t * ray.Direction;
+
+			return hitInfo;
+		}
+
+		HitInfo Intersect(const Ray& ray, float maxDist = 0.f, uint32_t startIndex = 0, EntityType ignoreType = EntityType::UNDEFINED)
+		{
+			auto hitInfo = IntersectMap(ray, 0.f);
+
+			auto entityInfo = IntersectEntities(ray, startIndex, ignoreType);
+
+			if (entityInfo.t < hitInfo.t) hitInfo = entityInfo;
 
 			return hitInfo;
 		}
@@ -739,32 +769,32 @@ namespace wc
 						DestroyEntity(i);
 					}
 
-					auto hitInfo = Intersect({ entity.Position , direction }, Entities.size());
+					auto hitInfo = IntersectMap({ entity.Position , direction });
 
 
 					//movement
 					float distToPlayer = glm::distance(player.Position, entity.Position);
 
-					auto movementRayLeftDown = Intersect({ entity.Position, glm::normalize(glm::vec2(-1.f,-1.f)) }, Entities.size());
+					auto movementRayLeftDown = IntersectMap({ entity.Position, glm::normalize(glm::vec2(-1.f,-1.f)) });
 
-					auto movementRayRightDown = Intersect({ entity.Position, glm::normalize(glm::vec2(1.f,-1.f)) }, Entities.size());
+					auto movementRayRightDown = IntersectMap({ entity.Position, glm::normalize(glm::vec2(1.f,-1.f)) });
 
-					auto movementRayRightUp = Intersect({ entity.Position, glm::normalize(glm::vec2(1.f,1.f)) }, Entities.size());
+					auto movementRayRightUp = IntersectMap({ entity.Position, glm::normalize(glm::vec2(1.f,1.f)) });
 
-					auto movementRayLeftUp = Intersect({ entity.Position, glm::normalize(glm::vec2(-1.f,1.f)) }, Entities.size());
+					auto movementRayLeftUp = IntersectMap({ entity.Position, glm::normalize(glm::vec2(-1.f,1.f)) });
 
 
-					auto jumpingRayLeft = Intersect({ entity.Position, glm::normalize(glm::vec2(-1.f, 0.f)) * 1.5f }, Entities.size());
+					auto jumpingRayLeft = IntersectMap({ entity.Position, glm::normalize(glm::vec2(-1.f, 0.f)) * 1.5f });
 
-					auto jumpingRayRight = Intersect({ entity.Position, glm::normalize(glm::vec2(1.f, 0.f)) * 1.5f }, Entities.size());
+					auto jumpingRayRight = IntersectMap({ entity.Position, glm::normalize(glm::vec2(1.f, 0.f)) * 1.5f });
 
-					if (distToPlayer < entity.DetectRange) {
+					if (distToPlayer < entity.DetectRange) 
+					{
 						//platform movement
 						if (movementRayLeftDown.t > 1.f && entity.DownContacts > 0.f)
 							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed, 0.f), true);
 						else if (movementRayRightDown.t > 1.f && entity.DownContacts > 0.f)
 							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-EntityStats[(int)entity.Type].Speed, 0.f), true);
-
 						else if (movementRayLeftDown.t < 1.f && entity.DownContacts > 0.f && movementRayRightDown.t < 1.f)
 							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed * direction.x, 0.f), true);
 
@@ -777,7 +807,6 @@ namespace wc
 							else if (jumpingRayRight.t < 1.f && entity.DownContacts > 0.f)
 								entity.Body->ApplyLinearImpulseToCenter(b2Vec2(40.f, 200.f), true);
 						}
-
 					}
 
 					//attack behavior
@@ -807,73 +836,65 @@ namespace wc
 					WeaponInfo& weapon = WeaponStats[(int)bullet.WeaponType];
 					bullet.DistanceTraveled += weapon.BulletSpeed * SimulationTime;
 					bool destroy = false;
-					if (bullet.HitEntityType > EntityType::UNDEFINED)
+					if (bullet.HitAnyEntity())
 					{
 						Entity* shotEnt = bullet.HitEntity;
 
-						if (bullet.BulletType == BulletType::RedCircle && bullet.HitEntityType == EntityType::Player)
+						if (bullet.DidHitEntity())
 						{
-							std::random_device rd;
-							std::mt19937 gen(rd());
-							std::uniform_int_distribution<> dis(0, 1); // Define the range
+							bool hit = shotEnt != bullet.SourceEntity && shotEnt->Type != bullet.SourceEntity->Type;
 
-							if (dis(gen) == 0)
+							if (hit)
 							{
-								RedCube* em = new RedCube();
-								em->Position = bullet.Position + glm::vec2(0.f, 1.f);
-								em->CreateBody(PhysicsWorld);
+								shotEnt->DealDamage(weapon.Damage);
 
-								m_SummonParticle.Position = em->Position;
-								m_SummonParticle.Velocity = glm::vec2(0.5f);
-								for (int i = 0; i < 6; i++)
+								if (bullet.BulletType == BulletType::Blaster)
 								{
-									m_SummonParticle.VelocityVariation = glm::normalize(glm::vec3(RandomValue(), RandomValue(), RandomValue()));
+									ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
 
-									m_ParticleEmitter.Emit(m_SummonParticle);
+									m_Particle.LifeTime = 0.35f;
+									m_Particle.SizeBegin = bullet.Size.x * 2.f;
+									m_Particle.ColorBegin = glm::vec4(0.f, 1.f, 0.f, 1.f) * 2.f;
+									m_Particle.ColorEnd = glm::vec4(0.f, 1.f, 0.f, 1.f);
+									m_Particle.Position = bullet.Position;
+									m_Particle.Velocity = glm::vec2(0.5f);
+									m_Particle.VelocityVariation = glm::normalize(shotEnt->Position - player.Position) * 2.5f;
+									m_ParticleEmitter.Emit(m_Particle, 6);
 								}
-								EnemyCount++;
-								Entities.emplace_back(em);
-							}
-
-							ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
-							player.DealDamage(weapon.Damage);
-						}
-
-						if (bullet.HitEntityType > EntityType::Entity)
-						{
-							if (bullet.BulletType == BulletType::Blaster)
-							{
-								if (shotEnt != bullet.SourceEntity) 
+								else if (bullet.BulletType == BulletType::RedCircle && bullet.HitEntityType == EntityType::Player)
 								{
-									shotEnt->DealDamage(weapon.Damage);
+									std::random_device rd;
+									std::mt19937 gen(rd());
+									std::uniform_int_distribution<> dis(0, 1); // Define the range
+
+									if (dis(gen) == 0)
+									{
+										RedCube* em = new RedCube();
+										em->Position = bullet.Position + glm::vec2(0.f, 1.f);
+										em->CreateBody(PhysicsWorld);
+
+										m_SummonParticle.Position = em->Position;
+										m_SummonParticle.Velocity = glm::vec2(0.5f);
+										for (int i = 0; i < 6; i++)
+										{
+											m_SummonParticle.VelocityVariation = glm::normalize(glm::vec3(RandomValue(), RandomValue(), RandomValue()));
+
+											m_ParticleEmitter.Emit(m_SummonParticle);
+										}
+										EnemyCount++;
+										Entities.emplace_back(em);
+									}
+
 									ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
 								}
-
-								m_Particle.LifeTime = 0.35f;
-								m_Particle.SizeBegin = bullet.Size.x * 2.f;
-								m_Particle.ColorBegin = glm::vec4(0.f, 1.f, 0.f, 1.f) * 2.f;
-								m_Particle.ColorEnd = glm::vec4(0.f, 1.f, 0.f, 1.f);
-								m_Particle.Position = bullet.Position;
-								m_Particle.Velocity = glm::vec2(0.5f);
-								m_Particle.VelocityVariation = glm::normalize(shotEnt->Position - player.Position) * 2.5f;
-								m_ParticleEmitter.Emit(m_Particle, 6);
-							}
-
-							if (bullet.BulletType == BulletType::Shotgun)
-							{
-								if (shotEnt != bullet.SourceEntity) shotEnt->DealDamage(weapon.Damage);
-							}
-
-							if (bullet.BulletType == BulletType::Revolver)
-							{
-								if (shotEnt != bullet.SourceEntity) shotEnt->DealDamage(weapon.Damage);
-							}
+							}							
 
 							if (bullet.HitEntity == bullet.SourceEntity && bullet.Bounces != WeaponStats[(int)bullet.WeaponType].BulletBounces) destroy = true;
 						}
 						
 
-						if (!bullet.IsSensor() && bullet.HitEntity->Type == EntityType::Bullet) {
+						if (!bullet.IsSensor() && bullet.HitBullet()) 
+						{
 							Bullet& hitBullet = *(Bullet*)bullet.HitEntity;
 							if (!hitBullet.IsSensor())
 							{
@@ -910,15 +931,7 @@ namespace wc
 					break;
 				}
 			}
-		}
-
-		void FixedUpdate()
-		{
-			if (player.MoveDir != 0.f)
-				player.Body->ApplyLinearImpulseToCenter({ player.MoveDir * EntityStats[(int)EntityType::Player].Speed * player.Body->GetMass() / 10.f * (player.DownContacts > 0 ? 1.f : AirSpeedFactor), 0.f}, true);
-
-			UpdateAIFixed();
-		}
+		}		
 
 		void Update()
 		{
@@ -934,7 +947,13 @@ namespace wc
 				for (auto& entity : Entities)
 					entity->PrevPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
 
-				FixedUpdate();
+				// Fixed update
+				{
+					if (player.MoveDir != 0.f)
+						player.Body->ApplyLinearImpulseToCenter({ player.MoveDir * EntityStats[(int)EntityType::Player].Speed * player.Body->GetMass() / 10.f * (player.DownContacts > 0 ? 1.f : AirSpeedFactor), 0.f }, true);
+										
+					UpdateAIFixed();
+				}
 
 				PhysicsWorld->Step(SimulationTime, velocityIterations, positionIterations);
 
@@ -962,9 +981,6 @@ namespace wc
 			}
 		}
 
-		uint32_t Get1DSize() { return m_Size; }
-		TileID* GetData() { return m_Data; }
-
 	public:
 		glm::uvec3 Size = glm::uvec3(1);
 
@@ -978,15 +994,13 @@ namespace wc
 
 		float DragStrength = 2.f;
 		float AirSpeedFactor = 0.7f;
-
 		
-		float AccumulatedTime = 0.f;
 	private:
 		TileID* m_Data = nullptr;
-		uint32_t m_Size = 1;		
-
+		uint32_t m_Size = 1;
 
 		const float SimulationTime = 1.f / 60.f;
+		float AccumulatedTime = 0.f;
 
 	private:
 

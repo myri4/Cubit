@@ -311,10 +311,12 @@ namespace wc
 					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
 
 					glm::vec2 shootPos = player.Position + dir * 0.25f;
-					auto hitInfo = m_Map.Intersect({ shootPos, dir }, 1, EntityType::Bullet);
+					auto hitInfo = m_Map.Intersect({ shootPos, dir }, 0.f, 1, EntityType::Bullet);
 
-					if (glm::distance(hitInfo.Point, player.Position) < WeaponStats[(int)WeaponType::Laser].Range) {
-						if (hitInfo.Hit && hitInfo.Entity) {
+					if (glm::distance(hitInfo.Point, player.Position) < WeaponStats[(int)WeaponType::Laser].Range) 
+					{
+						if (hitInfo.Hit && hitInfo.Entity) 
+						{
 							if (static_cast<Entity*>(hitInfo.Entity)->Type > EntityType::Entity)
 								static_cast<Entity*>(hitInfo.Entity)->DealDamage(WeaponStats[(int)player.Weapon].Damage);
 						}
@@ -332,7 +334,7 @@ namespace wc
 					camera.Shake(0.8f);
 
 					glm::vec2 shootPos = player.Position + dir * 0.25f;
-					auto hitInfo = m_Map.Intersect({ shootPos, dir }, 1);
+					auto hitInfo = m_Map.IntersectMap({ shootPos, dir });
 
 					if (hitInfo.t <= 5.f)
 					{
@@ -378,7 +380,6 @@ namespace wc
 			//alt fire
 			if (ImGui::IsKeyDown(ImGuiKey_MouseRight) && player.CanShoot())
 			{
-				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 
 				player.ResetWeaponTimer(false);
 
@@ -396,16 +397,11 @@ namespace wc
 			{
 				if (player.Weapon == WeaponType::Revolver)
 				{
-					std::random_device rd;
-					std::mt19937 gen(rd());
-					std::uniform_real_distribution<float> dis(-0.25f, 0.25f);
-
 					if (player.CanShoot())
 					{
 						ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
-						glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 
-						m_Map.SpawnBullet(player.Position + dir * 0.75f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
+						m_Map.SpawnBullet(player.Position + dir * 0.35f, dir, player.Weapon, (Entity*)&player);
 						player.Weapons[(int)player.Weapon].Magazine--;
 						player.Weapons[(int)player.Weapon].Timer = 0.2f;
 					}
@@ -430,7 +426,7 @@ namespace wc
 							{
 								glm::vec2 direction = glm::normalize(entity.Position - player.Position);
 
-								auto hitInfo = m_Map.Intersect({ player.Position, direction }, m_Map.Entities.size()); // We skip entity intersection
+								auto hitInfo = m_Map.IntersectMap({ player.Position, direction });
 
 								if ((hitInfo.Hit && dist <= hitInfo.t) || !hitInfo.Hit)
 								{
@@ -533,9 +529,6 @@ namespace wc
 
 				m_RenderData.DrawQuad(transform, weapon.TextureID);
 			}
-
-			glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
-			glm::vec2 shootPos = player.Position + dir * 0.35f;
 
 			m_ParticleEmitter.OnRender(m_RenderData);
 
