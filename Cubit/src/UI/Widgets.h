@@ -203,7 +203,6 @@ namespace wc
 
 		void WeaponChoose(WeaponType weapon, WeaponType& playerWeapon)
 		{
-			//WC_CORE_ERROR(weapon);
 			if (playerWeapon != weapon)ImGui::BeginDisabled();
 			ImGui::Image(m_RenderData.Textures[WeaponStats[(int)weapon].TextureID], ImVec2(WeaponStats[(int)weapon].RenderSize.x * 200, WeaponStats[(int)weapon].RenderSize.y * 200));
 			if (playerWeapon != weapon)ImGui::EndDisabled();

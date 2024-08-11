@@ -47,7 +47,7 @@ namespace wc
 
 		OrthographicCamera camera;
 
-		uint32_t SwordTexture = 0;
+		uint32_t FaceTexture = 0;
 		Font font;
 
 		glm::vec2 m_TargetPosition;
@@ -62,7 +62,8 @@ namespace wc
 			LevelTime = 0.f;
 			m_RotateSword = false;
 			m_SwordRotation = 0.f;
-			camera.Position = glm::vec3(m_Map.player.Position, 0.f);
+			//camera.Position = glm::vec3(m_Map.player.Position, 0.f);
+			camera.Position = glm::vec3(10.f, 10.f, 0.f);
 		}
 
 		float LevelTime = 0.f;
@@ -79,7 +80,8 @@ namespace wc
 
 			m_Tileset.Load();
 
-			SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
+			//SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
+			FaceTexture = m_RenderData.LoadTexture("assets/textures/face.png");
 
 			{
 				auto& redcube = EntityStats[(int)EntityType::RedCube];
@@ -89,38 +91,55 @@ namespace wc
 			}
 
 			{
+				auto& weaponbox = EntityStats[(int)EntityType::WeaponBox];
+				weaponbox.Density = 1000000.f;
+				weaponbox.Speed = 0.f;
+				weaponbox.LinearDamping = 0.f;
+				weaponbox.MaxHealth = 0.f;
+				weaponbox.StartHealth = 0.f;
+			}
+
+			{
 				auto& player = EntityStats[(int)EntityType::Player];
 				player.Density = 100.f;
-				player.Speed = 7.f;
+				player.Speed = 10.f;
 				player.LinearDamping = 1.5f;
+
+				//not working - fix
+				player.MaxHealth = 10.f;
+				player.StartHealth = 10.f;
 			}
 
 			{
 				auto& blaster = WeaponStats[(int)WeaponType::Blaster];
 				blaster.BulletType = BulletType::Blaster;
-				blaster.WeaponClass = WeaponClass::Primary;
+				//blaster.WeaponClass = WeaponClass::Primary;
 				blaster.CanZoom = true;
 				blaster.Damage = 30;
 				blaster.FireRate = 0.3f;
 				blaster.MaxMag = 15;
+				blaster.MaxAmmo = 60;
 				blaster.ReloadSpeed = 1.5f;
 				blaster.Range = 50.f;
 				blaster.BulletColor = { 0.f, 1.f, 0.f, 1.f };
-				blaster.BulletSpeed = 45.f;
+				blaster.BulletSpeed = 25.f;
 				blaster.BulletSize = { 0.25f, 0.25f };
 				blaster.Recoil = { 0.25f, -0.15f };
-				blaster.RenderOffset = { 0.25f, -0.15f };
+				blaster.RenderOffset = { 0.5f, -0.15f };
 				blaster.RenderSize = { 1.f, 0.45f };
+				blaster.IsBulletPolygon = true;
+				blaster.BulletIgnoreWalls = false;
 				blaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			}
 
 			{
 				auto& laser = WeaponStats[(int)WeaponType::Laser];
-				laser.WeaponClass = WeaponClass::Primary;
+				//laser.WeaponClass = WeaponClass::Primary;
 				laser.CanZoom = true;
 				laser.Damage = 60;
 				laser.FireRate = 1.5f;
 				laser.MaxMag = 5;
+				laser.MaxAmmo = 10;
 				laser.ReloadSpeed = 2.5f;
 				laser.Range = 50.f;
 				laser.BulletSize = { 0.25f, 0.25f };
@@ -133,10 +152,11 @@ namespace wc
 			{
 				auto& shotgun = WeaponStats[(int)WeaponType::Shotgun];
 				shotgun.BulletType = BulletType::Shotgun;
-				shotgun.WeaponClass = WeaponClass::Secondary;
+				//shotgun.WeaponClass = WeaponClass::Secondary;
 				shotgun.Damage = 18;
 				shotgun.FireRate = 1.1f;
 				shotgun.MaxMag = 4;
+				shotgun.MaxAmmo = 16;
 				shotgun.ReloadSpeed = 0.5f;
 				shotgun.ReloadByOne = true;
 				shotgun.CanZoom = true;
@@ -147,17 +167,19 @@ namespace wc
 				shotgun.Recoil = { 0.25f, -0.15f };
 				shotgun.RenderOffset = { 0.25f, -0.15f };
 				shotgun.RenderSize = { 1.f, 0.45f };
+				shotgun.IsBulletPolygon = false;
 				shotgun.TextureID = m_RenderData.LoadTexture("assets/textures/Sawed-Off.png");
 			}
 
 			{
 				auto& revolver = WeaponStats[(int)WeaponType::Revolver];
 				revolver.BulletType = BulletType::Revolver;
-				revolver.WeaponClass = WeaponClass::Secondary;
-				revolver.Damage = 25;
-				revolver.FireRate = 1.f;
+				//revolver.WeaponClass = WeaponClass::Secondary;
+				revolver.Damage = 35;
+				revolver.FireRate = 0.9f;
 				revolver.AltFireRate = 1.5f;
 				revolver.MaxMag = 6;
+				revolver.MaxAmmo = 30;
 				revolver.ReloadSpeed = 0.5f;
 				revolver.ReloadByOne = true;
 				revolver.Range = 125.f;
@@ -168,32 +190,42 @@ namespace wc
 				revolver.BulletSpeed = 45.f;
 				revolver.BulletSize = { 0.1f, 0.1f };
 				revolver.BulletBounces = 3;
+				revolver.IsBulletPolygon = false;
 				revolver.TextureID = m_RenderData.LoadTexture("assets/textures/Revolver.png");
 			}
 
 			{
 				auto& redBlaster = WeaponStats[(int)WeaponType::RedBlaster];
-				redBlaster.WeaponClass = WeaponClass::EnemyWeapon;
+				//redBlaster.WeaponClass = WeaponClass::EnemyWeapon;
 				redBlaster.BulletType = BulletType::RedCircle;
-				redBlaster.Damage = 5;
-				redBlaster.FireRate = 0.3f;
+				redBlaster.Damage = 50;
+				redBlaster.FireRate = 0.1f;
 				redBlaster.Range = 50.f;
 				redBlaster.BulletColor = { 1.f, 0, 0, 1.f };
-				redBlaster.BulletSpeed = 45.f;
+				redBlaster.BulletSpeed = 5.f;
 				redBlaster.Recoil = { 0.25f, -0.15f };
 				redBlaster.BulletSize = { 0.25f, 0.25f };
 				redBlaster.RenderOffset = { 0.25f, -0.15f };
 				redBlaster.RenderSize = { 1.f, 0.45f };
+				redBlaster.IsBulletPolygon = false;
 				redBlaster.TextureID = m_RenderData.LoadTexture("assets/textures/Plasma_Rifle.png");
 			}
 
 			{
 				auto& sword = WeaponStats[(int)WeaponType::Sword];
-				sword.WeaponClass = WeaponClass::Melee;
+				//sword.WeaponClass = WeaponClass::Melee;
+				sword.BulletType = BulletType::Slash;
 				sword.Damage = 50;
 				sword.FireRate = 2.5f;
 				sword.Range = 15.f;
-				sword.RenderSize = { 1.f, 0.45f };
+				sword.RenderSize = { 5.f, 1.f };
+				sword.RenderOffset = { 2.5f, -0.1f };
+				sword.IsBulletPolygon = true;
+				sword.BulletIgnoreWalls = true;
+				sword.BulletSize = {2.2f, 0.35f};
+				sword.BulletSpeed = 0.001f;
+				sword.Damage = 50;
+				sword.BulletColor = { 0.9f, 0.05f, 0.58f, 1.f };
 				sword.TextureID = m_RenderData.LoadTexture("assets/textures/Sword.png");
 			}
 
@@ -236,17 +268,22 @@ namespace wc
 				}
 			}
 
-			if (ImGui::IsKeyReleased((ImGuiKey)Globals.settings.KeyFastSwich))
-			{
-				if (player.Weapon == player.PrimaryWeapon) player.Weapon = player.SecondaryWeapon;
-				else player.Weapon = player.PrimaryWeapon;
-			}
+			//if (ImGui::IsKeyReleased((ImGuiKey)Globals.settings.KeyFastSwich))
+			//{
+			//	//if (player.Weapon == player.PrimaryWeapon) player.Weapon = player.SecondaryWeapon;
+			//	//else player.Weapon = player.PrimaryWeapon;
+			//}
 
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMainWeapon))
-				player.Weapon = player.PrimaryWeapon;
+			//if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMainWeapon))
+			//	player.Weapon = player.PrimaryWeapon;
+			//
+			//else if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeySecondaryWeapon))
+			//	player.Weapon = player.SecondaryWeapon;
+			//
+			//else if (ImGui::IsKeyPressed(ImGuiKey_3))
+			//	player.Weapon = player.MeleeWeapon;
 
-			else if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeySecondaryWeapon))
-				player.Weapon = player.SecondaryWeapon;
+			
 
 			if (player.DownContacts > 0)
 			{
@@ -408,21 +445,32 @@ namespace wc
 				}
 			}
 
+			//main attack melee
+			if (ImGui::IsKeyDown(ImGuiKey_MouseLeft) && player.CanMelee()) {
 
-			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyMelee) && player.CanMelee())
-			{
-				if (player.MeleeWeapon == WeaponType::Sword)
-				{
+				//sword attack
+				if (player.Weapon == WeaponType::Sword) {
+					ma_engine_play_sound(&Globals.sfx_engine, Globals.swordSwing.c_str(), nullptr);
+					m_Map.SpawnBullet(player.Position + dir * 2.5f, dir, WeaponType::Sword, (Entity*)&player, std::atan2(dir.y, dir.x));
+				}
+				player.ResetMeleeTimer();
+			}
+
+			//alt attack melee
+			if (ImGui::IsKeyDown(ImGuiKey_MouseRight) && player.CanMelee()) {
+
+				//sword alt attack
+				if (player.Weapon == WeaponType::Sword) {
 					ma_engine_play_sound(&Globals.sfx_engine, Globals.swordSwing.c_str(), nullptr);
 					m_RotateSword = true;
 
 					for (uint32_t i = 0; i < m_Map.Entities.size(); i++)
 					{
 						auto& entity = *m_Map.Entities[i];
+						float dist = glm::distance(entity.Position, player.Position);
 						if (entity.Type == EntityType::RedCube)
 						{
-							float dist = glm::distance(entity.Position, player.Position);
-							if (dist < WeaponStats[(int)player.MeleeWeapon].Range)
+							if (dist < WeaponStats[(int)WeaponType::Sword].Range)
 							{
 								glm::vec2 direction = glm::normalize(entity.Position - player.Position);
 
@@ -432,13 +480,19 @@ namespace wc
 								{
 									auto vel = glm::sign(direction.x) * 15.f * entity.Body->GetMass();
 									entity.Body->ApplyLinearImpulseToCenter(b2Vec2(vel, 0.f), true);
-									entity.DealDamage(WeaponStats[(int)player.MeleeWeapon].Damage);
+									entity.DealDamage(WeaponStats[(int)WeaponType::Sword].Damage);
 								}
 							}
 						}
+
+						if (entity.Type == EntityType::Bullet && dist < WeaponStats[(int)WeaponType::Sword].Range) {
+							Bullet& bullet = (Bullet&)entity;
+							b2Vec2 impulse = -2 * bullet.Body->GetMass() * bullet.Body->GetLinearVelocity();
+							bullet.Body->ApplyLinearImpulseToCenter(impulse, true);
+							bullet.SourceEntity = (Entity*)&player;
+						}
 					}
 				}
-
 				player.ResetMeleeTimer();
 			}
 		}
@@ -465,14 +519,22 @@ namespace wc
 				if (entity.Type == EntityType::Bullet)
 				{
 					Bullet& bullet = *(Bullet*)(m_Map.Entities[i]);
-					m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bullet.Color * 1.3f);
+					if (bullet.IsPolygon())m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), bullet.Size * glm::vec2(2.f), bullet.Angle, 0.05f, bullet.Color * 1.3f);
+					else m_RenderData.DrawCircle(glm::vec3(entity.Position, 0.f), entity.Size.x, 1.f, 0.05f, bullet.Color * 1.3f);
 				}
 				else
 				{
-					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
-
-					if (entity.Type != EntityType::Player)
+					//added a little bit of footing so the gap is not visible (between entities and tiles)
+					if (entity.Type == EntityType::Player) //Render Player
 					{
+						m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * glm::vec2(2.f, 2.06f), 0, glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
+						
+						//render face - we can make separate textures for eyes and mouth for customization
+						m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), glm::vec2(0.5f), FaceTexture);
+					}
+					else if (entity.Type == EntityType::RedCube) //Render RedCube
+					{
+						m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * glm::vec2(2.f, 2.06f), 0, glm::vec4(1.f, 0, 0, 1.f));
 						m_RenderData.DrawString(std::format("HP: {}", entity.Health), font, entity.Position + glm::vec2(-0.5f, 1.f), glm::vec4(1.f, 0, 0, 1.f));
 
 						auto& weapon = WeaponStats[(int)WeaponType::Blaster];
@@ -492,6 +554,15 @@ namespace wc
 
 						m_RenderData.DrawQuad(transform, weapon.TextureID);
 					}
+					else if (entity.Type == EntityType::WeaponBox) //Render WeaponBox
+					{
+						//WeaponBox& weaponBox = *(WeaponBox*)&m_Map.Entities[i];
+						//WC_CORE_INFO((void*)&weaponBox);
+						WeaponBox& weaponBox = *(WeaponBox*)(m_Map.Entities[i]);
+						m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * glm::vec2(2.f, 2.06f), 0, glm::vec4(0.5f, 0.5f, 0.5f, 0.75f));
+						m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, WeaponStats[(int)weaponBox.weapon].TextureID);
+						//WC_CORE_INFO("WeaponBox: {}", weaponBox.weapon);
+					}
 				}
 			}
 
@@ -508,10 +579,11 @@ namespace wc
 					glm::rotate(glm::mat4(1.f), m_SwordRotation, { 0.f, 0.f, 1.f }) * glm::scale(glm::mat4(1.f),
 						glm::vec3{ 0.14f, 1.f, 0.5f } *6.f);
 
-				m_RenderData.DrawQuad(transform, SwordTexture);
+				m_RenderData.DrawQuad(transform, WeaponStats[(int)WeaponType::Sword].TextureID);
 			}
-			else
+			else //render player weapon
 			{
+				//fix - mariqn
 				auto& weapon = WeaponStats[(int)player.Weapon];
 
 				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
@@ -529,7 +601,6 @@ namespace wc
 
 				m_RenderData.DrawQuad(transform, weapon.TextureID);
 			}
-
 			m_ParticleEmitter.OnRender(m_RenderData);
 
 			m_Renderer.Flush(m_RenderData);
@@ -543,13 +614,14 @@ namespace wc
 			LevelTime += Globals.deltaTime;
 			//m_TargetPosition = glm::clamp(m_TargetPosition, glm::vec2(8, 4), glm::vec2(Size) - glm::vec2(8, 4));
 
+			//camera.Position = glm::vec3(m_Map.Size.x * 0.5f, m_Map.Size.y * 0.5f, 0.f);
 			camera.Position += glm::vec3((m_TargetPosition - glm::vec2(camera.Position)) * 11.5f * Globals.deltaTime, 0.f);
 			camera.Rotation += (m_TargetRotation - camera.Rotation) * 11.5f * Globals.deltaTime;
-			if (camera.Zoom != m_TargetZoom)
-			{
-				camera.Zoom += (m_TargetZoom - camera.Zoom) * 11.5f * Globals.deltaTime;
-				camera.Update(m_Renderer.GetHalfSize());
-			}
+			//if (camera.Zoom != m_TargetZoom)
+			//{
+			//	camera.Zoom -= (m_TargetZoom - camera.Zoom) * 11.5f * Globals.deltaTime;
+			//	camera.Update(m_Renderer.GetHalfSize());
+			//}
 			m_Renderer.ChromaSettings.Falloff += (m_TargetChromaFallOff - m_Renderer.ChromaSettings.Falloff) * 11.5f * Globals.deltaTime;
 
 			m_ParticleEmitter.OnUpdate();
@@ -579,9 +651,11 @@ namespace wc
 			if (m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo >= 100)offset = 305.f;
 			else offset = 255.f;
 			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x - offset, ImGui::GetWindowSize().y - 70.f));
-			int mag = m_Map.player.Weapons[(int)m_Map.player.Weapon].Magazine;
-			if (mag >= 10) ImGui::TextColored(color, std::format("{}/{}", mag, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
-			else ImGui::TextColored(color, std::format("  {}/{}", mag, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
+			if (m_Map.player.Weapon != WeaponType::Sword) {
+				int mag = m_Map.player.Weapons[(int)m_Map.player.Weapon].Magazine;
+				if (mag >= 10) ImGui::TextColored(color, std::format("{}/{}", mag, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
+				else ImGui::TextColored(color, std::format("  {}/{}", mag, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
+			}
 			//ImGui::SetCursorPosX(10.f);
 			//ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.player.Weapons[(int)m_Map.player.MeleeWeapon].Timer).c_str());
 			//ImGui::SetCursorPosX(10.f);
@@ -627,9 +701,9 @@ namespace wc
 
 			ImVec2 PlaySize = ImGui::CalcTextSize("PLAY");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - PlaySize.x) * 0.5f, (ImGui::GetWindowSize().y - PlaySize.y) * 0.5f));
-			if (ImGui::Button("PLAY"))
+			if (ImGui::Button("PLAY") || ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Space))
 			{
-				m_Map.LoadFull("levels/level1.malen");
+				m_Map.LoadFull("levels/backup.malen");
 				Globals.gameState = GameState::PLAY;
 			}
 
@@ -685,7 +759,8 @@ namespace wc
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ResetSize.x) * 0.5f, (ImGui::GetWindowSize().y - ResetSize.y) * 0.5f + 100));
 			if (ImGui::Button("Reset")) 
 			{
-				LoadFull(m_Map.levelPath);
+				//LoadFull(m_Map.levelPath); // load the same level you are in
+				LoadFull("levels/backup.malen");
 				Globals.gameState = GameState::PLAY;
 			}
 
@@ -707,7 +782,7 @@ namespace wc
 			ImGui::PopStyleVar(3);
 		}
 
-		void LOADOUT_MENU()
+		/*void LOADOUT_MENU()
 		{
 			const ImGuiViewport* viewport = ImGui::GetMainViewport();
 			ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -772,7 +847,7 @@ namespace wc
 			}
 			ImGui::End();
 			ImGui::PopStyleVar(5);
-		}
+		}*/
 
 		bool buttonChecks[10] = { false };
 		void SETTINGS_MENU()
@@ -833,9 +908,9 @@ namespace wc
 					UI::GetKey("Dash", Globals.settings.KeyDash, buttonChecks[3]);
 					UI::Separator("Weapons");
 					UI::GetKey("Shoot", Globals.settings.KeyShoot, buttonChecks[4]);
-					UI::GetKey("Melee", Globals.settings.KeyMelee, buttonChecks[5]);
 					UI::GetKey("Main Weapon", Globals.settings.KeyMainWeapon, buttonChecks[6]);
 					UI::GetKey("Secondary Weapon", Globals.settings.KeySecondaryWeapon, buttonChecks[7]);
+					UI::GetKey("Melee Weapon", Globals.settings.KeyMeleeWeapon, buttonChecks[5]);
 					UI::GetKey("Fast Switch", Globals.settings.KeyFastSwich, buttonChecks[8]);
 					UI::Separator("Game");
 

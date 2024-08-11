@@ -20,6 +20,7 @@ namespace wc
         Bullet,
         Entity,
         RedCube,
+        WeaponBox,
 
         Player,
     };	
@@ -58,8 +59,8 @@ namespace wc
 		float LinearDamping = 1.4f;
 		float Speed = 7.f;
 
-		uint32_t StartHealth = 100;
-		uint32_t MaxHealth = 100;
+		uint32_t StartHealth = 1000;
+		uint32_t MaxHealth = 1000;
     };
 
     EntityProperties EntityStats[magic_enum::enum_count<EntityType>()];
@@ -68,11 +69,11 @@ namespace wc
     {
         // Properties
 
-        uint32_t StartHealth = 100;
-        //uint32_t MaxHealth = Properties.MaxHealth;
+        uint32_t StartHealth = EntityStats[(int)Type].StartHealth;
+        uint32_t MaxHealth = EntityStats[(int)Type].MaxHealth;
         glm::vec2 HitBoxSize = glm::vec2(0.5f);
 
-        uint32_t Health = 100;
+        uint32_t Health = EntityStats[(int)Type].StartHealth;
                 
         void DealDamage(uint32_t Damage)
         {
@@ -109,11 +110,11 @@ namespace wc
 
     struct Player : public Entity
     {
-		WeaponType PrimaryWeapon = WeaponType::Blaster;
-		WeaponType SecondaryWeapon = WeaponType::Revolver;
-		WeaponType MeleeWeapon = WeaponType::Sword;
+		//WeaponType PrimaryWeapon = WeaponType::Blaster;
+		//WeaponType SecondaryWeapon = WeaponType::Revolver;
+		//WeaponType MeleeWeapon = WeaponType::Sword;
 
-        WeaponType Weapon = PrimaryWeapon;
+        WeaponType Weapon = WeaponType::Blaster;
 
         WeaponData Weapons[magic_enum::enum_count<WeaponType>()];
 
@@ -126,8 +127,8 @@ namespace wc
 
         inline bool CanShoot() { return Weapons[(int)Weapon].Timer <= 0.f && Weapons[(int)Weapon].Magazine > 0; }
 
-		inline bool CanMelee() { return Weapons[(int)MeleeWeapon].Timer <= 0; }
-		inline void ResetMeleeTimer() { Weapons[(int)MeleeWeapon].Timer = WeaponStats[(int)MeleeWeapon].FireRate; }
+		inline bool CanMelee() { return Weapons[(int)Weapon].Timer <= 0; }
+		inline void ResetMeleeTimer() { Weapons[(int)Weapon].Timer = WeaponStats[(int)Weapon].FireRate; }
 
 		inline void ResetWeaponTimer(const bool Reload = true) { Weapons[(int)Weapon].Timer = Reload ? WeaponStats[(int)Weapon].FireRate : WeaponStats[(int)Weapon].AltFireRate; }
 
@@ -179,6 +180,13 @@ namespace wc
         RedCube() { Type = EntityType::RedCube; Health = 150;}
     };
 
+    struct WeaponBox : public Entity
+    {
+        WeaponType weapon = WeaponType::Blaster;
+        bool isTouched = false;
+        WeaponBox() { Type = EntityType::WeaponBox; } // maybe edit size from here or add to entity stats
+    };
+
     struct Bullet : public Entity
     {
         glm::vec2 Direction;
@@ -186,6 +194,7 @@ namespace wc
         WeaponType WeaponType = WeaponType::Blaster;
 
         glm::vec4 Color;
+        float Angle = 0.f;
 
         EntityType HitEntityType = EntityType::UNDEFINED;
 		Entity* HitEntity = nullptr;
@@ -196,6 +205,8 @@ namespace wc
         Bullet() { Type = EntityType::Bullet; }
 
         bool IsSensor() { return WeaponStats[(int)WeaponType].IsBulletSensor; }
+        bool IsPolygon() { return WeaponStats[(int)WeaponType].IsBulletPolygon; }
+        bool IgnoreWalls() { return WeaponStats[(int)WeaponType].BulletIgnoreWalls; }
 
 		bool HitAnyEntity() { return HitEntityType > EntityType::UNDEFINED; }
 		bool DidHitEntity() { return HitEntityType > EntityType::Entity; } // To prevent name collision

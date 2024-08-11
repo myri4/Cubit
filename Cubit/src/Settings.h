@@ -40,10 +40,10 @@ namespace wc
 		KeyType KeyRight = ImGuiKey_D;
 		KeyType KeyJump = ImGuiKey_Space;
 		KeyType KeyDash = ImGuiKey_LeftShift;
-		KeyType KeyMelee = ImGuiKey_E;
 		KeyType KeyShoot = ImGuiKey_MouseLeft;
 		KeyType KeyMainWeapon = ImGuiKey_1;
 		KeyType KeySecondaryWeapon = ImGuiKey_2;
+		KeyType KeyMeleeWeapon = ImGuiKey_3;
 		KeyType KeyFastSwich = ImGuiKey_Q; // @TODO: Make it so it changes to the last weapon used
 
 		void Save()
@@ -74,10 +74,10 @@ namespace wc
 			YAML_SAVE_VAR(settings, KeyRight);
 			YAML_SAVE_VAR(settings, KeyJump);
 			YAML_SAVE_VAR(settings, KeyDash);
-			YAML_SAVE_VAR(settings, KeyMelee);
 			YAML_SAVE_VAR(settings, KeyShoot);
 			YAML_SAVE_VAR(settings, KeyMainWeapon);
 			YAML_SAVE_VAR(settings, KeySecondaryWeapon);
+			YAML_SAVE_VAR(settings, KeyMeleeWeapon);
 			YAML_SAVE_VAR(settings, KeyFastSwich);
 
 			ChooseWindowSize();
@@ -118,10 +118,10 @@ namespace wc
 			YAML_LOAD_VAR(settings, KeyRight);
 			YAML_LOAD_VAR(settings, KeyJump);
 			YAML_LOAD_VAR(settings, KeyDash);
-			YAML_LOAD_VAR(settings, KeyMelee);
 			YAML_LOAD_VAR(settings, KeyShoot);
 			YAML_LOAD_VAR(settings, KeyMainWeapon);
 			YAML_LOAD_VAR(settings, KeySecondaryWeapon);
+			YAML_LOAD_VAR(settings, KeyMeleeWeapon);
 			YAML_LOAD_VAR(settings, KeyFastSwich);
 
 			ChooseWindowSize();

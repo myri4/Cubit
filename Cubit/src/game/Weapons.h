@@ -3,15 +3,16 @@
 
 namespace wc
 {
-	enum class BulletType : uint8_t { Blaster, Revolver, Shotgun, RedCircle };
+	enum class BulletType : uint8_t { Blaster, Revolver, Shotgun, RedCircle, Slash };
 	enum class WeaponType : uint8_t { Blaster, Laser, Revolver, Shotgun, RedBlaster, Sword };
-	enum class WeaponClass : uint8_t { Primary, Secondary, Melee, EnemyWeapon };
+	//enum class WeaponClass : uint8_t { Primary, Secondary, Melee, EnemyWeapon };
 
 	struct BulletInfo
 	{
 		glm::vec4 Color = { 0, 0, 0, 0 };
 		float Speed = 0.f;
 		bool IsSensor = true; //physical body or a sensor
+		bool IsPolygon = false; //is polygon or circle
 		uint32_t Bounces = 0;
 		glm::vec2 Size;
 	};
@@ -20,7 +21,7 @@ namespace wc
 	{
 		bool CloseRange = false;
 		BulletType BulletType = BulletType::Blaster;
-		WeaponClass WeaponClass = WeaponClass::Primary;
+		//WeaponClass WeaponClass = WeaponClass::Primary;
 		uint32_t Damage = 0;
 		bool CanZoom = false;
 		float FireRate = 0.f;
@@ -29,13 +30,16 @@ namespace wc
 		glm::vec4 BulletColor = { 0, 0, 0, 0 };
 		float BulletSpeed = 0.f;
 		bool IsBulletSensor = true; //physical body or a sensor
+		bool BulletIgnoreWalls = false;
 		uint32_t BulletBounces = 0;
 		glm::vec2 BulletSize;
+		bool IsBulletPolygon = false; //if true, bullet will be a polygon instead of a circle
 
 		float Range = 0.f;
 		float ReloadSpeed = 0.f;
 		bool ReloadByOne = false;
 		uint32_t MaxMag = 0;
+		uint32_t MaxAmmo = 0;
 
 		glm::vec2 RenderSize;
 		glm::vec2 RenderOffset;

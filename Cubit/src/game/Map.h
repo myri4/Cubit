@@ -39,6 +39,21 @@ namespace wc
 
 	};
 
+	class OverlapQueryCallback : public b2QueryCallback {
+	public:
+		std::vector<b2Fixture*> overlappingFixtures;
+
+		bool ReportFixture(b2Fixture* fixture) override {
+			overlappingFixtures.push_back(fixture);
+			return true; // Continue the query
+		}
+
+		void Query(b2World* world, const b2AABB& aabb) {
+			overlappingFixtures.clear();
+			world->QueryAABB(this, aabb);
+		}
+	};
+
 	class ContactListener : public b2ContactListener
 	{
 		void BulletHit(Entity* entityA, Entity* entityB)
@@ -46,9 +61,12 @@ namespace wc
 			if (entityA->Type == EntityType::Bullet)
 			{
 				Bullet& bullet = *(Bullet*)entityA;
-
-				bullet.HitEntityType = entityB->Type;
-				bullet.HitEntity = entityB;
+				//WC_CORE_INFO(bullet.SourceEntity->Type);
+				
+				if (entityB != bullet.SourceEntity) {
+					bullet.HitEntityType = entityB->Type;
+					bullet.HitEntity = entityB;
+				}
 			
 				//if (entityB->Type > EntityType::Entity)
 				//{
@@ -57,19 +75,39 @@ namespace wc
 			}
 		}
 
+		void CheckBulletOverlap(Entity* entity, b2World* world) {
+			Bullet& bullet = *(Bullet*)entity;
+			OverlapQueryCallback queryCallback;
+			b2AABB aabb;
+			aabb.lowerBound = entity->Body->GetPosition() - b2Vec2(bullet.Size.x * 0.5f, bullet.Size.y * 0.5f);
+			aabb.upperBound = entity->Body->GetPosition() + b2Vec2(bullet.Size.x * 0.5f, bullet.Size.y * 0.5f);
+
+			queryCallback.Query(world, aabb);
+
+			for (b2Fixture* fixture : queryCallback.overlappingFixtures) {
+				Entity* hitEntity = reinterpret_cast<Entity*>(fixture->GetUserData().pointer);
+				if (hitEntity && hitEntity->Type == EntityType::RedCube) {
+					BulletHit(entity, hitEntity);
+				}
+			}
+		}
+
 		void BulletHitTile(Entity* entityA, Entity* entityB, glm::vec2 normal)
 		{
 			if (entityA && entityA->Type == EntityType::Bullet && !entityB)
 			{
 				Bullet& bullet = *(Bullet*)entityA;
-				bullet.HitEntityType = EntityType::Tile;
 
-				if (bullet.Bounces > 0)
-				{
-					bullet.Direction = glm::reflect(bullet.Direction, normal);
-					bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * WeaponStats[(int)bullet.WeaponType].BulletSpeed, bullet.Direction.y * WeaponStats[(int)bullet.WeaponType].BulletSpeed));
-					bullet.HitEntityType = EntityType::UNDEFINED;
-					bullet.Bounces--;
+				if (!bullet.IgnoreWalls()) {
+					bullet.HitEntityType = EntityType::Tile;
+
+					if (bullet.Bounces > 0)
+					{
+						bullet.Direction = glm::reflect(bullet.Direction, normal);
+						bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * WeaponStats[(int)bullet.WeaponType].BulletSpeed, bullet.Direction.y * WeaponStats[(int)bullet.WeaponType].BulletSpeed));
+						bullet.HitEntityType = EntityType::UNDEFINED;
+						bullet.Bounces--;
+					}
 				}
 			}
 		}
@@ -100,8 +138,24 @@ namespace wc
 
 			if (entityA && entityB)
 			{
+				CheckBulletOverlap(entityA, fixtureA->GetBody()->GetWorld());
+				CheckBulletOverlap(entityB, fixtureB->GetBody()->GetWorld());
+
 				BulletHit(entityA, entityB);
 				BulletHit(entityB, entityA);
+
+				
+
+				if(entityA->Type == EntityType::WeaponBox && entityB->Type == EntityType::Player)
+				{
+					WeaponBox& weaponBox = *(WeaponBox*)entityA;
+					weaponBox.isTouched = true;
+				}
+				if (entityB->Type == EntityType::WeaponBox && entityA->Type == EntityType::Player)
+				{
+					WeaponBox& weaponBox = *(WeaponBox*)entityB;
+					weaponBox.isTouched = true;
+				}
 			}
 
 			BulletHitTile(entityA, entityB, normal);
@@ -302,16 +356,20 @@ namespace wc
 						auto metaData = objects[i];
 						EntityType Type = EntityType::UNDEFINED;
 						Type = magic_enum::enum_cast<EntityType>(metaData["Type"].as<std::string>()).value();
+						WeaponType Weapon = WeaponType::Blaster;
+						if (Type == EntityType::WeaponBox) {
+							Weapon = magic_enum::enum_cast<WeaponType>(metaData["Weapon"].as<std::string>()).value();
+						}
 
 						if (Type == EntityType::Player)
 						{
-							player.Weapons[(int)WeaponType::Blaster].Ammo = 60;
-							player.Weapons[(int)WeaponType::Laser].Ammo = 10;
-							player.Weapons[(int)WeaponType::Shotgun].Ammo = 12;
-							player.Weapons[(int)WeaponType::Revolver].Ammo = 24;
-							player.Weapon = player.PrimaryWeapon;
+							//for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++) {
+							//	player.Weapons[i].Magazine = WeaponStats[i].MaxMag;
+							//	player.Weapons[i].Ammo = WeaponStats[i].MaxAmmo;
+							//}
 
-							for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++) player.Weapons[i].Magazine = WeaponStats[i].MaxMag;
+							player.Weapons[(int)player.Weapon].Magazine = WeaponStats[(int)player.Weapon].MaxMag;
+							player.Weapons[(int)player.Weapon].Ammo = WeaponStats[(int)player.Weapon].MaxAmmo;
 
 							player.LoadMapBase(metaData);
 						}
@@ -322,6 +380,12 @@ namespace wc
 							Entities.emplace_back(e);
 
 							EnemyCount++;
+						}
+						else if (Type == EntityType::WeaponBox) {
+							WeaponBox* e = new WeaponBox();
+							e->LoadMapBase(metaData);
+							Entities.emplace_back(e);
+							e->weapon = Weapon;
 						}
 					}
 				}
@@ -666,7 +730,7 @@ namespace wc
 			}
 		}
 
-		void SpawnBullet(glm::vec2 position, glm::vec2 direction, WeaponType weaponType, Entity* src)
+		void SpawnBullet(glm::vec2 position, glm::vec2 direction, WeaponType weaponType, Entity* src, float angle = 0)
 		{
 			auto& weaponInfo = WeaponStats[(int)weaponType];
 			Bullet* bullet = new Bullet();
@@ -677,6 +741,7 @@ namespace wc
 			//bullet->Speed = weaponInfo.BulletSpeed;
 			bullet->Direction = direction;
 			bullet->Color = weaponInfo.BulletColor;
+			bullet->Angle = angle;
 			bullet->BulletType = weaponInfo.BulletType;
 			bullet->WeaponType = weaponType;
 			//bullet->Density = 0.f;
@@ -688,14 +753,19 @@ namespace wc
 				bodyDef.type = b2_dynamicBody;
 				bodyDef.position.Set(bullet->Position.x, bullet->Position.y);
 				bodyDef.fixedRotation = true;
+				bodyDef.angle = angle;
 				bodyDef.bullet = true;
 				bodyDef.gravityScale = 0.f;
 				bodyDef.linearVelocity = b2Vec2(bullet->Direction.x * weaponInfo.BulletSpeed, bullet->Direction.y * weaponInfo.BulletSpeed);
 				bullet->Body = PhysicsWorld->CreateBody(&bodyDef);
 
-				b2CircleShape shape;
-				shape.m_radius = bullet->Size.x;
 
+				b2PolygonShape PolygonShape;
+				PolygonShape.SetAsBox(bullet->Size.x, bullet->Size.y);
+
+				b2CircleShape CircleShape;
+				CircleShape.m_radius = bullet->Size.x;
+				
 				b2FixtureDef fixtureDef;
 				fixtureDef.density = 0.01f;
 				fixtureDef.friction = 0.f;
@@ -703,7 +773,7 @@ namespace wc
 
 				fixtureDef.userData.pointer = (uintptr_t)bullet;
 
-				fixtureDef.shape = &shape;
+				fixtureDef.shape = weaponInfo.IsBulletPolygon ? &PolygonShape : static_cast<b2Shape*>(&CircleShape);
 				bullet->Body->CreateFixture(&fixtureDef);
 				b2MassData massData;
 				massData.center = bullet->Body->GetMassData().center;
@@ -713,6 +783,7 @@ namespace wc
 			}
 			Entities.emplace_back(bullet);
 		}
+		
 
 		void DestroyPhysicsWorld()
 		{
@@ -764,8 +835,9 @@ namespace wc
 					if (!entity.Alive())
 					{
 						EnemyCount--;
-						player.Weapons[(int)player.PrimaryWeapon].Ammo += WeaponStats[(int)player.PrimaryWeapon].MaxMag * 0.8f;
-						player.Weapons[(int)player.SecondaryWeapon].Ammo += WeaponStats[(int)player.PrimaryWeapon].MaxMag * 0.8f;
+						player.Weapons[(int)player.Weapon].Ammo += WeaponStats[(int)player.Weapon].MaxMag * 0.8f;
+						//player.Weapons[(int)player.PrimaryWeapon].Ammo += WeaponStats[(int)player.PrimaryWeapon].MaxMag * 0.8f;
+						//player.Weapons[(int)player.SecondaryWeapon].Ammo += WeaponStats[(int)player.PrimaryWeapon].MaxMag * 0.8f;
 						DestroyEntity(i);
 					}
 
@@ -788,7 +860,7 @@ namespace wc
 
 					auto jumpingRayRight = IntersectMap({ entity.Position, glm::normalize(glm::vec2(1.f, 0.f)) * 1.5f });
 
-					if (distToPlayer < entity.DetectRange) 
+					if (distToPlayer < entity.DetectRange && false) 
 					{
 						//platform movement
 						if (movementRayLeftDown.t > 1.f && entity.DownContacts > 0.f)
@@ -830,11 +902,27 @@ namespace wc
 				}
 				break;
 
+				case EntityType::WeaponBox:
+				{
+					WeaponBox& weaponBox = *(WeaponBox*)e;
+					if (weaponBox.isTouched) {
+						player.Weapon = weaponBox.weapon;
+						//WC_CORE_INFO("A: {}", (void*)&weaponBox);
+						player.Weapons[(int)player.Weapon].Magazine = WeaponStats[(int)player.Weapon].MaxMag;
+						player.Weapons[(int)player.Weapon].Ammo = WeaponStats[(int)player.Weapon].MaxAmmo;
+						weaponBox.isTouched = false;
+						DestroyEntity(i);
+
+					}
+				}
+				break;
+
 				case EntityType::Bullet:
 				{
 					Bullet& bullet = *(Bullet*)e;
 					WeaponInfo& weapon = WeaponStats[(int)bullet.WeaponType];
 					bullet.DistanceTraveled += weapon.BulletSpeed * SimulationTime;
+					//WC_CORE_INFO(bullet.DistanceTraveled);
 					bool destroy = false;
 					if (bullet.HitAnyEntity())
 					{
@@ -842,15 +930,19 @@ namespace wc
 
 						if (bullet.DidHitEntity())
 						{
-							bool hit = shotEnt != bullet.SourceEntity && shotEnt->Type != bullet.SourceEntity->Type;
+							bool hit = shotEnt != bullet.SourceEntity; // && shotEnt->Type != bullet.SourceEntity->Type
 
 							if (hit)
 							{
 								shotEnt->DealDamage(weapon.Damage);
 
+								if (bullet.BulletType == BulletType::Slash) {
+									if (bullet.HitEntityType == EntityType::Bullet)
+										destroy = true;
+								}
 								if (bullet.BulletType == BulletType::Blaster)
 								{
-									ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
+									//ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
 
 									m_Particle.LifeTime = 0.35f;
 									m_Particle.SizeBegin = bullet.Size.x * 2.f;
@@ -861,13 +953,13 @@ namespace wc
 									m_Particle.VelocityVariation = glm::normalize(shotEnt->Position - player.Position) * 2.5f;
 									m_ParticleEmitter.Emit(m_Particle, 6);
 								}
-								else if (bullet.BulletType == BulletType::RedCircle && bullet.HitEntityType == EntityType::Player)
+								else if (bullet.BulletType == BulletType::RedCircle) // && bullet.HitEntityType == EntityType::Player
 								{
 									std::random_device rd;
 									std::mt19937 gen(rd());
 									std::uniform_int_distribution<> dis(0, 1); // Define the range
 
-									if (dis(gen) == 0)
+									if (dis(gen) == 0 && false) // stopped duplicating on hit
 									{
 										RedCube* em = new RedCube();
 										em->Position = bullet.Position + glm::vec2(0.f, 1.f);
@@ -917,6 +1009,7 @@ namespace wc
 					else 
 					{
 						if (bullet.HitEntityType == EntityType::Tile && bullet.Bounces == 0) destroy = true;
+						if (bullet.BulletType == BulletType::Slash && bullet.DistanceTraveled > 0.0001f) destroy = true;
 					}
 					
 					if (bullet.DistanceTraveled > weapon.Range) destroy = true;
