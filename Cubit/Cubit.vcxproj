@@ -166,7 +166,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(ProjectDir)vendor\libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>soloud_static.lib;glfw3.lib;spirv-cross-core.lib;box2d.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;spirv-cross-core.lib;box2d.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuild>
       <Command>"$(VULKAN_SDK)\Bin\glslc.exe" -std=450core -I"$(ProjectDir)src\shaders\include" -o "$(ProjectDir)assets\shaders\%(Filename)%(Extension)" -O0 "%(FullPath)"</Command>
@@ -283,6 +283,7 @@
     <ClInclude Include="vendor\include\wc\Math\Camera.h" />
     <ClInclude Include="vendor\include\wc\Shader.h" />
     <ClInclude Include="vendor\include\wc\Texture.h" />
+    <ClInclude Include="vendor\include\wc\Utils\box2d.h" />
     <ClInclude Include="vendor\include\wc\Utils\CPUImage.h" />
     <ClInclude Include="vendor\include\wc\Utils\FileDialogs.h" />
     <ClInclude Include="vendor\include\wc\Utils\List.h" />

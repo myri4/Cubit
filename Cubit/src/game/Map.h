@@ -1,5 +1,7 @@
 #pragma once
 
+#include <box2d/box2d.h>
+
 #include "../include/wc/Utils/YAML.h"
 #include <filesystem>
 #include <fstream>
@@ -34,141 +36,6 @@ namespace wc
 	ParticleProps m_Particle;
 	ParticleProps m_SummonParticle;
 
-	class ContactListener : public b2ContactListener
-	{
-		void BulletHit(Entity* entityA, Entity* entityB)
-		{
-			if (entityA->Type == EntityType::Bullet)
-			{
-				Bullet& bullet = *(Bullet*)entityA;
-
-				bullet.HitEntityType = entityB->Type;
-				bullet.HitEntity = entityB;
-			
-				//if (entityB->Type > EntityType::Entity)
-				//{
-					//entityB->Body->ApplyLinearImpulseToCenter(-bullet.Body->GetLinearVelocity(), true);						
-				//}
-			}
-		}
-
-		void BulletHitTile(Entity* entityA, Entity* entityB, glm::vec2 normal)
-		{
-			if (entityA && entityA->Type == EntityType::Bullet && !entityB)
-			{
-				Bullet& bullet = *(Bullet*)entityA;
-				bullet.HitEntityType = EntityType::Tile;
-
-				if (bullet.Bounces > 0)
-				{
-					bullet.Direction = glm::reflect(bullet.Direction, normal);
-					bullet.Body->SetLinearVelocity(b2Vec2(bullet.Direction.x * WeaponStats[(int)bullet.WeaponType].BulletSpeed, bullet.Direction.y * WeaponStats[(int)bullet.WeaponType].BulletSpeed));
-					bullet.HitEntityType = EntityType::UNDEFINED;
-					bullet.Bounces--;
-				}
-			}
-		}
-
-		void BulletClear(Entity* entity)
-		{
-			if (entity->Type == EntityType::Bullet)
-			{
-				Bullet& bullet = *(Bullet*)entity;
-				bullet.HitEntityType = EntityType::UNDEFINED;
-				bullet.HitEntity = nullptr;
-			}
-		}
-
-		void BeginContact(b2Contact* contact) override
-		{
-			b2Fixture* fixtureA = contact->GetFixtureA();
-			b2Fixture* fixtureB = contact->GetFixtureB();
-
-			b2FixtureUserData fixtureUserDataA = fixtureA->GetUserData();
-			b2FixtureUserData fixtureUserDataB = fixtureB->GetUserData();
-
-			Entity* entityA = reinterpret_cast<Entity*>(fixtureUserDataA.pointer);
-			Entity* entityB = reinterpret_cast<Entity*>(fixtureUserDataB.pointer);
-							
-			b2Vec2 bNormal = contact->GetManifold()->localNormal;
-			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
-
-			if (entityA && entityB)
-			{
-				BulletHit(entityA, entityB);
-				BulletHit(entityB, entityA);
-			}
-
-			BulletHitTile(entityA, entityB, normal);
-			BulletHitTile(entityB, entityA, normal);
-
-			if (entityA && (entityA->Type > EntityType::Entity || entityA->Type == EntityType::Bullet))
-			{
-				if (fixtureB->GetType() == b2Shape::e_chain)
-				{
-					entityA->Contacts++;
-					if (normal == glm::vec2(0.f, -1.f)) entityA->UpContacts++;
-					if (normal == glm::vec2(0.f, 1.f)) entityA->DownContacts++;
-					if (normal == glm::vec2(1.f, 0.f)) entityA->LeftContacts++;
-					if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts++;
-				}
-			}
-
-			if (entityB && (entityB->Type > EntityType::Entity || entityB->Type == EntityType::Bullet))
-			{
-				if (fixtureA->GetType() == b2Shape::e_chain)
-				{
-					entityB->Contacts++;
-					if (normal == glm::vec2(0.f, -1.f)) entityB->UpContacts++;
-					if (normal == glm::vec2(0.f, 1.f)) entityB->DownContacts++;
-					if (normal == glm::vec2(1.f, 0.f)) entityB->LeftContacts++;
-					if (normal == glm::vec2(-1.f, 0.f)) entityB->RightContacts++;
-				}
-			}
-		}
-
-		void EndContact(b2Contact* contact) override
-		{
-			b2Fixture* fixtureA = contact->GetFixtureA();
-			b2Fixture* fixtureB = contact->GetFixtureB();
-
-			b2FixtureUserData fixtureUserDataA = fixtureA->GetUserData();
-			b2FixtureUserData fixtureUserDataB = fixtureB->GetUserData();
-
-			Entity* entityA = reinterpret_cast<Entity*>(fixtureUserDataA.pointer);
-			Entity* entityB = reinterpret_cast<Entity*>(fixtureUserDataB.pointer);
-
-			b2Vec2 bNormal = contact->GetManifold()->localNormal;
-			glm::vec2 normal = glm::round(glm::vec2(bNormal.x, bNormal.y));
-
-			if (entityA && (entityA->Type > EntityType::Entity || entityA->Type == EntityType::Bullet))
-			{
-				//BulletClear(entityA);
-				if (fixtureB->GetType() == b2Shape::e_chain)
-				{
-					entityA->Contacts--;
-					if (normal == glm::vec2(0.f, -1.f)) entityA->UpContacts--;
-					if (normal == glm::vec2(0.f, 1.f)) entityA->DownContacts--;
-					if (normal == glm::vec2(1.f, 0.f)) entityA->LeftContacts--;
-					if (normal == glm::vec2(-1.f, 0.f)) entityA->RightContacts--;
-				}
-			}
-
-			if (entityB && (entityB->Type > EntityType::Entity || entityB->Type == EntityType::Bullet))
-			{
-				//BulletClear(entityB);
-				if (fixtureA->GetType() == b2Shape::e_chain)
-				{
-					entityB->Contacts--;
-					if (normal == glm::vec2(0.f, -1.f)) entityB->UpContacts--;
-					if (normal == glm::vec2(0.f, 1.f)) entityB->DownContacts--;
-					if (normal == glm::vec2(1.f, 0.f)) entityB->LeftContacts--;
-					if (normal == glm::vec2(-1.f, 0.f)) entityB->RightContacts--;
-				}
-			}
-		}
-	} ContactListenerInstance;
-
 	struct Map
 	{
 		Map() = default;
@@ -196,6 +63,8 @@ namespace wc
 
 		void Free(bool ResetSizes = false)
 		{
+			if (!IsLoaded()) return;
+
 			delete m_Data;
 			m_Data = nullptr;
 
@@ -219,8 +88,7 @@ namespace wc
 		void DestroyEntity(uint32_t i)
 		{
 			auto e = Entities[i];
-			e->Body->DestroyFixture(e->Body->GetFixtureList());
-			PhysicsWorld->DestroyBody(e->Body);
+			e->DestroyBody();
 
 			delete e;
 			Entities.erase(Entities.begin() + i);
@@ -244,7 +112,6 @@ namespace wc
 		void Reset()
 		{
 			AccumulatedTime = 0.f;
-			EnemyCount = 0;
 			//stopping sword animation
 
 			m_ParticleEmitter.Reset();
@@ -306,14 +173,6 @@ namespace wc
 
 							player.LoadMapBase(metaData);
 						}
-						else if (Type == EntityType::RedCube)
-						{
-							RedCube* e = new RedCube();
-							e->LoadMapBase(metaData);
-							Entities.emplace_back(e);
-
-							EnemyCount++;
-						}
 					}
 				}
 
@@ -324,15 +183,16 @@ namespace wc
 		void LoadFull(const std::string& filepath) // @TODO: Rename?
 		{
 			Load(filepath);
-			CreatePhysicsWorld();		}
+			CreatePhysicsWorld();
+		}
 
 		float Gravity = -9.8f;
 		void CreatePhysicsWorld()
 		{
-			PhysicsWorld = new b2World({ 0.f, Gravity });
-			PhysicsWorld->SetContactListener(&ContactListenerInstance);
+			b2WorldDef worldDef = b2DefaultWorldDef();
+			worldDef.gravity = { 0.f, Gravity };
 
-			b2Vec2 vs[4];
+			PhysicsWorld.Create(worldDef);
 
 			for (uint32_t i = 0; i < Entities.size(); i++)
 			{
@@ -340,34 +200,33 @@ namespace wc
 				e->CreateBody(PhysicsWorld);
 			}
 
-			auto addFace = [&](const b2Vec2* face)
+			auto addFace = [&](glm::vec2 p1, glm::vec2 p2)
 				{
-					if ((face[0].x == face[1].x && face[1].x == 0.f) && face[0].y == face[1].y && face[1].y == 0.f) return;
+					if ((p1.x == p2.x && p2.x == 0.f) && p1.y == p2.y && p2.y == 0.f) return;
 
-					b2ChainShape chain;
-					chain.CreateChain(face, 2, b2Vec2_zero, b2Vec2_zero);
+					b2BodyDef bodyDef = b2DefaultBodyDef();
+					bodyDef.type = b2_staticBody;
+					b2Body body(PhysicsWorld, bodyDef);
 
-					b2BodyDef bd;
-					bd.type = b2_staticBody;
-					b2Body* body = PhysicsWorld->CreateBody(&bd);
+					b2ShapeDef shapeDef = b2DefaultShapeDef();
+					shapeDef.friction = 0.8f;
 
-					b2FixtureDef fixtureDef;
-					fixtureDef.shape = &chain;
-					fixtureDef.friction = 0.8f;
+					b2Segment segment = { {p1.x, p1.y}, {p2.x, p2.y} };
 
-					body->CreateFixture(&fixtureDef);
+					b2CreateSegmentShape(body, &shapeDef, &segment);
 				};
 
+			const float offset = 0.05f;
 
 			// Top/down
 			for (int y = 0; y < (int)Size.y; y++)
 			{
-				b2Vec2 TopStartPos = { 0.f, 0.f };
-				b2Vec2 TopEndPos = { 0.f, 0.f };
+				glm::vec2 TopStartPos = { 0.f, 0.f };
+				glm::vec2 TopEndPos = { 0.f, 0.f };
 				bool creatingTopLine = false;
 
-				b2Vec2 BotStartPos = { 0.f, 0.f };
-				b2Vec2 BotEndPos = { 0.f, 0.f };
+				glm::vec2 BotStartPos = { 0.f, 0.f };
+				glm::vec2 BotEndPos = { 0.f, 0.f };
 				bool creatingBotLine = false;
 
 				for (int x = 0; x < (int)Size.x; x++)
@@ -394,8 +253,7 @@ namespace wc
 						else if (creatingTopLine)
 						{
 							creatingTopLine = false;
-							b2Vec2 FACE[2] = { TopEndPos, TopStartPos };
-							addFace(FACE);
+							addFace({ TopStartPos.x + offset, TopStartPos.y }, { TopEndPos.x - offset, TopEndPos.y });
 						}
 
 						// Down face
@@ -416,23 +274,20 @@ namespace wc
 						else if (creatingBotLine)
 						{
 							creatingBotLine = false;
-							b2Vec2 FACE[2] = { BotStartPos, BotEndPos };
-							addFace(FACE);
+							addFace({ BotStartPos.x + offset, BotStartPos.y }, { BotEndPos.x - offset, BotEndPos.y });
 						}
 					}
 					else
 					{
 						if (creatingTopLine)
 						{
-							b2Vec2 FACE[2] = { TopEndPos, TopStartPos };
-							addFace(FACE);
+							addFace({ TopStartPos.x + offset, TopStartPos.y }, { TopEndPos.x - offset, TopEndPos.y });
 							creatingTopLine = false;
 						}
 
 						if (creatingBotLine)
 						{
-							b2Vec2 FACE[2] = { BotStartPos, BotEndPos };
-							addFace(FACE);
+							addFace({ BotStartPos.x + offset, BotStartPos.y }, { BotEndPos.x - offset, BotEndPos.y });
 							creatingBotLine = false;
 						}
 					}
@@ -441,15 +296,13 @@ namespace wc
 				// Close any open top or bottom lines at the end of the row
 				if (creatingTopLine)
 				{
-					b2Vec2 FACE[2] = { TopEndPos, TopStartPos };
-					addFace(FACE);
+					addFace({ TopStartPos.x + offset, TopStartPos.y }, { TopEndPos.x - offset, TopEndPos.y });
 					creatingTopLine = false;
 				}
 
 				if (creatingBotLine)
 				{
-					b2Vec2 FACE[2] = { BotStartPos, BotEndPos };
-					addFace(FACE);
+					addFace({ BotStartPos.x + offset, BotStartPos.y }, { BotEndPos.x - offset, BotEndPos.y });
 					creatingBotLine = false;
 				}
 			}
@@ -489,8 +342,7 @@ namespace wc
 						else if (creatingLeftLine)
 						{
 							creatingLeftLine = false;
-							b2Vec2 FACE[2] = { LeftEndPos, LeftStartPos };
-							addFace(FACE);
+							addFace({ LeftStartPos.x, LeftStartPos.y + offset }, { LeftEndPos.x, LeftEndPos.y - offset });
 						}
 
 						// Right face
@@ -511,23 +363,20 @@ namespace wc
 						else if (creatingRightLine)
 						{
 							creatingRightLine = false;
-							b2Vec2 FACE[2] = { RightStartPos, RightEndPos };
-							addFace(FACE);
+							addFace({ RightStartPos.x, RightStartPos.y + offset }, { RightEndPos.x, RightEndPos.y - offset });
 						}
 					}
 					else
 					{
 						if (creatingLeftLine)
 						{
-							b2Vec2 FACE[2] = { LeftEndPos, LeftStartPos };
-							addFace(FACE);
+							addFace({ LeftStartPos.x, LeftStartPos.y + offset }, { LeftEndPos.x, LeftEndPos.y - offset });
 							creatingLeftLine = false;
 						}
 
 						if (creatingRightLine)
 						{
-							b2Vec2 FACE[2] = { RightStartPos, RightEndPos };
-							addFace(FACE);
+							addFace({ RightStartPos.x, RightStartPos.y + offset }, { RightEndPos.x, RightEndPos.y - offset });
 							creatingRightLine = false;
 						}
 					}
@@ -536,15 +385,13 @@ namespace wc
 				// Close any open left or right lines at the end of the column
 				if (creatingLeftLine)
 				{
-					b2Vec2 FACE[2] = { LeftEndPos, LeftStartPos };
-					addFace(FACE);
+					addFace({ LeftStartPos.x, LeftStartPos.y + offset }, { LeftEndPos.x, LeftEndPos.y - offset });
 					creatingLeftLine = false;
 				}
 
 				if (creatingRightLine)
 				{
-					b2Vec2 FACE[2] = { RightStartPos, RightEndPos };
-					addFace(FACE);
+					addFace({ RightStartPos.x, RightStartPos.y + offset }, { RightEndPos.x, RightEndPos.y - offset });
 					creatingRightLine = false;
 				}
 			}
@@ -631,7 +478,7 @@ namespace wc
 				{
 					float invDistance = 1.f / dist;
 					glm::vec2 dir = glm::normalize(e.Position - position) * blastPower * invDistance * invDistance;
-					if (e.Type != EntityType::Bullet) e.Body->ApplyLinearImpulse(b2Vec2{ dir.x, dir.y }, b2Vec2{ position.x, position.y }, true);
+					if (e.Type != EntityType::Bullet)e.Body.ApplyLinearImpulse(glm::normalize(e.Position - position) * blastPower * invDistance * invDistance, position, true);
 				}
 			}
 		}
@@ -656,42 +503,42 @@ namespace wc
 			{
 				b2BodyDef bodyDef;
 				bodyDef.type = b2_dynamicBody;
-				bodyDef.position.Set(bullet->Position.x, bullet->Position.y);
+				bodyDef.position = { bullet->Position.x, bullet->Position.y };
 				bodyDef.fixedRotation = true;
-				bodyDef.bullet = true;
+				bodyDef.isBullet = true;
+				bodyDef.isEnabled = true;
+				bodyDef.enableSleep = false;
 				bodyDef.gravityScale = 0.f;
-				bodyDef.linearVelocity = b2Vec2(bullet->Direction.x * weaponInfo.BulletSpeed, bullet->Direction.y * weaponInfo.BulletSpeed);
-				bullet->Body = PhysicsWorld->CreateBody(&bodyDef);
+				bodyDef.linearVelocity = { bullet->Direction.x * weaponInfo.BulletSpeed, bullet->Direction.y * weaponInfo.BulletSpeed };
+				bullet->Body.Create(PhysicsWorld, bodyDef);
 
-				b2CircleShape shape;
-				shape.m_radius = bullet->Size.x;
+				b2Circle shape;
+				shape.center = { 0.f, 0.f };
+				shape.radius = bullet->Size.x;
 
-				b2FixtureDef fixtureDef;
-				fixtureDef.density = 0.01f;
-				fixtureDef.friction = 0.f;
-				fixtureDef.isSensor = weaponInfo.IsBulletSensor;
+				b2ShapeDef shapeDef = b2DefaultShapeDef();
+				shapeDef.density = 0.01f;
+				shapeDef.friction = 0.f;
+				shapeDef.isSensor = weaponInfo.IsBulletSensor;
+				shapeDef.userData = (void*)bullet;
 
-				fixtureDef.userData.pointer = (uintptr_t)bullet;
+				bullet->ShapeID.CreateCircleShape(bullet->Body, shapeDef, shape);
 
-				fixtureDef.shape = &shape;
-				bullet->Body->CreateFixture(&fixtureDef);
-				b2MassData massData;
-				massData.center = bullet->Body->GetMassData().center;
-				massData.I = bullet->Body->GetMassData().I;
+				auto massData = bullet->Body.GetMassData();
 				massData.mass = 0.01f;
-				bullet->Body->SetMassData(&massData);
+				bullet->Body.SetMassData(massData);
 			}
 			Entities.emplace_back(bullet);
 		}
 
 		void DestroyPhysicsWorld()
 		{
-			delete PhysicsWorld;
-			PhysicsWorld = nullptr;
+			PhysicsWorld.Destroy();
 		}
 
 		void UpdateAI()
 		{
+#if 0
 			for (uint32_t i = 1; i < Entities.size(); i++)
 			{
 				auto& e = Entities[i];
@@ -699,13 +546,6 @@ namespace wc
 				e->ID = i;
 				switch (e->Type)
 				{
-				case EntityType::RedCube:
-				{
-					RedCube& entity = *(RedCube*)e;
-
-					if (entity.AttackTimer > 0.f) entity.AttackTimer -= Globals.deltaTime;
-				}
-				break;
 				case EntityType::Bullet:
 				{
 
@@ -715,6 +555,7 @@ namespace wc
 					break;
 				}
 			}
+#endif
 		}
 
 		void UpdateAIFixed()
@@ -725,159 +566,80 @@ namespace wc
 				
 				switch (e->Type)
 				{
-				case EntityType::RedCube:
-				{
-					RedCube& entity = *(RedCube*)e;
-
-					glm::vec2 direction = glm::normalize(player.Position - entity.Position);
-
-					if (!entity.Alive())
-					{
-						EnemyCount--;
-						player.Weapons[(int)player.PrimaryWeapon].Ammo += WeaponStats[(int)player.PrimaryWeapon].MaxMag * 0.8f;
-						player.Weapons[(int)player.SecondaryWeapon].Ammo += WeaponStats[(int)player.PrimaryWeapon].MaxMag * 0.8f;
-						DestroyEntity(i);
-					}
-
-					auto hitInfo = Intersect({ entity.Position , direction }, Entities.size());
-
-
-					//movement
-					float distToPlayer = glm::distance(player.Position, entity.Position);
-
-					auto movementRayLeftDown = Intersect({ entity.Position, glm::normalize(glm::vec2(-1.f,-1.f)) }, Entities.size());
-
-					auto movementRayRightDown = Intersect({ entity.Position, glm::normalize(glm::vec2(1.f,-1.f)) }, Entities.size());
-
-					auto movementRayRightUp = Intersect({ entity.Position, glm::normalize(glm::vec2(1.f,1.f)) }, Entities.size());
-
-					auto movementRayLeftUp = Intersect({ entity.Position, glm::normalize(glm::vec2(-1.f,1.f)) }, Entities.size());
-
-
-					auto jumpingRayLeft = Intersect({ entity.Position, glm::normalize(glm::vec2(-1.f, 0.f)) * 1.5f }, Entities.size());
-
-					auto jumpingRayRight = Intersect({ entity.Position, glm::normalize(glm::vec2(1.f, 0.f)) * 1.5f }, Entities.size());
-
-					if (distToPlayer < entity.DetectRange) {
-						//platform movement
-						if (movementRayLeftDown.t > 1.f && entity.DownContacts > 0.f)
-							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed, 0.f), true);
-						else if (movementRayRightDown.t > 1.f && entity.DownContacts > 0.f)
-							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-EntityStats[(int)entity.Type].Speed, 0.f), true);
-
-						else if (movementRayLeftDown.t < 1.f && entity.DownContacts > 0.f && movementRayRightDown.t < 1.f)
-							entity.Body->ApplyLinearImpulseToCenter(b2Vec2(EntityStats[(int)entity.Type].Speed * direction.x, 0.f), true);
-
-						//jumping behavior
-						if (!movementRayLeftUp.Hit && !movementRayRightUp.Hit) {
-							if (jumpingRayLeft.t < 1.f && entity.DownContacts > 0.f)
-								entity.Body->ApplyLinearImpulseToCenter(b2Vec2(-40.f, 200.f), true);
-
-
-							else if (jumpingRayRight.t < 1.f && entity.DownContacts > 0.f)
-								entity.Body->ApplyLinearImpulseToCenter(b2Vec2(40.f, 200.f), true);
-						}
-
-					}
-
-					//attack behavior
-					if (distToPlayer < entity.ShootRange)
-					{
-						if (entity.AttackTimer <= 0 && entity.Alive())
-						{
-							//shoot
-							std::random_device rd;
-							std::mt19937 gen(rd());
-							auto& offset = WeaponStats[(int)WeaponType::RedBlaster].Recoil;
-							std::uniform_real_distribution<float> dis(offset.x, offset.y);
-
-							glm::vec2 dir = glm::normalize(player.Position - entity.Position);
-							//SpawnBullet(entity.Position + dir * 0.5f, dir, WeaponType::RedBlaster, e);
-							SpawnBullet(entity.Position + dir * 0.5f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), WeaponType::RedBlaster, e);
-
-							entity.AttackTimer = 2.f;
-						}
-					}
-				}
-				break;
-
 				case EntityType::Bullet:
 				{
 					Bullet& bullet = *(Bullet*)e;
 					WeaponInfo& weapon = WeaponStats[(int)bullet.WeaponType];
 					bullet.DistanceTraveled += weapon.BulletSpeed * SimulationTime;
+					//WC_CORE_INFO(bullet.DistanceTraveled);
 					bool destroy = false;
-					if (bullet.HitEntityType > EntityType::UNDEFINED)
+					if (bullet.HitAnyEntity())
 					{
 						Entity* shotEnt = bullet.HitEntity;
 
-						if (bullet.BulletType == BulletType::RedCircle && bullet.HitEntityType == EntityType::Player)
+						if (bullet.DidHitEntity())
 						{
-							std::random_device rd;
-							std::mt19937 gen(rd());
-							std::uniform_int_distribution<> dis(0, 1); // Define the range
+							bool hit = shotEnt != bullet.SourceEntity; // && shotEnt->Type != bullet.SourceEntity->Type
 
-							if (dis(gen) == 0)
+							if (hit)
 							{
-								RedCube* em = new RedCube();
-								em->Position = bullet.Position + glm::vec2(0.f, 1.f);
-								em->CreateBody(PhysicsWorld);
+								shotEnt->TakeDamage(weapon.Damage);
 
-								m_SummonParticle.Position = em->Position;
-								m_SummonParticle.Velocity = glm::vec2(0.5f);
-								for (int i = 0; i < 6; i++)
+								if (bullet.BulletType == BulletType::Blaster)
 								{
-									m_SummonParticle.VelocityVariation = glm::normalize(glm::vec3(RandomValue(), RandomValue(), RandomValue()));
+									//ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
 
-									m_ParticleEmitter.Emit(m_SummonParticle);
+									m_Particle.LifeTime = 0.35f;
+									m_Particle.SizeBegin = bullet.Size.x * 2.f;
+									m_Particle.ColorBegin = glm::vec4(0.f, 1.f, 0.f, 1.f) * 2.f;
+									m_Particle.ColorEnd = glm::vec4(0.f, 1.f, 0.f, 1.f);
+									m_Particle.Position = bullet.Position;
+									m_Particle.Velocity = glm::vec2(0.5f);
+									m_Particle.VelocityVariation = glm::normalize(shotEnt->Position - player.Position) * 2.5f;
+									m_ParticleEmitter.Emit(m_Particle, 6);
 								}
-								EnemyCount++;
-								Entities.emplace_back(em);
-							}
-
-							ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
-							player.DealDamage(weapon.Damage);
-						}
-
-						if (bullet.HitEntityType > EntityType::Entity)
-						{
-							if (bullet.BulletType == BulletType::Blaster)
-							{
-								if (shotEnt != bullet.SourceEntity) 
+								else if (bullet.BulletType == BulletType::RedCircle) // && bullet.HitEntityType == EntityType::Player
 								{
-									shotEnt->DealDamage(weapon.Damage);
+									std::random_device rd;
+									std::mt19937 gen(rd());
+									std::uniform_int_distribution<> dis(0, 1); // Define the range
+
+									//if (dis(gen) == 0 && false) // stopped duplicating on hit
+									//{
+									//	RedCube* em = new RedCube();
+									//	em->Position = bullet.Position + glm::vec2(0.f, 1.f);
+									//	em->CreateBody(PhysicsWorld);
+									//
+									//	m_SummonParticle.Position = em->Position;
+									//	m_SummonParticle.Velocity = glm::vec2(0.5f);
+									//	for (int i = 0; i < 6; i++)
+									//	{
+									//		m_SummonParticle.VelocityVariation = glm::normalize(glm::vec3(RandomValue(), RandomValue(), RandomValue()));
+									//
+									//		m_ParticleEmitter.Emit(m_SummonParticle);
+									//	}
+									//	EnemyCount++;
+									//	Entities.emplace_back(em);
+									//}
+
 									ma_engine_play_sound(&Globals.sfx_engine, Globals.damageEnemy.c_str(), nullptr);
 								}
+							}							
 
-								m_Particle.LifeTime = 0.35f;
-								m_Particle.SizeBegin = bullet.Size.x * 2.f;
-								m_Particle.ColorBegin = glm::vec4(0.f, 1.f, 0.f, 1.f) * 2.f;
-								m_Particle.ColorEnd = glm::vec4(0.f, 1.f, 0.f, 1.f);
-								m_Particle.Position = bullet.Position;
-								m_Particle.Velocity = glm::vec2(0.5f);
-								m_Particle.VelocityVariation = glm::normalize(shotEnt->Position - player.Position) * 2.5f;
-								m_ParticleEmitter.Emit(m_Particle, 6);
+
+							//destroy itself if collides with source entity after one bounce
+							if (bullet.HitEntity == bullet.SourceEntity && bullet.Bounces != WeaponStats[(int)bullet.WeaponType].BulletBounces) {
+								destroy = true;
 							}
-
-							if (bullet.BulletType == BulletType::Shotgun)
-							{
-								if (shotEnt != bullet.SourceEntity) shotEnt->DealDamage(weapon.Damage);
-							}
-
-							if (bullet.BulletType == BulletType::Revolver)
-							{
-								if (shotEnt != bullet.SourceEntity) shotEnt->DealDamage(weapon.Damage);
-							}
-
-							if (bullet.HitEntity == bullet.SourceEntity && bullet.Bounces != WeaponStats[(int)bullet.WeaponType].BulletBounces) destroy = true;
 						}
 						
-
-						if (!bullet.IsSensor() && bullet.HitEntity->Type == EntityType::Bullet) {
+						// destroy both bullets if they are from different sources and both are physical
+						if (!bullet.IsSensor() && bullet.HitBullet()) 
+						{
 							Bullet& hitBullet = *(Bullet*)bullet.HitEntity;
-							if (!hitBullet.IsSensor())
+							if (!hitBullet.IsSensor() && bullet.SourceEntity != hitBullet.SourceEntity)
 							{
-								//animation
+								//animation from both physical bullets destroying each other
 								m_Particle.LifeTime = 0.45f;
 								m_Particle.ColorBegin = bullet.Color;
 								m_Particle.ColorEnd = hitBullet.Color;
@@ -896,8 +658,9 @@ namespace wc
 					else 
 					{
 						if (bullet.HitEntityType == EntityType::Tile && bullet.Bounces == 0) destroy = true;
+						//if (bullet.BulletType == BulletType::Slash && bullet.DistanceTraveled > 0.0001f) destroy = true;
 					}
-					
+
 					if (bullet.DistanceTraveled > weapon.Range) destroy = true;
 					if (bullet.Position.x <= 0.f || bullet.Position.x >= Size.x + 1.f ||
 						bullet.Position.y <= 0.f || bullet.Position.y >= Size.y + 1.f) destroy = true;
@@ -915,16 +678,13 @@ namespace wc
 		void FixedUpdate()
 		{
 			if (player.MoveDir != 0.f)
-				player.Body->ApplyLinearImpulseToCenter({ player.MoveDir * EntityStats[(int)EntityType::Player].Speed * player.Body->GetMass() / 10.f * (player.DownContacts > 0 ? 1.f : AirSpeedFactor), 0.f}, true);
+				player.Body.ApplyLinearImpulseToCenter({ player.MoveDir * EntityStats[(int)EntityType::Player].Speed * player.Body.GetMass() / 10.f * (player.DownContacts > 0 ? 1.f : AirSpeedFactor), 0.f }, true);
 
 			UpdateAIFixed();
 		}
 
 		void Update()
 		{
-			const int32_t velocityIterations = 8;
-			const int32_t positionIterations = 3;
-
 			AccumulatedTime += Globals.deltaTime;
 
 			UpdateAI();
@@ -932,20 +692,174 @@ namespace wc
 			while (AccumulatedTime >= SimulationTime)
 			{
 				for (auto& entity : Entities)
-					entity->PrevPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
+					entity->PrevPos = entity->Body.GetPosition();
 
 				FixedUpdate();
 
-				PhysicsWorld->Step(SimulationTime, velocityIterations, positionIterations);
+				PhysicsWorld.Step(SimulationTime, 4);
+				//PhysicsWorld.SetHitEventThreshold(10.f);
+				
+				//Physical bullets go to contact events and sensor bullets go to sensor events
+
+				// Sensor Events
+				b2SensorEvents sensorEvents = PhysicsWorld.GetSensorEvents();
+
+				for (uint32_t i = 0; i < sensorEvents.beginCount; i++)
+				{
+					auto& contact = sensorEvents.beginEvents[i];
+
+					Entity* entityS = static_cast<Entity*>(b2Shape_GetUserData(contact.sensorShapeId));  // sensor
+					Entity* entityV = static_cast<Entity*>(b2Shape_GetUserData(contact.visitorShapeId)); // visitor
+					
+					// Sensor Bullets Begin Touch
+					if (entityS && entityV) {
+						BulletHit(entityS, entityV);
+					}
+
+					//sensor bullets dont reflect off walls SO normal is {0, 0}
+					BulletHitTile(entityS, entityV, {0, 0});
+				}
+
+				for (uint32_t i = 0; i < sensorEvents.endCount; i++)
+				{
+					auto& contact = sensorEvents.beginEvents[i];
+
+					Entity* entityS = static_cast<Entity*>(b2Shape_GetUserData(contact.sensorShapeId));  // sensor
+					Entity* entityV = static_cast<Entity*>(b2Shape_GetUserData(contact.visitorShapeId)); // visitor
+
+					// Sensor Bullet End Touch
+					BulletClear(entityS);
+				}
+
+
+				// Contact Events
+				b2ContactEvents contactEvents = PhysicsWorld.GetContactEvents();
+
+				//Begin Touch
+				for (uint32_t i = 0; i < contactEvents.beginCount; i++)
+				{
+					auto& contact = contactEvents.beginEvents[i];
+
+					Entity* entityA = static_cast<Entity*>(b2Shape_GetUserData(contact.shapeIdA));
+					Entity* entityB = static_cast<Entity*>(b2Shape_GetUserData(contact.shapeIdB));
+
+					
+					// Physical Bullets Begin Contact
+					if (entityB && entityB->Type == EntityType::Bullet)
+					{
+						if (entityA) BulletHit(entityA, entityB);
+						
+						b2ContactData contactData;
+						b2Shape_GetContactData(contact.shapeIdA, &contactData, 1);
+						glm::vec2 normal = glm::vec2(contactData.manifold.normal.x, contactData.manifold.normal.y);
+						BulletHitTile(entityA, entityB, normal);
+						BulletHitTile(entityB, entityA, normal);
+					}
+
+					// Player Begin Contacts
+					if ((!entityA && entityB && entityB->Type == EntityType::Player) || (!entityB && entityA && entityA->Type == EntityType::Player)) 
+					{
+						b2Body body;
+						b2Segment segment;
+						Entity* entity = nullptr;	
+
+						// Determine which is wall and which is entity
+						if (!entityA)
+						{
+							segment = b2Shape_GetSegment(contact.shapeIdA);
+							body = b2Shape_GetBody(contact.shapeIdB);
+							entity = entityB;
+						}
+						if (!entityB)
+						{
+							segment = b2Shape_GetSegment(contact.shapeIdB);
+							body = b2Shape_GetBody(contact.shapeIdA);
+							entity = entityA;
+						}
+
+						// Horizontal
+						if (segment.point1.y == segment.point2.y)
+						{
+							if (segment.point1.y > body.GetPosition().y) entity->UpContacts++;
+							else entity->DownContacts++;
+						}
+
+						// Vertical
+						if (segment.point1.x == segment.point2.x)
+						{
+							if (segment.point1.x > body.GetPosition().x) entity->RightContacts++;
+							else entity->LeftContacts++;
+						}
+					}
+				}
+
+				//End Touch
+				for (uint32_t i = 0; i < contactEvents.endCount; i++)
+				{
+					auto& contact = contactEvents.endEvents[i];
+
+					Entity* entityA = static_cast<Entity*>(b2Shape_GetUserData(contact.shapeIdA));
+					Entity* entityB = static_cast<Entity*>(b2Shape_GetUserData(contact.shapeIdB));
+
+					// Physical Bullets End Contact
+					if (entityB && entityB->Type == EntityType::Bullet)
+					{
+
+					}
+
+					// Player End Contacts
+					if ((!entityA && entityB && entityB->Type == EntityType::Player) || (!entityB && entityA && entityA->Type == EntityType::Player))
+					{
+						b2Body body;
+						b2Segment segment;
+						Entity* entity = nullptr;
+
+						// Determine which is wall and which is entity
+						if (!entityA)
+						{
+							segment = b2Shape_GetSegment(contact.shapeIdA);
+							body = b2Shape_GetBody(contact.shapeIdB);
+							entity = entityB;
+						}
+						if (!entityB)
+						{
+							segment = b2Shape_GetSegment(contact.shapeIdB);
+							body = b2Shape_GetBody(contact.shapeIdA);
+							entity = entityA;
+						}
+
+						// Horizontal
+						if (segment.point1.y == segment.point2.y)
+						{
+							if (segment.point1.y > body.GetPosition().y) entity->UpContacts--;
+							else entity->DownContacts--;
+						}
+
+						// Vertical
+						if (segment.point1.x == segment.point2.x)
+						{
+							if (segment.point1.x > body.GetPosition().x) entity->RightContacts--;
+							else entity->LeftContacts--;
+						}
+					}
+				}
+
+				for (uint32_t i = 0; i < contactEvents.hitCount; i++)
+				{
+					b2ContactHitEvent contact = contactEvents.hitEvents[i];
+					WC_CORE_INFO("HIT");
+
+				}
 
 				AccumulatedTime -= SimulationTime;
-			}
+			}			
 
 			float alpha = AccumulatedTime / SimulationTime;
 
 			for (auto& entity : Entities)
 			{
-				auto bPos = glm::vec2(entity->Body->GetPosition().x, entity->Body->GetPosition().y);
+				auto b2Pos = entity->Body.GetPosition();
+				auto bPos = glm::vec2(b2Pos.x, b2Pos.y);
 
 				entity->Position = glm::mix(entity->PrevPos, bPos, alpha);
 			}
@@ -972,9 +886,7 @@ namespace wc
 
 		Player player;
 
-		b2World* PhysicsWorld = nullptr;
-
-		uint32_t EnemyCount = 0;
+		b2World PhysicsWorld;
 
 		float DragStrength = 2.f;
 		float AirSpeedFactor = 0.7f;
@@ -985,8 +897,58 @@ namespace wc
 		TileID* m_Data = nullptr;
 		uint32_t m_Size = 1;		
 
+		const float SimulationTime = 1.f / 240.f; // 1.f/60.f or 1.f/200.f
 
-		const float SimulationTime = 1.f / 60.f;
+	private: 
+		void BulletHit(Entity* entityA, Entity* entityB)
+		{
+			if (entityA->Type == EntityType::Bullet)
+			{
+				Bullet& bullet = *(Bullet*)entityA;
+
+				bullet.HitEntityType = entityB->Type;
+				bullet.HitEntity = entityB;
+				//if (entityB->Type > EntityType::Entity)
+				//{
+					//entityB->Body->ApplyLinearImpulseToCenter(-bullet.Body->GetLinearVelocity(), true);						
+				//}
+			}
+			if (entityB->Type == EntityType::Bullet)
+			{
+				Bullet& bullet = *(Bullet*)entityB;
+
+				bullet.HitEntityType = entityA->Type;
+				bullet.HitEntity = entityA;
+			}
+		}
+
+		void BulletHitTile(Entity* entityA, Entity* entityB, glm::vec2 normal)
+		{
+
+			if (entityA && entityA->Type == EntityType::Bullet && !entityB)
+			{
+				Bullet& bullet = *(Bullet*)entityA;
+				bullet.HitEntityType = EntityType::Tile;
+
+				if (bullet.Bounces > 0 && !bullet.IsSensor())
+				{
+					bullet.Direction = glm::reflect(bullet.Direction, normal);
+					bullet.Body.SetLinearVelocity(bullet.Direction * WeaponStats[(int)bullet.WeaponType].BulletSpeed);
+					bullet.HitEntityType = EntityType::UNDEFINED;
+					bullet.Bounces--;
+				}
+			}
+		}
+
+		void BulletClear(Entity* entity)
+		{
+			if (entity->Type == EntityType::Bullet)
+			{
+				Bullet& bullet = *(Bullet*)entity;
+				bullet.HitEntityType = EntityType::UNDEFINED;
+				bullet.HitEntity = nullptr;
+			}
+		}		
 
 	private:
 

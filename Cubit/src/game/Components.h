@@ -5,6 +5,7 @@
 #include <vector>
 #include <wc/Utils/Time.h>
 #include <wc/Utils/YAML.h>
+#include <wc/Utils/box2d.h>
 
 namespace wc
 {
@@ -34,7 +35,8 @@ namespace wc
 	{
 		glm::vec2 PrevPos;
 
-		b2Body* Body = nullptr;
+		b2Body Body;
+		b2Shape ShapeID;
 
 		uint32_t UpContacts = 0;
 		uint32_t DownContacts = 0;

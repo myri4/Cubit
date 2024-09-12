@@ -13,13 +13,10 @@
 #include <wc/vk/SyncContext.h>
 
 #include <wc/Utils/Time.h>
-
+#include <wc/Utils/box2d.h>
 #include <wc/Utils/List.h>
 #include <wc/Utils/Window.h>
 #include <wc/Utils/YAML.h>
-
-// Physics
-#include <box2d/box2d.h>
 
 // GUI
 #include <imgui/imgui.h>
@@ -82,16 +79,9 @@ namespace wc
 			SwordTexture = m_RenderData.LoadTexture("assets/textures/Sword.png");
 
 			{
-				auto& redcube = EntityStats[(int)EntityType::RedCube];
-				redcube.Density = 55.f;
-				redcube.Speed = 7.f;
-				redcube.LinearDamping = 1.8f;
-			}
-
-			{
 				auto& player = EntityStats[(int)EntityType::Player];
 				player.Density = 100.f;
-				player.Speed = 7.f;
+				player.Speed = 3.5f;
 				player.LinearDamping = 1.5f;
 			}
 
@@ -157,15 +147,15 @@ namespace wc
 				revolver.Damage = 25;
 				revolver.FireRate = 1.f;
 				revolver.AltFireRate = 1.5f;
-				revolver.MaxMag = 6;
-				revolver.ReloadSpeed = 0.5f;
+				revolver.MaxMag = 99;
+				revolver.ReloadSpeed = 0.35f;
 				revolver.ReloadByOne = true;
 				revolver.Range = 125.f;
 				revolver.RenderOffset = { 0.25f, -0.15f };
 				revolver.RenderSize = { 1.f, 0.45f };
 				revolver.IsBulletSensor = false;
 				revolver.BulletColor = { 1.f, 1.f, 0.f, 1.f };
-				revolver.BulletSpeed = 45.f;
+				revolver.BulletSpeed = 25.f;
 				revolver.BulletSize = { 0.1f, 0.1f };
 				revolver.BulletBounces = 3;
 				revolver.TextureID = m_RenderData.LoadTexture("assets/textures/Revolver.png");
@@ -222,8 +212,8 @@ namespace wc
 		{
 			auto& player = m_Map.player;
 
-			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyLeft)) player.MoveDir = -1.f;
-			else if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyRight)) player.MoveDir = 1.f;
+			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyLeft) && player.LeftContacts == 0) player.MoveDir = -1.f;
+			else if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyRight) && player.RightContacts == 0) player.MoveDir = 1.f;
 			else player.MoveDir = 0.f;
 
 			if (player.MoveDir != 0.f)
@@ -231,7 +221,7 @@ namespace wc
 				if (Key::GetKey(Key::LeftShift) == GLFW_PRESS && player.DashCD <= 0.f)
 				{
 					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
-					player.Body->ApplyLinearImpulseToCenter({ 50.f * player.Body->GetMass() * player.MoveDir, 0.f }, true);
+					player.Body.ApplyLinearImpulseToCenter({ 50.f * player.Body.GetMass() * player.MoveDir, 0.f }, true);
 					player.DashCD = 2.f;
 				}
 			}
@@ -250,26 +240,26 @@ namespace wc
 
 			if (player.DownContacts > 0)
 			{
-				auto vel = player.Body->GetLinearVelocity();
+				auto vel = player.Body.GetLinearVelocity();
 
-				player.Body->SetGravityScale(1.f);
+				player.Body.SetGravityScale(1.f);
 
 				vel.x -= m_Map.DragStrength * vel.x * Globals.deltaTime;
 
 				if (abs(vel.x) < 0.01f) vel.x = 0.f;
 
-				player.Body->SetLinearVelocity(vel);
+				player.Body.SetLinearVelocity(vel);
 			}
-			else if (player.Body->GetLinearVelocity().y < 0.f) player.Body->SetGravityScale(2.5f);
+			else if (player.Body.GetLinearVelocity().y < 0.f) player.Body.SetGravityScale(2.5f);
 
 
 			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump) && player.DownContacts != 0)
 			{
 				// @NOTE: if gravity is changed we should update this
 				float jumHeight = 8.f;
-				player.JumpForce = glm::sqrt(jumHeight * m_Map.Gravity * player.Body->GetGravityScale() * -(2.f + EntityStats[(int)EntityType::Player].LinearDamping)) * player.Body->GetMass();
+				player.JumpForce = glm::sqrt(jumHeight * m_Map.Gravity * player.Body.GetGravityScale() * -(2.f + EntityStats[(int)EntityType::Player].LinearDamping)) * player.Body.GetMass();
 
-				player.Body->ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
+				player.Body.ApplyLinearImpulseToCenter({ 0.f, player.JumpForce }, true);
 			}
 
 
@@ -316,7 +306,7 @@ namespace wc
 					if (glm::distance(hitInfo.Point, player.Position) < WeaponStats[(int)WeaponType::Laser].Range) {
 						if (hitInfo.Hit && hitInfo.Entity) {
 							if (static_cast<Entity*>(hitInfo.Entity)->Type > EntityType::Entity)
-								static_cast<Entity*>(hitInfo.Entity)->DealDamage(WeaponStats[(int)player.Weapon].Damage);
+								static_cast<Entity*>(hitInfo.Entity)->TakeDamage(WeaponStats[(int)player.Weapon].Damage);
 						}
 
 						m_Particle.Position = hitInfo.Point;
@@ -338,7 +328,7 @@ namespace wc
 					{
 						float invDist = 1.f / glm::max(hitInfo.t, 1.f);
 						auto recoilForce = -dir * player.JumpForce * 2.f * invDist * invDist;
-						player.Body->ApplyLinearImpulseToCenter({ recoilForce.x, recoilForce.y }, true);
+						player.Body.ApplyLinearImpulseToCenter(-dir * player.JumpForce * 2.f * invDist * invDist, true);
 					}
 
 					ma_engine_play_sound(&Globals.sfx_engine, Globals.shotgun.c_str(), nullptr);
@@ -352,7 +342,7 @@ namespace wc
 						m_Map.SpawnBullet(shootPos, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
 
 						m_Particle.Position = player.Position + dir * 0.55f;
-						auto& vel = player.Body->GetLinearVelocity();
+						auto vel = player.Body.GetLinearVelocity();
 						m_Particle.ColorBegin = glm::vec4{ 254 / 255.0f, 212 / 255.0f, 123 / 255.0f, 1.0f } *2.f;
 						m_Particle.ColorEnd = { 254 / 255.0f, 109 / 255.0f, 41 / 255.0f, 1.0f };
 						m_Particle.Velocity = glm::vec2(vel.x, vel.y) * 0.45f;
@@ -368,7 +358,7 @@ namespace wc
 					std::uniform_real_distribution<float> dis(offset.x, offset.y);
 
 					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
-					m_Map.SpawnBullet(player.Position + dir * 0.25f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
+					m_Map.SpawnBullet(player.Position + dir * 1.25f, RandomOnHemisphere(dir, glm::normalize(dir + glm::vec2(dis(gen), dis(gen)))), player.Weapon, (Entity*)&player);
 				}
 
 				player.Weapons[(int)player.Weapon].Magazine--;
@@ -423,6 +413,7 @@ namespace wc
 					for (uint32_t i = 0; i < m_Map.Entities.size(); i++)
 					{
 						auto& entity = *m_Map.Entities[i];
+#if 0
 						if (entity.Type == EntityType::RedCube)
 						{
 							float dist = glm::distance(entity.Position, player.Position);
@@ -440,11 +431,61 @@ namespace wc
 								}
 							}
 						}
+#endif
 					}
 				}
 
 				player.ResetMeleeTimer();
 			}
+
+			//if (ImGui::IsKeyPressed(ImGuiKey_F2))
+			//{
+			//	VulkanContext::GetLogicalDevice().WaitIdle();
+
+			//	uint32_t width = m_Renderer.GetRenderSize().x;
+			//	uint32_t height = m_Renderer.GetRenderSize().y;
+
+			//	StagingBuffer stagingBuffer;
+			//	stagingBuffer.Allocate(sizeof(float) * 4 * width * height, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+			//	SyncContext::immediate_submit([&](VkCommandBuffer cmd) {
+			//		m_Renderer.GetFinalImage().setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+			//		VkBufferImageCopy copyRegion = {};
+			//		copyRegion.bufferOffset = 0;
+			//		copyRegion.bufferRowLength = 0;
+			//		copyRegion.bufferImageHeight = 0;
+
+			//		copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			//		copyRegion.imageSubresource.mipLevel = 0;
+			//		copyRegion.imageSubresource.baseArrayLayer = 0;
+			//		copyRegion.imageSubresource.layerCount = 1;
+			//		copyRegion.imageExtent.width = width;
+			//		copyRegion.imageExtent.height = height;
+			//		copyRegion.imageExtent.depth = 1;
+
+			//		//copy the buffer into the image
+			//		vkCmdCopyImageToBuffer(cmd, m_Renderer.GetFinalImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingBuffer, 1, &copyRegion);
+
+			//		m_Renderer.GetFinalImage().setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+			//		});
+
+			//	float* imagedata = (float*)stagingBuffer.Map();
+
+			//	const auto now = std::chrono::system_clock::now();
+			//	auto filename = std::format("screenshots/screenshot_{:%d-%m-%Y-%H-%M-%OS}.png", now);
+
+			//	int bytes_per_pixel = 4;
+			//	uint32_t bytes_per_scanline = bytes_per_pixel * width;
+			//	uint8_t* imageOutput = new uint8_t[width * height * bytes_per_pixel];
+
+			//	for (int i = 0; i < width * height * bytes_per_pixel; i++)
+			//		imageOutput[i] = (uint8_t)(imagedata[i] * 255.f);
+
+			//	stbi_write_png(filename.c_str(), width, height, bytes_per_pixel, imageOutput, bytes_per_scanline);
+			//	delete[] imageOutput;
+			//	stagingBuffer.Unmap();
+			//	stagingBuffer.Free();
+			//}
 		}
 
 		void RenderGame()
@@ -473,7 +514,7 @@ namespace wc
 				}
 				else
 				{
-					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, 0, entity.Type == EntityType::RedCube ? glm::vec4(1.f, 0, 0, 1.f) : glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
+					m_RenderData.DrawQuad(glm::vec3(entity.Position, 0.f), entity.Size * 2.f, player.Body.GetAngle(), 0, glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
 
 					if (entity.Type != EntityType::Player)
 					{
@@ -562,7 +603,6 @@ namespace wc
 			m_ParticleEmitter.OnUpdate();
 
 			if (!m_Map.player.Alive()) Globals.gameState = GameState::DEATH;
-			if (m_Map.EnemyCount == 0) Globals.gameState = GameState::WIN;
 
 			RenderGame();
 		}
@@ -577,9 +617,9 @@ namespace wc
 
 
 			ImGui::SetCursorPos(ImVec2(10.f, ImGui::GetWindowSize().y - 70.f));
-			ImGui::TextColored(color, std::format("Enemies: {}", m_Map.EnemyCount).c_str());
-			ImGui::SetCursorPosX(10.f);
 			ImGui::TextColored(color, std::format("Current Level: {}", m_LevelID).c_str());
+			ImGui::SetCursorPos({ 10.f, 10.f });
+			ImGui::TextColored(color, std::format("FPS: {}", 1 / Globals.deltaTime).c_str());
 			
 			ImGui::SetWindowFontScale(1.2f);
 			float offset = 0.f;
@@ -591,8 +631,6 @@ namespace wc
 			else ImGui::TextColored(color, std::format("  {}/{}", mag, m_Map.player.Weapons[(int)m_Map.player.Weapon].Ammo).c_str());
 			//ImGui::SetCursorPosX(10.f);
 			//ImGui::TextColored(color, std::format("Accumulator: {}", m_Map.player.Weapons[(int)m_Map.player.MeleeWeapon].Timer).c_str());
-			//ImGui::SetCursorPosX(10.f);
-			//ImGui::TextColored(color, std::format("Steps: {}", m_Map.nSteps).c_str());
 			//ImGui::SetCursorPosX(10.f);
 			//ImGui::TextColored(color, std::format("Clamped steps: {}", glm::min(m_Map.nSteps, m_Map.MAX_STEPS)).c_str());
 
@@ -924,7 +962,6 @@ namespace wc
 			if (ImGui::Button("Go Next")) 
 			{
 				Globals.gameState = GameState::PLAY;
-				m_Map.EnemyCount = 0;
 				m_Map.LoadFull("levels/level2.malen");
 				m_Map.player.Health = m_Map.player.StartHealth;
 				m_LevelID++;
