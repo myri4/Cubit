@@ -42,7 +42,7 @@ namespace wc
 
 		glm::vec2 Recoil;
 
-		uint32 TextureID = 0;
+		uint32_t TextureID = 0;
 	};
 
 	struct WeaponData

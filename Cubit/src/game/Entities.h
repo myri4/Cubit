@@ -19,7 +19,6 @@ namespace wc
         // Entities
         Bullet,
         Entity,
-        RedCube,
 
         Player,
     };	
@@ -33,11 +32,11 @@ namespace wc
 	{
 		uint32_t ID = 0;
 
-        inline void SetPosition() { Body->SetTransform({ Position.x, Position.y }, 0.f); }
+        inline void SetPosition() { b2Body_SetTransform(Body, { Position.x, Position.y }, { 0.f, 0.f }); }
 
         inline void UpdatePosition()
         {
-            auto& bPos = Body->GetPosition();
+            auto bPos = b2Body_GetPosition(Body);
             Position = { bPos.x, bPos.y };
         }
 
@@ -74,34 +73,37 @@ namespace wc
 
         uint32_t Health = 100;
                 
-        void DealDamage(uint32_t Damage)
+        void TakeDamage(uint32_t Damage)
         {
             if (Alive()) Health -= glm::min(Damage, Health);
         }
 
         bool Alive() { return Health > 0; }        
 
-        virtual void CreateBody(b2World* PhysicsWorld)
+        virtual void CreateBody(b2WorldId PhysicsWorld)
         {
-            b2BodyDef bodyDef;
+            b2BodyDef bodyDef = b2DefaultBodyDef();
             bodyDef.type = b2_dynamicBody;
-            bodyDef.position.Set(Position.x, Position.y);
+            bodyDef.position = { Position.x, Position.y };
             bodyDef.fixedRotation = true;
             bodyDef.linearDamping = EntityStats[(int)Type].LinearDamping;//
-            Body = PhysicsWorld->CreateBody(&bodyDef);
+            Body.Create(PhysicsWorld, bodyDef);
 
-            b2PolygonShape shape;
-            shape.SetAsBox(HitBoxSize.x, HitBoxSize.y);
+            b2Polygon shape = b2MakeBox(HitBoxSize.x, HitBoxSize.y);
 
 
-            b2FixtureDef fixtureDef;
-            fixtureDef.density = EntityStats[(int)Type].Density;//
-            fixtureDef.friction = 0.f;
+			b2ShapeDef shapeDef = b2DefaultShapeDef();
+			shapeDef.density = EntityStats[(int)Type].Density;
+			shapeDef.friction = 0.1f;
+            shapeDef.userData = this;
 
-            fixtureDef.userData.pointer = (uintptr_t)this;
+            ShapeID.CreatePolygonShape(Body, shapeDef, shape);
+        }
 
-            fixtureDef.shape = &shape;
-            Body->CreateFixture(&fixtureDef);
+        void DestroyBody()
+        {
+			ShapeID.Destroy();
+			Body.Destroy();
         }
 
         Entity() = default;
@@ -167,17 +169,6 @@ namespace wc
             //Density = 100.f;
         }
     };
-    	
-    struct RedCube : public Entity
-    {
-        float AttackTimer = 2.f; 
-        float ShootRange = 8.f;
-        float DetectRange = 15.f;
-        uint32_t Damage = 10;
-        //float Speed = EntityStats[(int)EntityType::RedCube].Speed;
-
-        RedCube() { Type = EntityType::RedCube; Health = 150;}
-    };
 
     struct Bullet : public Entity
     {
@@ -195,6 +186,13 @@ namespace wc
 
         Bullet() { Type = EntityType::Bullet; }
 
-        bool IsSensor() { return WeaponStats[(int)WeaponType].IsBulletSensor; }
+		bool IsSensor() { return WeaponStats[(int)WeaponType].IsBulletSensor; }
+		//bool IsPolygon() { return WeaponStats[(int)WeaponType].IsBulletPolygon; }
+		//bool IgnoreWalls() { return WeaponStats[(int)WeaponType].BulletIgnoreWalls; }
+
+		bool HitAnyEntity() { return HitEntityType > EntityType::UNDEFINED; }
+		bool DidHitEntity() { return HitEntityType > EntityType::Entity; } // To prevent name collision
+		bool HitBullet() { return HitEntityType == EntityType::Bullet; }
+		bool HitTile() { return HitEntityType == EntityType::Tile; }
     };
 }
