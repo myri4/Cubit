@@ -56,13 +56,13 @@ namespace wc
 		{
 			m_Map.LoadFull(filepath);
 
-			LevelTime = 0.f;
+			Globals.serverTime = 0.f;
 			m_RotateSword = false;
 			m_SwordRotation = 0.f;
 			camera.Position = glm::vec3(m_Map.player.Position, 0.f);
 		}
 
-		float LevelTime = 0.f;
+		
 
 		std::string levelPath;
 	public:	
@@ -588,7 +588,7 @@ namespace wc
 		{
 			m_Map.Update();
 
-			LevelTime += Globals.deltaTime;
+			Globals.serverTime += Globals.deltaTime;
 			//m_TargetPosition = glm::clamp(m_TargetPosition, glm::vec2(8, 4), glm::vec2(Size) - glm::vec2(8, 4));
 
 			camera.Position += glm::vec3((m_TargetPosition - glm::vec2(camera.Position)) * 11.5f * Globals.deltaTime, 0.f);
@@ -613,7 +613,7 @@ namespace wc
 			ImGui::SetWindowFontScale(0.5f);
 
 			ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2 - 75);
-			ImGui::TextColored(color, std::format("{:.2f} sec.", LevelTime).c_str());
+			ImGui::TextColored(color, std::format("{:.2f} sec.", Globals.serverTime).c_str());
 
 
 			ImGui::SetCursorPos(ImVec2(10.f, ImGui::GetWindowSize().y - 70.f));
@@ -951,7 +951,7 @@ namespace wc
 
 			ImVec2 TimeSize = ImGui::CalcTextSize("Level Time: {} sec.");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - TimeSize.x) * 0.5f, (ImGui::GetWindowSize().y - TimeSize.y) * 0.5f - 100));
-			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), std::format("Level Time: {:.2f} sec.", LevelTime).c_str());
+			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), std::format("Level Time: {:.2f} sec.", Globals.serverTime).c_str());
 
 			ImVec2 LevelSize = ImGui::CalcTextSize("Current Level: {}");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - TimeSize.x) * 0.5f, (ImGui::GetWindowSize().y - TimeSize.y) * 0.5f - 200));

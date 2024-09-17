@@ -500,6 +500,10 @@ namespace wc
 			//bullet->LinearDamping = 0.f;
 			bullet->Bounces = weaponInfo.BulletBounces;
 
+			//add event for spawn bullet
+			//WC_CORE_INFO("a{}", Globals.ServerEvents.size());
+			AddEvent(Globals.ServerEvents, EventType::SpawnBullet, bullet, Globals.serverTime);
+
 			{
 				b2BodyDef bodyDef;
 				bodyDef.type = b2_dynamicBody;
@@ -688,6 +692,19 @@ namespace wc
 			AccumulatedTime += Globals.deltaTime;
 
 			UpdateAI();
+
+			//go over all events
+			for (ServerEvent event : Globals.ServerEvents)
+			{
+				//process event based on type
+				if (event.type == EventType::SpawnBullet)
+				{
+					WC_CORE_INFO("bullet event");
+				}
+
+			}
+			//clear all events after processing all of them
+			ClearAllEvents(Globals.ServerEvents);
 
 			while (AccumulatedTime >= SimulationTime)
 			{
