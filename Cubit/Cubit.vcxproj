@@ -159,6 +159,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(ProjectDir)vendor\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BuildStlModules>true</BuildStlModules>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -265,6 +266,7 @@
     <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\game\Components.h" />
     <ClInclude Include="src\game\Entities.h" />
+    <ClInclude Include="src\game\Events.h" />
     <ClInclude Include="src\game\Game.h" />
     <ClInclude Include="src\game\Map.h" />
     <ClInclude Include="src\game\ParticleSystem.h" />

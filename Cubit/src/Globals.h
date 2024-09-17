@@ -5,6 +5,7 @@
 #include <wc/Utils/Window.h>
 #include <wc/Utils/Time.h>
 #include "miniaudio.h"
+#include "game/Events.h"
 
 #include "Settings.h"
 
@@ -28,6 +29,8 @@ namespace wc
 
 		std::string levelName = "";
 
+		std::vector<ServerEvent> ServerEvents;
+
 		//sound
 		const int music_fade_time_mls = 500;
 
@@ -50,6 +53,7 @@ namespace wc
 
 		Clock deltaTimer;
 		float deltaTime = 0.f;
+		float serverTime = 0.f;
 
 		GameState gameState = GameState::MENU;
 

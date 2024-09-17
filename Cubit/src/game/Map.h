@@ -19,6 +19,7 @@
 #include "Raycasting.h"
 #include "Tile.h"
 #include <magic_enum.hpp>
+#include "../Globals.h"
 
 // @TODO: Separate tile map and scene
 namespace wc
@@ -732,6 +733,7 @@ namespace wc
 
 		void SpawnBullet(glm::vec2 position, glm::vec2 direction, WeaponType weaponType, Entity* src, float angle = 0)
 		{
+
 			auto& weaponInfo = WeaponStats[(int)weaponType];
 			Bullet* bullet = new Bullet();
 			bullet->SourceEntity = src;
@@ -747,6 +749,9 @@ namespace wc
 			//bullet->Density = 0.f;
 			//bullet->LinearDamping = 0.f;
 			bullet->Bounces = weaponInfo.BulletBounces;
+
+			WC_CORE_INFO("a{}", Globals.ServerEvents.size());
+			AddEvent(Globals.ServerEvents, EventType::SpawnBullet, bullet, Globals.serverTime);
 
 			{
 				b2BodyDef bodyDef;
@@ -1034,6 +1039,20 @@ namespace wc
 			AccumulatedTime += Globals.deltaTime;
 
 			UpdateAI();
+
+			//go over all events
+			for (ServerEvent event : Globals.ServerEvents) 
+			{
+				//process event based on type
+				if (event.type == EventType::SpawnBullet)
+				{
+					WC_CORE_INFO("bullet event");
+				}
+					
+			}
+			//clear all events after processing all of them
+			ClearAllEvents(Globals.ServerEvents);
+
 
 			while (AccumulatedTime >= SimulationTime)
 			{
