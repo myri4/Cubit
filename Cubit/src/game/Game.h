@@ -27,7 +27,7 @@
 
 #include "../Globals.h"
 #include "../Rendering/Renderer2D.h"
-#include "UI/Widgets.h"
+#include "../UI/Widgets.h"
 
 #include "Map.h"
 
@@ -60,6 +60,10 @@ namespace wc
 			m_RotateSword = false;
 			m_SwordRotation = 0.f;
 			camera.Position = glm::vec3(m_Map.player.Position, 0.f);
+			m_Map.player.UpContact = false;
+			m_Map.player.DownContact = false;
+			m_Map.player.LeftContact = false;
+			m_Map.player.RightContact = false;
 		}
 
 		
@@ -212,8 +216,8 @@ namespace wc
 		{
 			auto& player = m_Map.player;
 
-			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyLeft) && player.LeftContacts == 0) player.MoveDir = -1.f;
-			else if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyRight) && player.RightContacts == 0) player.MoveDir = 1.f;
+			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyLeft) && player.LeftContact == 0) player.MoveDir = -1.f;
+			else if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyRight) && player.RightContact == 0) player.MoveDir = 1.f;
 			else player.MoveDir = 0.f;
 
 			if (player.MoveDir != 0.f)
@@ -238,7 +242,7 @@ namespace wc
 			else if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeySecondaryWeapon))
 				player.Weapon = player.SecondaryWeapon;
 
-			if (player.DownContacts > 0)
+			if (player.DownContact)
 			{
 				auto vel = player.Body.GetLinearVelocity();
 
@@ -253,7 +257,7 @@ namespace wc
 			else if (player.Body.GetLinearVelocity().y < 0.f) player.Body.SetGravityScale(2.5f);
 
 
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump) && player.DownContacts != 0)
+			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump) && player.DownContact)
 			{
 				// @NOTE: if gravity is changed we should update this
 				float jumHeight = 8.f;
@@ -620,6 +624,14 @@ namespace wc
 			ImGui::TextColored(color, std::format("Current Level: {}", m_LevelID).c_str());
 			ImGui::SetCursorPos({ 10.f, 10.f });
 			ImGui::TextColored(color, std::format("FPS: {}", 1 / Globals.deltaTime).c_str());
+			ImGui::SetCursorPosX(10.f);
+			ImGui::TextColored(color, std::format("Left: {}", m_Map.player.LeftContact ? "+" : "").c_str());
+			ImGui::SetCursorPosX(10.f);
+			ImGui::TextColored(color, std::format("Right: {}", m_Map.player.RightContact ? "+" : "").c_str());
+			ImGui::SetCursorPosX(10.f);
+			ImGui::TextColored(color, std::format("Down: {}", m_Map.player.DownContact ? "+" : "").c_str());
+			ImGui::SetCursorPosX(10.f);
+			ImGui::TextColored(color, std::format("Up: {}", m_Map.player.UpContact ? "+" : "").c_str());
 			
 			ImGui::SetWindowFontScale(1.2f);
 			float offset = 0.f;
@@ -672,7 +684,7 @@ namespace wc
 
 			ImVec2 PlaySize = ImGui::CalcTextSize("PLAY");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - PlaySize.x) * 0.5f, (ImGui::GetWindowSize().y - PlaySize.y) * 0.5f));
-			if (ImGui::Button("PLAY"))
+			if (ImGui::Button("PLAY") || ImGui::IsKeyPressed(ImGuiKey_Space))
 			{
 				m_Map.LoadFull("levels/level1.malen");
 				Globals.gameState = GameState::PLAY;

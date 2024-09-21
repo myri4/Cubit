@@ -38,11 +38,11 @@ namespace wc
 		b2Body Body;
 		b2Shape ShapeID;
 
-		uint32_t UpContacts = 0;
-		uint32_t DownContacts = 0;
-		uint32_t LeftContacts = 0;
-		uint32_t RightContacts = 0;
-		uint32_t Contacts = 0;
+		bool UpContact = false;
+		bool DownContact = false;
+		bool LeftContact = false;
+		bool RightContact = false;
+		//bool Contacts = false;
 
 		Rigidbody2DComponent() = default;
 		Rigidbody2DComponent(const Rigidbody2DComponent&) = default;

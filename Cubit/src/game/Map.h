@@ -119,7 +119,7 @@ namespace wc
 			//resetting player and timers
 			player.DashCD = 0.2f;
 			player.Health = player.StartHealth;
-			player.DownContacts = 0;
+			player.DownContact = false;
 		}
 
 		void Load(const std::string& filepath)
@@ -216,7 +216,8 @@ namespace wc
 					b2CreateSegmentShape(body, &shapeDef, &segment);
 				};
 
-			const float offset = 0.05f;
+			//const float offset = 0.02105f;
+			const float offset = 0.025f;
 
 			// Top/down
 			for (int y = 0; y < (int)Size.y; y++)
@@ -682,11 +683,14 @@ namespace wc
 		void FixedUpdate()
 		{
 			if (player.MoveDir != 0.f)
-				player.Body.ApplyLinearImpulseToCenter({ player.MoveDir * EntityStats[(int)EntityType::Player].Speed * player.Body.GetMass() / 10.f * (player.DownContacts > 0 ? 1.f : AirSpeedFactor), 0.f }, true);
+				player.Body.ApplyLinearImpulseToCenter({ player.MoveDir * EntityStats[(int)EntityType::Player].Speed * player.Body.GetMass() / 10.f * (player.DownContact ? 1.f : AirSpeedFactor), 0.f }, true);
 
 			UpdateAIFixed();
 		}
 
+		//DEBUG RENDER LINE
+		//glm::vec2 start = {0,0};
+		//glm::vec2 end = { 0,0 };
 		void Update()
 		{
 			AccumulatedTime += Globals.deltaTime;
@@ -703,8 +707,10 @@ namespace wc
 				}
 
 			}
+
+			//m_RenderData.DrawLine(start, end, glm::vec3(1, 1, 0));
 			//clear all events after processing all of them
-			ClearAllEvents(Globals.ServerEvents);
+			Globals.ServerEvents.clear();
 
 			while (AccumulatedTime >= SimulationTime)
 			{
@@ -773,8 +779,10 @@ namespace wc
 						BulletHitTile(entityB, entityA, normal);
 					}
 
+
+					// TODO - make contact with true or false and fix issue (if DownContact but DownContact is 0, then UpContact) (same for left and right)
 					// Player Begin Contacts
-					if ((!entityA && entityB && entityB->Type == EntityType::Player) || (!entityB && entityA && entityA->Type == EntityType::Player)) 
+					if ((!entityA && entityB && entityB->Type == EntityType::Player) || (!entityB && entityA && entityA->Type == EntityType::Player))
 					{
 						b2Body body;
 						b2Segment segment;
@@ -797,15 +805,19 @@ namespace wc
 						// Horizontal
 						if (segment.point1.y == segment.point2.y)
 						{
-							if (segment.point1.y > body.GetPosition().y) entity->UpContacts++;
-							else entity->DownContacts++;
+							if (segment.point1.y > body.GetPosition().y) {
+								start = { segment.point1.x, segment.point1.y };
+								end = { segment.point2.x, segment.point2.y };
+								entity->UpContact = true;
+							}
+							else entity->DownContact = true;
 						}
 
 						// Vertical
 						if (segment.point1.x == segment.point2.x)
 						{
-							if (segment.point1.x > body.GetPosition().x) entity->RightContacts++;
-							else entity->LeftContacts++;
+							if (segment.point1.x > body.GetPosition().x) entity->RightContact = true;
+							else entity->LeftContact = true;
 						}
 					}
 				}
@@ -848,15 +860,15 @@ namespace wc
 						// Horizontal
 						if (segment.point1.y == segment.point2.y)
 						{
-							if (segment.point1.y > body.GetPosition().y) entity->UpContacts--;
-							else entity->DownContacts--;
+							if (segment.point1.y > body.GetPosition().y && entity->UpContact) entity->UpContact = false;
+							else entity->DownContact = false;
 						}
 
 						// Vertical
 						if (segment.point1.x == segment.point2.x)
 						{
-							if (segment.point1.x > body.GetPosition().x) entity->RightContacts--;
-							else entity->LeftContacts--;
+							if (segment.point1.x > body.GetPosition().x && entity->RightContact) entity->RightContact = false;
+							else entity->LeftContact = false;
 						}
 					}
 				}
