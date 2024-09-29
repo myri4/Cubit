@@ -209,7 +209,7 @@ namespace wc
 
 			//m_SummonParticle.VelocityVariation = glm::normalize(entity.Position - m_Map.player.Position) * 2.5f;
 		}
-		
+
 		void InputGame()
 		{
 			auto& player = m_Map.player;
@@ -221,6 +221,8 @@ namespace wc
 			//	WC_CORE_INFO(Key::DownDuration(KeyCode::C))
 			//	//Key::downDuration(KeyCode::C);
 			//}
+
+			//WC_CORE_INFO(player.Position);
 
 			if (Key::IsKeyDown(Globals.settings.KeyLeft) && player.LeftContact == 0) player.MoveDir = -1.f;
 			else if (Key::IsKeyDown(Globals.settings.KeyRight) && player.RightContact == 0) player.MoveDir = 1.f;

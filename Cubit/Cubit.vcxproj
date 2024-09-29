@@ -103,6 +103,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)Lib;$(ProjectDir)vendor\libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;spirv-cross-core.lib;box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <Profile>false</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -123,6 +124,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)Lib;$(ProjectDir)vendor\libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;spirv-cross-core.lib;box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <Profile>false</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -139,6 +141,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(ProjectDir)vendor\libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>soloud_static.lib;glfw3.lib;spirv-cross-core.lib;box2d.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <Profile>false</Profile>
     </Link>
     <CustomBuild>
       <Command>"$(VULKAN_SDK)\Bin\glslc.exe" -std=450core -I"$(ProjectDir)src\shaders\include" -o "$(ProjectDir)assets\shaders\%(Filename)%(Extension)" -O0 "%(FullPath)"</Command>
@@ -168,6 +171,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(ProjectDir)vendor\libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;spirv-cross-core.lib;box2d.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <Profile>false</Profile>
     </Link>
     <CustomBuild>
       <Command>"$(VULKAN_SDK)\Bin\glslc.exe" -std=450core -I"$(ProjectDir)src\shaders\include" -o "$(ProjectDir)assets\shaders\%(Filename)%(Extension)" -O0 "%(FullPath)"</Command>
@@ -290,6 +294,7 @@
     <ClInclude Include="vendor\include\wc\Utils\FileDialogs.h" />
     <ClInclude Include="vendor\include\wc\Utils\List.h" />
     <ClInclude Include="vendor\include\wc\Utils\Log.h" />
+    <ClInclude Include="vendor\include\wc\Utils\spdLog.h" />
     <ClInclude Include="vendor\include\wc\Utils\Time.h" />
     <ClInclude Include="vendor\include\wc\Utils\Window.h" />
     <ClInclude Include="vendor\include\wc\Utils\YAML.h" />

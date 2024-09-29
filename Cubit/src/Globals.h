@@ -4,13 +4,16 @@
 #include <wc/Audio/AudioEngine.h>
 #include <wc/Utils/Window.h>
 #include <wc/Utils/Time.h>
+//#include <wc/Utils/spdLog.h>
 #include "miniaudio.h"
 #include "game/Events.h"
 
 #include "Settings.h"
+#include <iostream>
 
 namespace wc 
 {
+	
 	enum class GameState
 	{
 		MENU,
