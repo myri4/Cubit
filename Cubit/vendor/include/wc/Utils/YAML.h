@@ -2,12 +2,47 @@
 #include <yaml-cpp/yaml.h>
 #include <fstream>
 #include <glm/glm.hpp>
+#include "Window.h"
 
 #define YAML_LOAD_VAR(node, var) if (node[#var]) var = node[#var].as<decltype(var)>()
 #define YAML_SAVE_VAR(node, var) node[#var] = var
 
 namespace YAML 
 {
+	template <>
+	struct convert<wc::MouseCode> {
+		static Node encode(const wc::MouseCode& rhs) {
+			Node node;
+			node = static_cast<uint16_t>(rhs);
+			return node;
+		}
+
+		static bool decode(const Node& node, wc::MouseCode& rhs) {
+			if (!node.IsScalar()) {
+				return false;
+			}
+			rhs = static_cast<wc::MouseCode>(node.as<uint16_t>());
+			return true;
+		}
+	};
+
+	template <>
+	struct convert<wc::KeyCode> {
+		static Node encode(const wc::KeyCode& rhs) {
+			Node node;
+			node = static_cast<uint16_t>(rhs);
+			return node;
+		}
+
+		static bool decode(const Node& node, wc::KeyCode& rhs) {
+			if (!node.IsScalar()) {
+				return false;
+			}
+			rhs = static_cast<wc::KeyCode>(node.as<uint16_t>());
+			return true;
+		}
+	};
+
 	template<>
 	struct convert<glm::vec2>
 	{

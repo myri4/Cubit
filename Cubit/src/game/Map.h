@@ -183,6 +183,16 @@ namespace wc
 		void LoadFull(const std::string& filepath) // @TODO: Rename?
 		{
 			Load(filepath);
+			for (int i = 0; i < Entities.size(); i++) {
+				auto* e = Entities[i];
+				if (e->Type == EntityType::Player) {
+					e->DownContact = false;
+					e->UpContact = false;
+					e->LeftContact = false;
+					e->RightContact = false;
+				
+				}
+			}
 			CreatePhysicsWorld();
 		}
 
@@ -806,8 +816,8 @@ namespace wc
 						if (segment.point1.y == segment.point2.y)
 						{
 							if (segment.point1.y > body.GetPosition().y) {
-								start = { segment.point1.x, segment.point1.y };
-								end = { segment.point2.x, segment.point2.y };
+								//start = { segment.point1.x, segment.point1.y };
+								//end = { segment.point2.x, segment.point2.y };
 								entity->UpContact = true;
 							}
 							else entity->DownContact = true;

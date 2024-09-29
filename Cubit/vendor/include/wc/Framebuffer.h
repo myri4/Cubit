@@ -7,7 +7,8 @@ namespace wc
 	// @brief Encapsulates a single frame buffer attachment
 	struct FramebufferAttachment
 	{
-		wc::Image image;
+		//wc::
+		Image image;
 		VkImageView view;
 		VkFormat format = VK_FORMAT_UNDEFINED;
 		VkImageSubresourceRange subresourceRange = {};

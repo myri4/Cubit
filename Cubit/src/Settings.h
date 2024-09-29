@@ -2,14 +2,15 @@
 
 #include <glm/glm.hpp>
 #include <filesystem>
+#include "../vendor/include/wc/Utils/Window.h"
 
 // Gui
-#include <imgui/imgui.h>
+//#include <imgui/imgui.h>
 #include <wc/Utils/YAML.h>
 
 namespace wc
 {
-	using KeyType = int32_t; // @TODO: Fix the entire input system and change this to uint
+	using KeyType = uint16_t; // @TODO: Fix the entire input system and change this to uint
 
 	enum class GraphicsOption : uint8_t { OFF, PERF, QUALITY };
 
@@ -36,15 +37,17 @@ namespace wc
 		int SFXVolume = 50;
 
 		// Controls
-		KeyType KeyLeft = ImGuiKey_A;
-		KeyType KeyRight = ImGuiKey_D;
-		KeyType KeyJump = ImGuiKey_Space;
-		KeyType KeyDash = ImGuiKey_LeftShift;
-		KeyType KeyMelee = ImGuiKey_E;
-		KeyType KeyShoot = ImGuiKey_MouseLeft;
-		KeyType KeyMainWeapon = ImGuiKey_1;
-		KeyType KeySecondaryWeapon = ImGuiKey_2;
-		KeyType KeyFastSwich = ImGuiKey_Q; // @TODO: Make it so it changes to the last weapon used
+		KeyCode KeyLeft = KeyCode::A;
+		KeyCode KeyRight = KeyCode::D;
+		KeyCode KeyReload = KeyCode::R;
+		KeyCode KeyJump = KeyCode::Space;
+		KeyCode KeyDash = KeyCode::LeftShift;
+		KeyCode KeyMelee = KeyCode::E;
+		KeyCode KeyMainWeapon = KeyCode::D1;
+		KeyCode KeySecondaryWeapon = KeyCode::D2;
+		KeyCode KeyFastSwich = KeyCode::Q;
+		MouseCode MouseShoot = MouseCode::Left;
+		MouseCode MouseAlt = MouseCode::Right;
 
 		void Save()
 		{
@@ -75,10 +78,10 @@ namespace wc
 			YAML_SAVE_VAR(settings, KeyJump);
 			YAML_SAVE_VAR(settings, KeyDash);
 			YAML_SAVE_VAR(settings, KeyMelee);
-			YAML_SAVE_VAR(settings, KeyShoot);
 			YAML_SAVE_VAR(settings, KeyMainWeapon);
 			YAML_SAVE_VAR(settings, KeySecondaryWeapon);
 			YAML_SAVE_VAR(settings, KeyFastSwich);
+			YAML_SAVE_VAR(settings, MouseShoot);
 
 			ChooseWindowSize();
 
@@ -119,10 +122,10 @@ namespace wc
 			YAML_LOAD_VAR(settings, KeyJump);
 			YAML_LOAD_VAR(settings, KeyDash);
 			YAML_LOAD_VAR(settings, KeyMelee);
-			YAML_LOAD_VAR(settings, KeyShoot);
 			YAML_LOAD_VAR(settings, KeyMainWeapon);
 			YAML_LOAD_VAR(settings, KeySecondaryWeapon);
 			YAML_LOAD_VAR(settings, KeyFastSwich);
+			YAML_LOAD_VAR(settings, MouseShoot);
 
 			ChooseWindowSize();
 		}

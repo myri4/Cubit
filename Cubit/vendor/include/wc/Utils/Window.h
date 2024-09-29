@@ -25,178 +25,229 @@ namespace wc
     };
 
     double scrollX = 0.f, scrollY = 0.f;
-    int MouseButtons[GLFW_MOUSE_BUTTON_LAST];
-    int KeyButtons[GLFW_KEY_LAST];
+    //int MouseButtons[GLFW_MOUSE_BUTTON_LAST];
+    //int KeyButtons[GLFW_KEY_LAST];
     glm::uvec2 cursorPosition = glm::uvec2(0);
+
+	enum class KeyCode : uint16_t
+	{
+		// From glfw3.h
+		Space = 32,
+		Apostrophe = 39, /* ' */
+		Comma = 44, /* , */
+		Minus = 45, /* - */
+		Period = 46, /* . */
+		Slash = 47, /* / */
+
+		D0 = 48, /* 0 */
+		D1 = 49, /* 1 */
+		D2 = 50, /* 2 */
+		D3 = 51, /* 3 */
+		D4 = 52, /* 4 */
+		D5 = 53, /* 5 */
+		D6 = 54, /* 6 */
+		D7 = 55, /* 7 */
+		D8 = 56, /* 8 */
+		D9 = 57, /* 9 */
+
+		Semicolon = 59, /* ; */
+		Equal = 61, /* = */
+
+		A = 65,
+		B = 66,
+		C = 67,
+		D = 68,
+		E = 69,
+		F = 70,
+		G = 71,
+		H = 72,
+		I = 73,
+		J = 74,
+		K = 75,
+		L = 76,
+		M = 77,
+		N = 78,
+		O = 79,
+		P = 80,
+		Q = 81,
+		R = 82,
+		S = 83,
+		T = 84,
+		U = 85,
+		V = 86,
+		W = 87,
+		X = 88,
+		Y = 89,
+		Z = 90,
+
+		LeftBracket = 91,  /* [ */
+		Backslash = 92,  /* \ */
+		RightBracket = 93,  /* ] */
+		GraveAccent = 96,  /* ` */
+
+		World1 = 161, /* non-US #1 */
+		World2 = 162, /* non-US #2 */
+
+		/* Function keys */
+		Escape = 256,
+		Enter = 257,
+		Tab = 258,
+		Backspace = 259,
+		Insert = 260,
+		Delete = 261,
+		Right = 262,
+		Left = 263,
+		Down = 264,
+		Up = 265,
+		PageUp = 266,
+		PageDown = 267,
+		Home = 268,
+		End = 269,
+		CapsLock = 280,
+		ScrollLock = 281,
+		NumLock = 282,
+		PrintScreen = 283,
+		Pause = 284,
+		F1 = 290,
+		F2 = 291,
+		F3 = 292,
+		F4 = 293,
+		F5 = 294,
+		F6 = 295,
+		F7 = 296,
+		F8 = 297,
+		F9 = 298,
+		F10 = 299,
+		F11 = 300,
+		F12 = 301,
+		F13 = 302,
+		F14 = 303,
+		F15 = 304,
+		F16 = 305,
+		F17 = 306,
+		F18 = 307,
+		F19 = 308,
+		F20 = 309,
+		F21 = 310,
+		F22 = 311,
+		F23 = 312,
+		F24 = 313,
+		F25 = 314,
+
+		/* Keypad */
+		KP0 = 320,
+		KP1 = 321,
+		KP2 = 322,
+		KP3 = 323,
+		KP4 = 324,
+		KP5 = 325,
+		KP6 = 326,
+		KP7 = 327,
+		KP8 = 328,
+		KP9 = 329,
+		KPDecimal = 330,
+		KPDivide = 331,
+		KPMultiply = 332,
+		KPSubtract = 333,
+		KPAdd = 334,
+		KPEnter = 335,
+		KPEqual = 336,
+
+		LeftShift = 340,
+		LeftControl = 341,
+		LeftAlt = 342,
+		LeftSuper = 343,
+		RightShift = 344,
+		RightControl = 345,
+		RightAlt = 346,
+		RightSuper = 347,
+		Menu = 348
+	};
 
     namespace Key 
     {
-        using KeyCode = uint16_t;
+		struct KeyData
+		{
+			bool Down = false;          // Is the key currently down?
+			float DownTime = 0.0f;  // How long has the key been held down?
+		};
+		
+        KeyData Keys[GLFW_KEY_LAST];
 
-        enum : KeyCode 
-        {
-            // From glfw3.h
-            Space = 32,
-            Apostrophe = 39, /* ' */
-            Comma = 44, /* , */
-            Minus = 45, /* - */
-            Period = 46, /* . */
-            Slash = 47, /* / */
+		bool IsKeyDown(KeyCode key) { return Keys[(int)key].Down; }
+		bool IsKeyPressed(KeyCode key) { return Keys[(int)key].Down && Keys[(int)key].DownTime == 0.0f; }
+		bool IsKeyUp(KeyCode key) { return !Keys[(int)key].Down; }
+		bool IsKeyReleased(KeyCode key) { return !Keys[(int)key].Down && Keys[(int)key].DownTime == 0.0f; }
+        // if < 0, time since last release (if turned on, else -1.0f) | if == 0, just pressed/released (check .Down) | if > 0, time since last press  
+		float DownDuration(KeyCode key) { return Keys[(int)key].DownTime; } 
 
-            D0 = 48, /* 0 */
-            D1 = 49, /* 1 */
-            D2 = 50, /* 2 */
-            D3 = 51, /* 3 */
-            D4 = 52, /* 4 */
-            D5 = 53, /* 5 */
-            D6 = 54, /* 6 */
-            D7 = 55, /* 7 */
-            D8 = 56, /* 8 */
-            D9 = 57, /* 9 */
-
-            Semicolon = 59, /* ; */
-            Equal = 61, /* = */
-
-            A = 65,
-            B = 66,
-            C = 67,
-            D = 68,
-            E = 69,
-            F = 70,
-            G = 71,
-            H = 72,
-            I = 73,
-            J = 74,
-            K = 75,
-            L = 76,
-            M = 77,
-            N = 78,
-            O = 79,
-            P = 80,
-            Q = 81,
-            R = 82,
-            S = 83,
-            T = 84,
-            U = 85,
-            V = 86,
-            W = 87,
-            X = 88,
-            Y = 89,
-            Z = 90,
-
-            LeftBracket = 91,  /* [ */
-            Backslash = 92,  /* \ */
-            RightBracket = 93,  /* ] */
-            GraveAccent = 96,  /* ` */
-
-            World1 = 161, /* non-US #1 */
-            World2 = 162, /* non-US #2 */
-
-            /* Function keys */
-            Escape = 256,
-            Enter = 257,
-            Tab = 258,
-            Backspace = 259,
-            Insert = 260,
-            Delete = 261,
-            Right = 262,
-            Left = 263,
-            Down = 264,
-            Up = 265,
-            PageUp = 266,
-            PageDown = 267,
-            Home = 268,
-            End = 269,
-            CapsLock = 280,
-            ScrollLock = 281,
-            NumLock = 282,
-            PrintScreen = 283,
-            Pause = 284,
-            F1 = 290,
-            F2 = 291,
-            F3 = 292,
-            F4 = 293,
-            F5 = 294,
-            F6 = 295,
-            F7 = 296,
-            F8 = 297,
-            F9 = 298,
-            F10 = 299,
-            F11 = 300,
-            F12 = 301,
-            F13 = 302,
-            F14 = 303,
-            F15 = 304,
-            F16 = 305,
-            F17 = 306,
-            F18 = 307,
-            F19 = 308,
-            F20 = 309,
-            F21 = 310,
-            F22 = 311,
-            F23 = 312,
-            F24 = 313,
-            F25 = 314,
-
-            /* Keypad */
-            KP0 = 320,
-            KP1 = 321,
-            KP2 = 322,
-            KP3 = 323,
-            KP4 = 324,
-            KP5 = 325,
-            KP6 = 326,
-            KP7 = 327,
-            KP8 = 328,
-            KP9 = 329,
-            KPDecimal = 330,
-            KPDivide = 331,
-            KPMultiply = 332,
-            KPSubtract = 333,
-            KPAdd = 334,
-            KPEnter = 335,
-            KPEqual = 336,
-
-            LeftShift = 340,
-            LeftControl = 341,
-            LeftAlt = 342,
-            LeftSuper = 343,
-            RightShift = 344,
-            RightControl = 345,
-            RightAlt = 346,
-            RightSuper = 347,
-            Menu = 348
-        };
-
-        int GetKey(KeyCode keyCode) { return KeyButtons[keyCode]; }
+        //old
+        //int GetKey(KeyCode keyCode) { return KeyButtons[(int)keyCode]; }
     }
+
+	enum class MouseCode : uint16_t
+	{
+		Button0 = 0,
+		Button1 = 1,
+		Button2 = 2,
+		Button3 = 3,
+		Button4 = 4,
+		Button5 = 5,
+		Button6 = 6,
+		Button7 = 7,
+
+		Last = Button7,
+		Left = Button0,
+		Right = Button1,
+		Middle = Button2
+	};
 
     namespace Mouse 
     {
-        using MouseCode = uint16_t;
+		struct MouseData
+		{
+			bool Down = false;          // Is the key currently down?
+			float DownTime = 0.0f;  // How long has the key been held down?
+		};
 
-        enum : MouseCode 
-        {
-            Button0 = 0,
-            Button1 = 1,
-            Button2 = 2,
-            Button3 = 3,
-            Button4 = 4,
-            Button5 = 5,
-            Button6 = 6,
-            Button7 = 7,
+        MouseData MouseBtn[GLFW_MOUSE_BUTTON_LAST];
 
-            LAST = Button7,
-            LEFT = Button0,
-            RIGHT = Button1,
-            MIDDLE = Button2
-        };
+		glm::uvec2 GetCursorPosition() { return cursorPosition; }
+		glm::vec2 GetMouseScroll() { return glm::vec2(scrollX, scrollY); }// .y = +1 if up, -1 if down 
 
-        int GetMouse(MouseCode key) { return MouseButtons[key]; }
-        glm::uvec2 GetCursorPosition() { return cursorPosition; }
-
-        glm::vec2 GetMouseScroll() { return glm::vec2(scrollX, scrollY); }
+		bool IsMouseDown(MouseCode button) { return MouseBtn[(int)button].Down; }
+		bool IsMousePressed(MouseCode button) { return MouseBtn[(int)button].Down && MouseBtn[(int)button].DownTime == 0.0f; }
+		bool IsMouseUp(MouseCode button) { return !MouseBtn[(int)button].Down; }
+		bool IsMouseReleased(MouseCode button) { return !MouseBtn[(int)button].Down && MouseBtn[(int)button].DownTime == 0.0f; }
+		// if < 0, time since last release (if turned on, else -1.0f) | if == 0, just pressed/released (check .Down) | if > 0, time since last press  
+		float DownDuration(MouseCode button) { return MouseBtn[(int)button].DownTime; }
+        
+        //old
+        //int GetMouse(MouseCode button) { return MouseButtons[(int)button]; }
     }
+
+	void UpdateInputTimer(float time)
+	{
+        //Keyboard input timer reset
+		for (int i = GLFW_KEY_SPACE; i < GLFW_KEY_LAST; i++) // space is first key
+		{
+			if (Key::Keys[i].Down)
+				Key::Keys[i].DownTime += time;
+			else
+				//Key::Keys[i].DownTime -= time; enable if we need to know how long key was released
+				Key::Keys[i].DownTime = -1.0f;
+		}
+
+		//Mouse input timer reset
+		for (int i = GLFW_MOUSE_BUTTON_1; i < GLFW_MOUSE_BUTTON_LAST; i++) // space is first key
+		{
+			if (Mouse::MouseBtn[i].Down)
+                Mouse::MouseBtn[i].DownTime += time;
+			else
+				//Key::Keys[i].DownTime -= time; enable if we need to know how long key was released
+                Mouse::MouseBtn[i].DownTime = -1.0f;
+		}
+	}
 
     enum WindowMode { Normal, Maximized, Fullscreen };
 
@@ -241,7 +292,18 @@ namespace wc
                 });
 
             glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
-                KeyButtons[key] = action;
+                //KeyButtons[key] = action;
+
+				if (action == GLFW_PRESS)
+				{
+					Key::Keys[key].Down = true;
+                    Key::Keys[key].DownTime = 0.0f;
+				}
+				else if (action == GLFW_RELEASE)
+				{
+					Key::Keys[key].Down = false;
+                    Key::Keys[key].DownTime = 0.0f;
+				}
 
                 ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
                 });
@@ -252,7 +314,19 @@ namespace wc
                 });
 
             glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mods) {
-                MouseButtons[button] = action;
+                //MouseButtons[button] = action;
+                
+				if (action == GLFW_PRESS)
+				{
+					Mouse::MouseBtn[button].Down = true;
+                    Mouse::MouseBtn[button].DownTime = 0.0f;
+				}
+				else if (action == GLFW_RELEASE)
+				{
+                    Mouse::MouseBtn[button].Down = false;
+                    Mouse::MouseBtn[button].DownTime = 0.0f;
+				}
+
                 ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
                 });
 

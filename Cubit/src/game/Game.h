@@ -66,8 +66,6 @@ namespace wc
 			m_Map.player.RightContact = false;
 		}
 
-		
-
 		std::string levelPath;
 	public:	
 		bool Overlay = true;
@@ -215,14 +213,22 @@ namespace wc
 		void InputGame()
 		{
 			auto& player = m_Map.player;
+	
+			//if (Mouse::IsMouseReleased(MouseCode::LEFT))WC_CORE_INFO("Mouse Pressed");
 
-			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyLeft) && player.LeftContact == 0) player.MoveDir = -1.f;
-			else if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyRight) && player.RightContact == 0) player.MoveDir = 1.f;
+			//if (Key::IsKeyPressed(KeyCode::C))
+			//{
+			//	WC_CORE_INFO(Key::DownDuration(KeyCode::C))
+			//	//Key::downDuration(KeyCode::C);
+			//}
+
+			if (Key::IsKeyDown(Globals.settings.KeyLeft) && player.LeftContact == 0) player.MoveDir = -1.f;
+			else if (Key::IsKeyDown(Globals.settings.KeyRight) && player.RightContact == 0) player.MoveDir = 1.f;
 			else player.MoveDir = 0.f;
 
 			if (player.MoveDir != 0.f)
 			{
-				if (Key::GetKey(Key::LeftShift) == GLFW_PRESS && player.DashCD <= 0.f)
+				if (Key::IsKeyPressed(Globals.settings.KeyDash) && player.DashCD <= 0.f)
 				{
 					ma_engine_play_sound(&Globals.sfx_engine, "assets/sound/sfx/dash.wav", NULL);
 					player.Body.ApplyLinearImpulseToCenter({ 50.f * player.Body.GetMass() * player.MoveDir, 0.f }, true);
@@ -230,16 +236,16 @@ namespace wc
 				}
 			}
 
-			if (ImGui::IsKeyReleased((ImGuiKey)Globals.settings.KeyFastSwich))
+			if (Key::IsKeyPressed(Globals.settings.KeyFastSwich))
 			{
 				if (player.Weapon == player.PrimaryWeapon) player.Weapon = player.SecondaryWeapon;
 				else player.Weapon = player.PrimaryWeapon;
 			}
 
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyMainWeapon))
+			if (Key::IsKeyPressed(Globals.settings.KeyMainWeapon))
 				player.Weapon = player.PrimaryWeapon;
 
-			else if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeySecondaryWeapon))
+			else if (Key::IsKeyPressed(Globals.settings.KeySecondaryWeapon))
 				player.Weapon = player.SecondaryWeapon;
 
 			if (player.DownContact)
@@ -256,8 +262,7 @@ namespace wc
 			}
 			else if (player.Body.GetLinearVelocity().y < 0.f) player.Body.SetGravityScale(2.5f);
 
-
-			if (ImGui::IsKeyPressed((ImGuiKey)Globals.settings.KeyJump) && player.DownContact)
+			if (Key::IsKeyPressed(Globals.settings.KeyJump) && player.DownContact)
 			{
 				// @NOTE: if gravity is changed we should update this
 				float jumHeight = 8.f;
@@ -269,7 +274,7 @@ namespace wc
 
 			glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 
-			bool Zoom = WeaponStats[(int)player.Weapon].CanZoom && Mouse::GetMouse(Mouse::RIGHT) != GLFW_RELEASE;
+			bool Zoom = WeaponStats[(int)player.Weapon].CanZoom && Mouse::IsMouseDown(MouseCode::Right);
 
 			m_TargetRotation = 0.f;
 			if (Zoom)
@@ -282,12 +287,13 @@ namespace wc
 			else
 			{
 				m_TargetPosition = player.Position;
+				//m_TargetPosition = glm::vec2(m_Map.Size.x * 0.5f, m_Map.Size.y * 0.5f);
 				m_TargetZoom = 1.f;
 			}
 
-			if (ImGui::IsKeyPressed(ImGuiKey_R)) player.ReloadWeapon();
+			if (Key::IsKeyPressed(Globals.settings.KeyReload)) player.ReloadWeapon();
 
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && player.CanShoot())
+			if (Mouse::IsMouseDown(Globals.settings.MouseShoot) && player.CanShoot())
 			{
 				if (player.Weapon == WeaponType::Blaster)
 				{
@@ -370,7 +376,7 @@ namespace wc
 			}
 
 			//alt fire
-			if (ImGui::IsKeyDown(ImGuiKey_MouseRight) && player.CanShoot())
+			if (Mouse::IsMouseDown(Globals.settings.MouseAlt) && player.CanShoot())
 			{
 				glm::vec2 dir = glm::normalize(glm::vec2(camera.Position) + m_Renderer.ScreenToWorld(Globals.window.GetCursorPos()) - player.Position);
 
@@ -407,7 +413,7 @@ namespace wc
 			}
 
 
-			if (ImGui::IsKeyDown((ImGuiKey)Globals.settings.KeyMelee) && player.CanMelee())
+			if (Key::IsKeyPressed(Globals.settings.KeyMelee) && player.CanMelee())
 			{
 				if (player.MeleeWeapon == WeaponType::Sword)
 				{
@@ -883,18 +889,18 @@ namespace wc
 
 				if (ImGui::BeginTabItem("Controls")) 
 				{
-					UI::Separator("Movement");
-					UI::GetKey("Move Left", Globals.settings.KeyLeft, buttonChecks[0]);
-					UI::GetKey("Move Right", Globals.settings.	KeyRight, buttonChecks[1]);
-					UI::GetKey("Jump", Globals.settings.KeyJump, buttonChecks[2]);
-					UI::GetKey("Dash", Globals.settings.KeyDash, buttonChecks[3]);
-					UI::Separator("Weapons");
-					UI::GetKey("Shoot", Globals.settings.KeyShoot, buttonChecks[4]);
-					UI::GetKey("Melee", Globals.settings.KeyMelee, buttonChecks[5]);
-					UI::GetKey("Main Weapon", Globals.settings.KeyMainWeapon, buttonChecks[6]);
-					UI::GetKey("Secondary Weapon", Globals.settings.KeySecondaryWeapon, buttonChecks[7]);
-					UI::GetKey("Fast Switch", Globals.settings.KeyFastSwich, buttonChecks[8]);
-					UI::Separator("Game");
+					//UI::Separator("Movement");
+					//UI::GetKey("Move Left", Globals.settings.KeyLeft, buttonChecks[0]);
+					//UI::GetKey("Move Right", Globals.settings.	KeyRight, buttonChecks[1]);
+					//UI::GetKey("Jump", Globals.settings.KeyJump, buttonChecks[2]);
+					//UI::GetKey("Dash", Globals.settings.KeyDash, buttonChecks[3]);
+					//UI::Separator("Weapons");
+					//UI::GetKey("Shoot", Globals.settings.KeyShoot, buttonChecks[4]);
+					//UI::GetKey("Melee", Globals.settings.KeyMelee, buttonChecks[5]);
+					//UI::GetKey("Main Weapon", Globals.settings.KeyMainWeapon, buttonChecks[6]);
+					//UI::GetKey("Secondary Weapon", Globals.settings.KeySecondaryWeapon, buttonChecks[7]);
+					//UI::GetKey("Fast Switch", Globals.settings.KeyFastSwich, buttonChecks[8]);
+					//UI::Separator("Game");
 
 					ImGui::EndTabItem();
 				}
