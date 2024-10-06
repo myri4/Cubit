@@ -1,0 +1,82 @@
+#pragma shader_stage(compute)
+
+layout(local_size_x = 4, local_size_y = 4) in;
+layout(binding = 0, rgba32f) restrict writeonly uniform image2D o_Image;
+
+layout(binding = 1) uniform sampler2D u_Texture;
+
+#define MODE_SEED 0
+#define MODE_JFA 1
+#define MODE_SDF 2
+
+layout (push_constant) uniform IndexData
+{
+    vec2 uOffset;
+    uint mode;
+};
+
+void main()
+{
+    vec2 imgSize = vec2(imageSize(o_Image));
+
+    ivec2 invocID = ivec2(gl_GlobalInvocationID);
+    vec2 vUv = vec2(float(invocID.x) / imgSize.x, float(invocID.y) / imgSize.y);
+    vUv += (1.f / imgSize) * 0.5f;
+
+    vec2 texSize = vec2(textureSize(u_Texture, 0));
+    
+    vec4 result = vec4(0.f);
+
+    if (mode == MODE_SEED)
+    {
+        vec2 texCoords = vUv;
+
+        vec3 color = vec3(1, 0, 1);
+
+        float alpha = sign(texture(u_Texture, texCoords).a);
+        color = vec3(texCoords * alpha, 0.0);
+
+        result = vec4(color, 1.f);
+    }
+    else if (mode == MODE_JFA)
+    {
+        vec4 nearestSeed = vec4(-2.f);
+        float nearestDist = 999999.9;
+        for (float y = -1.f; y <= 1.f; y += 1.f) 
+        {
+            for (float x = -1.f; x <= 1.f; x += 1.f) 
+            {
+                vec2 sampleUV = vUv + vec2(x, y) * uOffset / texSize;
+
+                if (sampleUV.x < 0.f || sampleUV.x > 1.f || sampleUV.y < 0.f || sampleUV.y > 1.f) { continue; }
+
+                vec4 sampleValue = texture(u_Texture, sampleUV);
+                vec2 sampleSeed = sampleValue.xy;
+                
+                if (sampleSeed.x != 0.0 || sampleSeed.y != 0.0) 
+                {
+                    vec2 diff = sampleSeed - vUv;
+                    float dist = dot(diff, diff);
+                    if (dist < nearestDist) 
+                    {
+                       nearestDist = dist;
+                       nearestSeed = sampleValue;
+                    }
+                }
+            }
+        }
+
+        result = nearestSeed;
+    }
+    else if (mode == MODE_SDF)
+    {
+        vec2 nearestSeed = texture(u_Texture, vUv).xy;
+        // Clamp by the size of our texture (1.0 in uv space).
+        float distance = clamp(distance(vUv, nearestSeed), 0.0, 1.0);
+        
+        // Normalize and visualize the distance
+        result = vec4(vec3(distance), 1.f);
+    }
+
+    imageStore(o_Image, ivec2(gl_GlobalInvocationID), result);
+}

@@ -449,8 +449,8 @@ namespace wc
 		VkPipelineLayout GetPipelineLayout() const { return m_PipelineLayout; }
 		DescriptorSetLayout GetDescriptorLayout() const { return m_DescriptorLayout; }
 
-
-		void Create(const ComputeShaderCreateInfo& createInfo) {
+		void Create(const ComputeShaderCreateInfo& createInfo) 
+		{
 			VkShaderModule shaderModule;
 
 				auto binary = ReadBinary(createInfo.path);
@@ -641,6 +641,17 @@ namespace wc
 
 		void PushConstants(CommandBuffer cmd, uint32_t size, const void* data, uint32_t offset = 0) 
 		{ cmd.PushConstants(m_PipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, size, data, offset);	}
+
+		template<typename T>
+		void PushConstants(CommandBuffer cmd, const T& data)
+		{ cmd.PushConstants(m_PipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(data), &data, 0);	}
+
+		DescriptorSet AllocateDescriptorSet()
+		{
+			DescriptorSet descriptor;
+			descriptorAllocator.allocate(descriptor, GetDescriptorLayout());
+			return descriptor;
+		}
 
 		void Destroy() 
 		{

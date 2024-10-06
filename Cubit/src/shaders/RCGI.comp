@@ -1,0 +1,117 @@
+#pragma shader_stage(compute)
+#include "include/constants.glsl"
+#include "include/Random.glsl"
+
+layout(local_size_x = 4, local_size_y = 4) in;
+layout(binding = 0, rgba32f) restrict writeonly uniform image2D o_Image;
+
+layout(binding = 1) uniform sampler2D u_DistanceTexture;
+layout(binding = 2) uniform sampler2D u_SceneTexture;
+layout(binding = 3) uniform sampler2D u_LastTexture;
+
+layout(push_constant) uniform IndexData
+{
+    float base;
+
+	//float rayCount;
+	float sqrtBase;
+	//float oneOverRayCount;
+	float angleStepSize;
+	uint firstLevel;
+	float spacing;
+	float intervalStart;
+	float intervalLength;
+    float upperSpacing;
+
+	float cascadeIndex;
+	float cascadeCount;
+};
+
+bool outOfBounds(vec2 uv) { return uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0; }
+
+const int maxSteps = 32;
+
+void main()
+{
+    vec2 resolution = vec2(imageSize(o_Image));
+    
+    ivec2 invocID = ivec2(gl_GlobalInvocationID);
+    vec2 uv = vec2(float(invocID.x) / resolution.x, float(invocID.y) / resolution.y);
+    uv += (1.f / resolution) * 0.5f;
+    
+    
+    vec2 cascadeExtent = resolution;
+    vec2 coord = floor(uv * cascadeExtent);
+    
+    vec4 radiance = vec4(0.0);
+    
+    vec2 size = floor(cascadeExtent / spacing); // pc
+    
+    vec2 probeRelativePosition = mod(coord, size);
+    vec2 probeCenter = (probeRelativePosition + 0.5) * spacing;
+    vec2 normalizedProbeCenter = probeCenter / resolution;
+    
+    vec2 oneOverSize = 1.0 / resolution;
+    vec2 scale = min(resolution.x, resolution.y) * oneOverSize;    
+    
+    vec2 rayPos = floor(coord / size);
+    float baseIndex = float(base) * (rayPos.x + (spacing * rayPos.y));
+    
+    float minStepSize = min(oneOverSize.x, oneOverSize.y) * 0.5;
+    
+    for (int i = 0; i < int(base); i++) 
+    {
+        float index = baseIndex + float(i);
+        float angleStep = index + 0.5;
+        float angle = angleStepSize * angleStep;
+        vec2 rayDirection = vec2(cos(angle), -sin(angle));
+        
+        vec2 sampleUv = normalizedProbeCenter + intervalStart * rayDirection * scale;
+        vec4 radDelta = vec4(0.0);
+        float traveled = 0.0;
+        
+        if (!outOfBounds(sampleUv))
+        {
+            // We tested uv already (we know we aren't an object), so skip step 0.
+            for (int step = 1; step < maxSteps; step++) 
+            {
+                float dist = texture(u_DistanceTexture, sampleUv).r;
+                
+                sampleUv += rayDirection * dist * scale;
+                
+                if (outOfBounds(sampleUv)) break;
+                
+                if (dist <= minStepSize) 
+                {
+                    vec4 colorSample = texture(u_SceneTexture, sampleUv);
+                    radDelta += colorSample;
+                    break;
+                }
+                
+                traveled += dist;
+                if (traveled >= intervalLength) break;
+            }
+        }
+
+        // Only merge on non-opaque areas
+        if (firstLevel == 1 && radDelta.a == 0.f) 
+        {
+            vec2 upperSize = floor(cascadeExtent / upperSpacing);
+            vec2 upperPosition = vec2(mod(index, upperSpacing), floor(index / upperSpacing)) * upperSize;
+            
+            vec2 offset = (probeRelativePosition + 0.5) / sqrtBase;
+            vec2 clamped = clamp(offset, vec2(0.5), upperSize - 0.5);
+            
+            vec4 upperSample = texture(u_LastTexture, (upperPosition + clamped) / cascadeExtent);
+            
+            radDelta += upperSample;
+        }
+        
+        radiance += radDelta;
+    }
+    
+    vec4 totalRadiance = vec4(radiance.rgb / float(base), 1.0);
+    
+    imageStore(o_Image, ivec2(gl_GlobalInvocationID), vec4(totalRadiance.rgb, 1.f));
+}
+

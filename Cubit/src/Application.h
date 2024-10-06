@@ -279,6 +279,11 @@ namespace wc
 
 			VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
+			VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+			timelineInfo.waitSemaphoreValueCount = 2;
+			uint64_t waitValues[] = { SyncContext::m_TimelineValue, 0 };
+			timelineInfo.pWaitSemaphoreValues = waitValues;
+			submit.pNext = &timelineInfo;
 			submit.commandBufferCount = 1;
 			submit.pCommandBuffers = cmd.GetPointer();
 
@@ -286,12 +291,10 @@ namespace wc
 
 			submit.pWaitDstStageMask = waitStage;
 
-			Semaphore waitSemaphores[] = { SyncContext::GetImageAvaibleSemaphore(), m_Renderer.RenderSemaphore[CURRENT_FRAME],};
+			Semaphore waitSemaphores[] = { SyncContext::m_TimelineSemaphore, SyncContext::GetImageAvaibleSemaphore(),};
 
 			submit.waitSemaphoreCount = ARRAYSIZE(waitSemaphores);
 			submit.pWaitSemaphores = (VkSemaphore*)waitSemaphores;
-
-			if (Globals.gameState != GameState::PLAY) submit.waitSemaphoreCount = 1;
 
 			submit.signalSemaphoreCount = 1;
 			submit.pSignalSemaphores = SyncContext::GetRenderSemaphore().GetPointer();

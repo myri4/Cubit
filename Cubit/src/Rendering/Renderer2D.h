@@ -14,15 +14,6 @@
 
 namespace wc
 {
-	struct Synchronizer
-	{
-	private:
-		std::vector<Semaphore> m_Semaphores;
-
-	public:
-	};
-
-
 	class Renderer2D
 	{
 		glm::vec2 m_TileSize = glm::vec2(16.f, 9.f); // @TODO: maybe rename?
@@ -59,13 +50,29 @@ namespace wc
 		Image m_FinalImage[3];
 		ImageView m_FinalImageView[3];
 
-		Semaphore m_BackgroundSemaphore[FRAME_OVERLAP];
-		Semaphore m_RtoPPSemaphore[FRAME_OVERLAP]; // Semaphore for synchronizing between main rendering and post processing
-
 		CommandBuffer m_Cmd[FRAME_OVERLAP];
 		CommandBuffer m_ComputeCmd[FRAME_OVERLAP];
+
+		// Radiance cascades
+		ComputeShader m_RCJFAShader;
+		ComputeShader m_RCGIShader;
+
+		Image m_RCBufferImage[2];
+		ImageView m_RCBufferImageView[2];
+
+		Image m_RCDistImage;
+		ImageView m_RCDistImageView;
+
+		uint32_t m_RCCascadeCount = 0;
+		uint32_t m_RCBaseRayCount = 16;
+		uint32_t m_RCJFAPasses = 0;
+		std::vector<DescriptorSet> m_RCJFASets;
+		std::vector<DescriptorSet> m_RCGISets;
+		DescriptorSet m_RCSeedDescriptor;
+		DescriptorSet m_RCGIDescriptor;
+
+
 	public:
-		Semaphore RenderSemaphore[FRAME_OVERLAP]; // Semaphore for signaling the end of the frame rendering
 		uint32_t BackgroundTexture = 0;
 
 		struct ChromaticAberrationSettings
@@ -124,16 +131,15 @@ namespace wc
 
 			for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
 			{
-				m_BackgroundSemaphore[i].Create();
-				m_RtoPPSemaphore[i].Create();
-				RenderSemaphore[i].Create();
-
 				SyncContext::CommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, m_Cmd[i]);
 				SyncContext::ComputeCommandPool.Allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, m_ComputeCmd[i]);
-
-				m_RtoPPSemaphore[i].SetName(std::format("Renderer2D::m_RtoPPSemaphore[{}]", i));
-				RenderSemaphore[i].SetName(std::format("Renderer2D::RenderSemaphore[{}]", i));
 			}
+
+			m_RCJFAShader.Create("assets/shaders/RCJFA.comp");
+			descriptorAllocator.allocate(m_RCSeedDescriptor, m_RCJFAShader.GetDescriptorLayout());
+
+			m_RCGIShader.Create("assets/shaders/RCGI.comp");
+			descriptorAllocator.allocate(m_RCGIDescriptor, m_RCGIShader.GetDescriptorLayout());
 		}
 
 		void CreateScreen(glm::vec2 size, RenderData& renderData)
@@ -163,16 +169,31 @@ namespace wc
 				m_FinalImage[i].Create(imageInfo);
 				m_FinalImage[i].SetName(std::format("Renderer2D::FinalImage[{}]", i));
 
-				VkImageViewCreateInfo imageView = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-				imageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
-				imageView.format = imageInfo.format;
-				imageView.subresourceRange = {};
-				imageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				imageView.subresourceRange.layerCount = 1;
-				imageView.subresourceRange.levelCount = 1;
-				imageView.image = m_FinalImage[i];
-				m_FinalImageView[i].Create(imageView);
+				m_FinalImageView[i].Create(m_FinalImage[i]);
 				m_FinalImageView[i].SetName(std::format("Renderer2D::FinalImageView[{}]", i));
+			}
+
+			for (int i = 0; i < ARRAYSIZE(m_RCBufferImage); i++)
+			{
+				ImageCreateInfo imageInfo;
+				imageInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+				imageInfo.width = m_RenderSize.x;
+				imageInfo.height = m_RenderSize.y;
+				imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+				m_RCBufferImage[i].Create(imageInfo);
+				m_RCBufferImage[i].SetName(std::format("Renderer2D::m_RCBufferImage[{}]", i));
+				m_RCBufferImageView[i].Create(m_RCBufferImage[i]);
+			}
+
+			{ // @TODO: consider making this R32 texture instead
+				ImageCreateInfo imageInfo;
+				imageInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+				imageInfo.width = m_RenderSize.x;
+				imageInfo.height = m_RenderSize.y;
+				imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+				m_RCDistImage.Create(imageInfo);
+
+				m_RCDistImageView.Create(m_RCDistImage);
 			}
 
 			{
@@ -186,6 +207,10 @@ namespace wc
 			SyncContext::immediate_submit([&](VkCommandBuffer cmd) {
 				for (int i = 0; i < ARRAYSIZE(m_FinalImage); i++)
 					m_FinalImage[i].setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+				for (int i = 0; i < ARRAYSIZE(m_RCBufferImage); i++)
+					m_RCBufferImage[i].setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+				m_RCDistImage.setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
 				if (BackgroundTexture == 0) renderData.Textures[BackgroundTexture].GetImage().setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 			});
@@ -237,32 +262,90 @@ namespace wc
 			{
 				DescriptorWriter writer;
 				writer.dstSet = m_CompositeSet;
-				writer.write_image(0, GetDescriptorData(m_ScreenSampler, m_FinalImageView[0], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-					.write_image(1, GetDescriptorData(m_ScreenSampler, m_Framebuffer.attachments[0].view, VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-					.write_image(2, GetDescriptorData(m_ScreenSampler, m_BloomBuffers[2].imageViews[0], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				writer.write_image(0, { m_ScreenSampler, m_FinalImageView[0], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+					.write_image(1, { m_ScreenSampler, m_Framebuffer.attachments[0].view, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+					.write_image(2, { m_ScreenSampler, m_BloomBuffers[2].imageViews[0], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 					.Update();
 			}
 			{
 				DescriptorWriter writer;
 				writer.dstSet = m_ChromaSet;
-				writer.write_image(0, GetDescriptorData(m_ScreenSampler, m_FinalImageView[1], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-					.write_image(1, GetDescriptorData(m_ScreenSampler, m_FinalImageView[0], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				writer.write_image(0, { m_ScreenSampler, m_FinalImageView[1], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+					.write_image(1, { m_ScreenSampler, m_FinalImageView[0], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 					.Update();
 			}
 			{
 				DescriptorWriter writer;
 				writer.dstSet = m_CRTSet;
-				writer.write_image(0, GetDescriptorData(m_ScreenSampler, m_FinalImageView[2], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-					.write_image(1, GetDescriptorData(m_ScreenSampler, m_FinalImageView[1], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				writer.write_image(0, { m_ScreenSampler, m_FinalImageView[2], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+					.write_image(1, { m_ScreenSampler, m_FinalImageView[1], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 					.Update();
 			}
 			{
 				auto& texture = renderData.Textures[BackgroundTexture];
 				DescriptorWriter writer;
 				writer.dstSet = m_BackgroundSet;
-				writer.write_image(0, GetDescriptorData(texture.GetSampler(), texture.GetView(), VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+				writer.write_image(0, { texture.GetSampler(), texture.GetView(), VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
 					.Update();
 			}
+			// Radiance cascades
+			{
+				DescriptorWriter writer;
+				writer.dstSet = m_RCSeedDescriptor;
+				writer.write_image(0, { m_ScreenSampler, m_RCBufferImageView[0], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+				writer.write_image(1, { m_ScreenSampler, m_Framebuffer.attachments[0].view, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.Update();
+			}
+
+			auto diagonal = glm::sqrt(m_RenderSize.x * m_RenderSize.x + m_RenderSize.y * m_RenderSize.y);
+
+			// Our calculation for number of cascades
+			m_RCCascadeCount = glm::ceil(glm::log(diagonal) / glm::log(m_RCBaseRayCount)) + 1;
+			
+			m_RCJFAPasses = glm::ceil(glm::log2(glm::max(m_RenderSize.x, m_RenderSize.y)));
+			//m_RCJFASets.reserve(m_RCJFAPasses); // @NOTE: See bloom descriptor set vector clearing
+			for (int i = 0; i < m_RCJFAPasses; i++)
+			{
+				DescriptorSet descriptor = m_RCJFAShader.AllocateDescriptorSet();
+				DescriptorWriter writer;
+				writer.dstSet = descriptor;
+				writer.write_image(0, { m_ScreenSampler, m_RCBufferImageView[(i + 1) % 2], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+				writer.write_image(1, { m_ScreenSampler, m_RCBufferImageView[(i) % 2], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.Update();
+				m_RCJFASets.push_back(descriptor);
+			}
+			{
+				DescriptorSet descriptor = m_RCJFAShader.AllocateDescriptorSet();
+				DescriptorWriter writer;
+				writer.dstSet = descriptor;
+				writer.write_image(0, { m_ScreenSampler, m_RCDistImageView, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+				writer.write_image(1, { m_ScreenSampler, m_RCBufferImageView[(m_RCJFAPasses) % 2], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.Update();
+				m_RCJFASets.push_back(descriptor);
+			}
+			for (int i = m_RCCascadeCount - 1; i >= 0; i--)
+			{
+				DescriptorSet descriptor = m_RCGIShader.AllocateDescriptorSet();
+				DescriptorWriter writer;
+				writer.dstSet = descriptor;
+				writer.write_image(0, { m_ScreenSampler, m_RCBufferImageView[(i) % 2], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+				writer.write_image(1, { m_ScreenSampler, m_RCDistImageView, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.write_image(2, { m_ScreenSampler, m_Framebuffer.attachments[0].view, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.write_image(3, { m_ScreenSampler, m_RCBufferImageView[(i + 1) % 2], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.Update();
+				m_RCGISets.push_back(descriptor);
+			}
+			{
+				descriptorAllocator.allocate(m_RCGIDescriptor, m_RCGIShader.GetDescriptorLayout());
+				int i = m_RCJFAPasses;
+				DescriptorWriter writer;
+				writer.dstSet = m_RCGIDescriptor;
+				writer.write_image(0, { m_ScreenSampler, m_RCBufferImageView[(m_RCJFAPasses) % 2], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+				writer.write_image(1, { m_ScreenSampler, m_RCDistImageView, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.write_image(2, { m_ScreenSampler, m_Framebuffer.attachments[0].view, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.Update();
+			}
+
 			{
 				ShaderCreateInfo createInfo;
 				createInfo.vertexShader = "assets/shaders/Line.vert";
@@ -285,7 +368,7 @@ namespace wc
 				writer.Update();
 			}
 
-			m_ImageID = MakeImGuiDescriptor(m_ImageID, { m_ScreenSampler, m_FinalImageView[2], VK_IMAGE_LAYOUT_GENERAL });
+			m_ImageID = MakeImGuiDescriptor(m_ImageID, { m_ScreenSampler, m_RCBufferImageView[1], VK_IMAGE_LAYOUT_GENERAL });
 			{
 				DescriptorWriter writer;
 				writer.dstSet = m_DescriptorSet;
@@ -314,6 +397,48 @@ namespace wc
 			CreateScreen(newSize, renderData);
 		}
 
+		void DestroyScreen()
+		{
+			m_Framebuffer.Destroy();
+
+			m_Shader.Destroy();
+			m_LineShader.Destroy();
+
+			m_ScreenSampler.Destroy();
+
+			for (int i = 0; i < ARRAYSIZE(m_FinalImage); i++)
+			{
+				m_FinalImage[i].Destroy();
+				m_FinalImageView[i].Destroy();
+			}
+
+			for (int i = 0; i < ARRAYSIZE(m_RCBufferImage); i++)
+			{
+				m_RCBufferImage[i].Destroy();
+				m_RCBufferImageView[i].Destroy();
+			}
+
+			m_RCDistImage.Destroy();
+			m_RCDistImageView.Destroy();
+
+			m_RCJFASets.clear();
+
+			DestroyBloomImages();
+		}
+
+		void Deinit()
+		{
+			DeinitBloom();
+			m_BackgroundShader.Destroy();
+			m_CompositeShader.Destroy();
+			m_ChromaShader.Destroy();
+			m_CRTShader.Destroy();
+			m_RCJFAShader.Destroy();
+			m_RCGIShader.Destroy();
+
+			DestroyScreen();
+		}
+
 		void Flush(RenderData& renderData)
 		{
 			//if (!m_IndexCount && !m_LineVertexCount) return;
@@ -335,24 +460,12 @@ namespace wc
 				m_Data.time = time;
 				m_Data.zoom = camera->Zoom;
 				m_Data.cameraPos = glm::vec2(camera->Position);
-				m_BackgroundShader.PushConstants(cmd, sizeof(m_Data), &m_Data);
+				m_BackgroundShader.PushConstants(cmd, m_Data);
 				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
 
 				cmd.End();
 
-				VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-
-				submit.commandBufferCount = 1;
-				submit.pCommandBuffers = cmd.GetPointer();
-
-				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-				submit.pSignalSemaphores = m_BackgroundSemaphore[CURRENT_FRAME].GetPointer();
-				submit.signalSemaphoreCount = 1;
-
-				submit.pWaitDstStageMask = &waitStage;
-
-				SyncContext::GetComputeQueue().Submit(submit);
+				SyncContext::Submit(cmd, SyncContext::GetComputeQueue());
 			}
 
 			{
@@ -365,7 +478,7 @@ namespace wc
 				rpInfo.framebuffer = m_Framebuffer.framebuffer;
 				rpInfo.clearValueCount = 1;
 				VkClearValue clearValue;
-				clearValue.color = { 0.f, 0.f, 0.f, 1.f };
+				clearValue.color = { 0.f, 0.f, 0.f, 0.f };
 				rpInfo.pClearValues = &clearValue;
 
 				rpInfo.renderArea.extent = { (uint32_t)m_RenderSize.x, (uint32_t)m_RenderSize.y };
@@ -395,39 +508,117 @@ namespace wc
 				cmd.EndRenderPass();
 				cmd.End();
 
-				VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-
-				submit.commandBufferCount = 1;
-				submit.pCommandBuffers = cmd.GetPointer();
-
-				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-				if (Globals.settings.Background)
-				{
-					submit.pWaitSemaphores = m_BackgroundSemaphore[CURRENT_FRAME].GetPointer();
-					submit.waitSemaphoreCount = 1;
-				}
-
-				submit.pSignalSemaphores = m_RtoPPSemaphore[CURRENT_FRAME].GetPointer();
-				submit.signalSemaphoreCount = 1;
-
-				submit.pWaitDstStageMask = &waitStage;
-
-				SyncContext::GetGraphicsQueue().Submit(submit);
+				SyncContext::Submit(cmd, SyncContext::GetGraphicsQueue());
 			}
 
 			{				
 				CommandBuffer& cmd = m_ComputeCmd[CURRENT_FRAME];
 				cmd.Reset();
 				cmd.Begin();
+
+				if (true)
+				{
+					{
+						enum
+						{
+							MODE_SEED,
+							MODE_JFA,
+							MODE_SDF,
+						};
+						struct
+						{
+							glm::vec2 uOffset;
+							uint32_t mode = MODE_SEED;
+						}u_data;
+						cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_RCJFAShader.GetPipelineLayout(), m_RCSeedDescriptor);
+						m_RCJFAShader.PushConstants(cmd, u_data);
+
+						m_RCJFAShader.Bind(cmd);
+						cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
+						u_data.mode = MODE_JFA;
+						for (int i = 0; i < m_RCJFAPasses; i++)
+						{
+							u_data.uOffset = glm::vec2(glm::pow(2, m_RCJFAPasses - i - 1));
+							cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_RCJFAShader.GetPipelineLayout(), m_RCJFASets[i]);
+							m_RCJFAShader.Bind(cmd);
+							m_RCJFAShader.PushConstants(cmd, u_data);
+							cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
+						}
+
+						cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_RCJFAShader.GetPipelineLayout(), m_RCJFASets[m_RCJFAPasses]);
+						u_data.mode = MODE_SDF;
+						m_RCJFAShader.PushConstants(cmd, u_data);
+						m_RCJFAShader.Bind(cmd);
+						cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
+					}
+
+					//m_RCGIShader.Bind(cmd);
+					//cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_RCGIShader.GetPipelineLayout(), m_RCGIDescriptor);
+					//cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
+					struct
+					{
+						float base;
+
+						//float rayCount;
+						float sqrtBase;
+						//float oneOverRayCount;
+						float angleStepSize;
+						uint32_t firstLevel;
+						float spacing;
+						float intervalStart;
+						float intervalLength;
+						float upperSpacing;
+
+						float cascadeIndex;
+						float cascadeCount;
+					}u_data;
+					u_data.base = m_RCBaseRayCount;
+					u_data.cascadeCount = m_RCCascadeCount;
+					u_data.sqrtBase = glm::sqrt(u_data.base);
+
+					for (int i = m_RCCascadeCount - 1; i >= 0; i--)
+					{
+						u_data.cascadeIndex = i;
+						u_data.firstLevel = u_data.cascadeIndex == 0.f;
+
+						float rayCount = glm::pow(u_data.base, u_data.cascadeIndex + 1.f);
+						u_data.angleStepSize = glm::tau<float>() / rayCount;
+						u_data.spacing = glm::pow(u_data.sqrtBase, u_data.cascadeIndex);
+						u_data.upperSpacing = glm::pow(u_data.sqrtBase, u_data.cascadeIndex + 1.0);
+						float modifierHack = u_data.base < 16.0 ? 1.0 : 4.0; // Hand-wavy rule that improved smoothing of other base ray counts
+						float oneOverShortestSize = 1.f / glm::min(m_RenderSize.x, m_RenderSize.y);
+						u_data.intervalStart = u_data.firstLevel == 1 ? 0.0 : (modifierHack * pow(u_data.base, u_data.cascadeIndex - 1.0)) * oneOverShortestSize;
+						u_data.intervalLength = (modifierHack * pow(u_data.base, u_data.cascadeIndex)) * oneOverShortestSize; // Calculate which set of rays we care about
+
+						m_RCGIShader.Bind(cmd);
+						m_RCGIShader.PushConstants(cmd, u_data);
+						cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_RCGIShader.GetPipelineLayout(), m_RCGISets[i]);
+						cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
+					}
+				}
+
 				if (Globals.settings.Bloom)
 				{
 					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_BloomShader.GetPipeline());
 					uint32_t counter = 0;
 
-					BloomBufferSettings settings;
+					enum class BloomMode
+					{
+						Prefilter,
+						Downsample,
+						UpsampleFirst,
+						Upsample
+					};
+
+					struct
+					{
+						glm::vec4 Params = glm::vec4(1.f); // (x) threshold, (y) threshold - knee, (z) knee * 2, (w) 0.25 / knee
+						float LOD = 0.f;
+						int Mode = (int)BloomMode::Prefilter;
+					} settings;
+
 					settings.Params = glm::vec4(BloomThreshold, BloomThreshold - BloomKnee, BloomKnee * 2.f, 0.25f / BloomKnee);
-					m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+					m_BloomShader.PushConstants(cmd, settings);
 					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
 					counter++;
 					cmd.Dispatch(glm::ceil(glm::vec2(m_BloomBuffers[0].image.GetSize()) / glm::vec2(m_ComputeWorkGroupSize)));
@@ -439,7 +630,7 @@ namespace wc
 
 						// Ping 
 						settings.LOD = float(currentMip - 1);
-						m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+						m_BloomShader.PushConstants(cmd, settings);
 
 						cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
 						counter++;
@@ -447,7 +638,7 @@ namespace wc
 
 						// Pong 
 						settings.LOD = float(currentMip);
-						m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+						m_BloomShader.PushConstants(cmd, settings);
 
 						cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
 						counter++;
@@ -457,7 +648,7 @@ namespace wc
 					// First Upsample		
 					settings.LOD = float(m_BloomMipLevels - 2);
 					settings.Mode = (int)BloomMode::UpsampleFirst;
-					m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+					m_BloomShader.PushConstants(cmd, settings);
 
 					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
 					counter++;
@@ -468,7 +659,7 @@ namespace wc
 					for (int currentMip = m_BloomMipLevels - 2; currentMip >= 0; currentMip--)
 					{
 						settings.LOD = float(currentMip);
-						m_BloomShader.PushConstants(cmd, sizeof(settings), &settings);
+						m_BloomShader.PushConstants(cmd, settings);
 
 						cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_BloomShader.GetPipelineLayout(), m_BloomSets[counter]);
 						counter++;
@@ -485,7 +676,7 @@ namespace wc
 						uint32_t Bloom;
 					}m_Data;
 					m_Data.Bloom = Globals.settings.Bloom;
-					m_CompositeShader.PushConstants(cmd, sizeof(m_Data), &m_Data);
+					m_CompositeShader.PushConstants(cmd, m_Data);
 					cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
 				}
 
@@ -493,7 +684,7 @@ namespace wc
 				{
 					cmd.BindDescriptorSet(VK_PIPELINE_BIND_POINT_COMPUTE, 0, m_ChromaShader.GetPipelineLayout(), m_ChromaSet);
 					m_ChromaShader.Bind(cmd);
-					m_ChromaShader.PushConstants(cmd, sizeof(ChromaSettings), &ChromaSettings);
+					m_ChromaShader.PushConstants(cmd, ChromaSettings);
 					cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
 				}
 
@@ -510,64 +701,13 @@ namespace wc
 				m_Data.Vignete = Globals.settings.Vignete;
 				m_Data.Brighness = Globals.settings.Brighness;
 
-				m_CRTShader.PushConstants(cmd, sizeof(m_Data), &m_Data);
+				m_CRTShader.PushConstants(cmd, m_Data);
 				cmd.Dispatch(glm::ceil((glm::vec2)m_RenderSize / glm::vec2(m_ComputeWorkGroupSize)));
 
 				cmd.End();
 
-				VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-
-				submit.commandBufferCount = 1;
-				submit.pCommandBuffers = cmd.GetPointer();
-
-				VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-				submit.pWaitSemaphores = m_RtoPPSemaphore[CURRENT_FRAME].GetPointer();
-				submit.waitSemaphoreCount = 1;
-
-				submit.pSignalSemaphores = RenderSemaphore[CURRENT_FRAME].GetPointer();
-				submit.signalSemaphoreCount = 1;
-
-				submit.pWaitDstStageMask = &waitStage;
-
-				SyncContext::GetComputeQueue().Submit(submit);
+				SyncContext::Submit(cmd, SyncContext::GetComputeQueue());
 			}
-		}
-
-		void DestroyScreen()
-		{
-			m_Framebuffer.Destroy();
-
-			m_Shader.Destroy();
-			m_LineShader.Destroy();
-
-			m_ScreenSampler.Destroy();
-
-			for (int i = 0; i < ARRAYSIZE(m_FinalImage); i++)
-			{
-				m_FinalImage[i].Destroy();
-				m_FinalImageView[i].Destroy();
-			}
-
-			DestroyBloomImages();
-		}
-
-		void Deinit()
-		{
-			DeinitBloom();
-			m_BackgroundShader.Destroy();
-			m_CompositeShader.Destroy();
-			m_ChromaShader.Destroy();
-			m_CRTShader.Destroy();
-
-			for (uint32_t i = 0; i < FRAME_OVERLAP; i++)
-			{
-				m_BackgroundSemaphore[i].Destroy();
-				m_RtoPPSemaphore[i].Destroy();
-				RenderSemaphore[i].Destroy();
-			}
-
-			DestroyScreen();
 		}
 	};
 }

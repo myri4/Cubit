@@ -57,6 +57,61 @@ namespace wc
 		}
 	};
 
+	struct TimelineSemaphore : public VkObject<VkSemaphore>
+	{
+		void Create(uint64_t initialValue = 0, VkSemaphoreCreateFlags flags = 0)
+		{
+			VkSemaphoreTypeCreateInfo timelineCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
+			timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+			timelineCreateInfo.initialValue = initialValue;
+
+			VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+			semaphoreCreateInfo.pNext = &timelineCreateInfo;
+			semaphoreCreateInfo.flags = flags;
+
+			vkCreateSemaphore(VulkanContext::GetLogicalDevice(), &semaphoreCreateInfo, VulkanContext::GetAllocator(), &m_RendererID);
+		}
+
+		void Create(const std::string& name, uint64_t initialValue = 0)
+		{
+			Create(initialValue);
+			SetName(name);
+		}
+
+		void Destroy()
+		{
+			vkDestroySemaphore(VulkanContext::GetLogicalDevice(), m_RendererID, VulkanContext::GetAllocator());
+			m_RendererID = VK_NULL_HANDLE;
+		}
+
+		void Signal(uint64_t value)
+		{
+			VkSemaphoreSignalInfo signalInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO };
+			signalInfo.semaphore = m_RendererID;
+			signalInfo.value = value;
+
+			vkSignalSemaphore(VulkanContext::GetLogicalDevice(), &signalInfo);
+		}
+
+		void Wait(uint64_t waitValue, uint64_t timeout = UINT64_MAX)
+		{
+			VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
+			waitInfo.flags = 0;
+			waitInfo.semaphoreCount = 1;
+			waitInfo.pSemaphores = &m_RendererID;
+			waitInfo.pValues = &waitValue;
+
+			vkWaitSemaphores(VulkanContext::GetLogicalDevice(), &waitInfo, timeout);
+		}
+
+		auto GetCounterValue()
+		{
+			uint64_t value;
+			vkGetSemaphoreCounterValue(VulkanContext::GetLogicalDevice(), m_RendererID, &value);
+			return value;
+		}
+	};
+
 	struct Event : public VkObject<VkEvent> 
 	{
 		void Create(const VkEventCreateInfo& eventCreateInfo) { vkCreateEvent(VulkanContext::GetLogicalDevice(), &eventCreateInfo, VulkanContext::GetAllocator(), &m_RendererID); }

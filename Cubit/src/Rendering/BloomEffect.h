@@ -7,22 +7,14 @@
 
 #include <wc/vk/SyncContext.h>
 
-// @TODO: Make an usable api in the future that just applies effects to images.
-// The api should be structured like a rendergraph and should have automatic synchronazation just like opengl.
+// @TODO: Make an usable API in the future that just applies effects to images.
+// The API should be structured like a render graph and should have automatic synchronization just like OpenGL.
 
 namespace wc
 {
 	uint32_t m_ComputeWorkGroupSize = 4; // @TODO: REMOVE!!!?
 	float BloomThreshold = 1.2f;
-	float BloomKnee = 0.6f;
-
-	enum class BloomMode
-	{
-		Prefilter,
-		Downsample,
-		UpsampleFirst,
-		Upsample
-	};
+	float BloomKnee = 0.6f;	
 
 	Sampler m_BloomSampler;
 	ComputeShader m_BloomShader;
@@ -87,26 +79,19 @@ namespace wc
 		}
 	} m_BloomBuffers[3];
 
-	struct BloomBufferSettings
-	{
-		glm::vec4 Params = glm::vec4(1.f); // (x) threshold, (y) threshold - knee, (z) knee * 2, (w) 0.25 / knee
-		float LOD = 0.f;
-		int Mode = (int)BloomMode::Prefilter;
-	};
-
 	void GenerateBloomDescriptor(const ImageView& outputView, const ImageView& bloomView)
 	{
 		DescriptorSet& descriptor = m_BloomSets.emplace_back();
 		descriptorAllocator.allocate(descriptor, m_BloomShader.GetDescriptorLayout());
 		DescriptorWriter writer;
 		writer.dstSet = descriptor;
-		writer.write_image(0, GetDescriptorData(m_ScreenSampler, outputView, VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-		writer.write_image(1, GetDescriptorData(m_ScreenSampler, bloomView, VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-		writer.write_image(2, GetDescriptorData(m_ScreenSampler, m_BloomBuffers[2].imageViews[0], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		writer.write_image(0, { m_ScreenSampler, outputView, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+		writer.write_image(1, { m_ScreenSampler, bloomView, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		writer.write_image(2, { m_ScreenSampler, m_BloomBuffers[2].imageViews[0], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 		writer.Update();
 	}
 
-	// @TODO/NOTE? : mipLevelCount can be ommited and maybe should be
+	// @TODO/NOTE? : mipLevelCount can be omitted and maybe should be
 	void CreateBloomImages(glm::vec2 renderSize, uint32_t mipLevelCount)
 	{
 		glm::ivec2 bloomTexSize = renderSize * 0.5f;
