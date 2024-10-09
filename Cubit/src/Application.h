@@ -87,37 +87,6 @@ namespace wc
 				game.InputGame();
 		}
 
-		void Credits()
-		{
-			const ImGuiViewport* viewport = ImGui::GetMainViewport();
-			ImGui::SetNextWindowPos(viewport->WorkPos);
-			ImGui::SetNextWindowSize(viewport->WorkSize);
-			ImGui::SetNextWindowViewport(viewport->ID);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);			 
-
-			ImGui::Begin("Credits", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
-			ImGui::SetWindowFontScale(0.65f);
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer").y) * 0.5f - 200));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Mariyan Fakirov(aka myri) - Programming:  Game Engine and Graphics / Lead Programmer");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Martin Geshev(aka geshev) - Programming : Sound / Music / Sound Design").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Martin Geshev(aka geshev) - Programming : Sound / Music / Sound Design").y) * 0.5f - 150));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Martin Geshev(aka geshev) - Programming : Sound / Music / Sound Design");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Hristo Arabadzhiev(aka Icaka) - Programming : Player Mechanics and Movement / Level Design / Credits").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Hristo Arabadzhiev(aka Icaka) - Programming : Player Mechanics and Movement / Level Design / Credits").y) * 0.5f - 100));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Hristo Arabadzhiev(aka Icaka) - Programming : Player Mechanics and Movement / Level Design / Credits");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Georgi(aka gosho / jojo) - Programming : enemy AI").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Georgi(aka gosho / jojo) - Programming : enemy AI").y) * 0.5f - 50));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Georgi(aka gosho / jojo) - Programming : enemy AI");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("Bulgaria na 3 moreta").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("Bulgaria na 3 moreta").y) * 0.5f));
-			ImGui::TextColored(ImVec4(0, 1.f, 1.f, 1.f), "Bulgaria na 3 moreta");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - 270) * 0.5f, (ImGui::GetWindowSize().y + 300) * 0.5f));
-			if (ImGui::Button("Go Back", ImVec2(270, 100)))Globals.gameState = GameState::MENU;
-			ImGui::End();
-			ImGui::PopStyleVar(5);
-		}
-
 		void CreateAudio()
 		{
 			ma_engine_init(NULL, &Globals.sfx_engine);
@@ -172,34 +141,6 @@ namespace wc
 				ma_sound_set_fade_in_milliseconds(&Globals.music_main, 0, 1, Globals.music_fade_time_mls);
 				ma_sound_start(&Globals.music_main);
 			}
-
-			if (Globals.gameState == GameState::DEATH && !death)
-			{
-				death = true;
-				main_menu = false;
-				play = false;
-				win = false;
-
-				ma_sound_set_fade_in_milliseconds(&Globals.music_main, -1, 0, Globals.music_fade_time_mls);
-
-				ma_sound_seek_to_pcm_frame(&Globals.music_GameOver, 0);
-				ma_sound_set_fade_in_milliseconds(&Globals.music_GameOver, 0, 1, Globals.music_fade_time_mls);
-				ma_sound_start(&Globals.music_GameOver);
-			}
-
-			if (Globals.gameState == GameState::WIN && !win)
-			{
-				win = true;
-				main_menu = false;
-				death = false;
-				play = false;
-
-				ma_sound_set_fade_in_milliseconds(&Globals.music_main, -1, 0, Globals.music_fade_time_mls);
-
-				ma_sound_seek_to_pcm_frame(&Globals.music_win, 0);
-				ma_sound_set_fade_in_milliseconds(&Globals.music_win, 0, 1, Globals.music_fade_time_mls);
-				ma_sound_start(&Globals.music_win);
-			}
 		}
 
 		void DestroySound()
@@ -237,13 +178,8 @@ namespace wc
 
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
-			ImGuizmo::BeginFrame();
 			if (Globals.gameState == GameState::MENU) game.MAIN_MENU();
-			else if (Globals.gameState == GameState::DEATH) game.DEATH_MENU();
-			else if (Globals.gameState == GameState::WIN) game.WIN_MENU();
 			else if (Globals.gameState == GameState::PLAY) game.UI();
-			else if (Globals.gameState == GameState::LOADOUT) game.LOADOUT_MENU();
-			else if (Globals.gameState == GameState::CREDITS) Credits();
 			else if (Globals.gameState == GameState::SETTINGS) game.SETTINGS_MENU();
 			else if (Globals.gameState == GameState::PAUSE) game.PAUSE_MENU();
 			ImGui::Render();			
@@ -279,6 +215,11 @@ namespace wc
 
 			VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
+			VkTimelineSemaphoreSubmitInfo timelineInfo = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+			timelineInfo.waitSemaphoreValueCount = 2;
+			uint64_t waitValues[] = { SyncContext::m_TimelineValue, 0 };
+			timelineInfo.pWaitSemaphoreValues = waitValues;
+			submit.pNext = &timelineInfo;
 			submit.commandBufferCount = 1;
 			submit.pCommandBuffers = cmd.GetPointer();
 
@@ -286,20 +227,18 @@ namespace wc
 
 			submit.pWaitDstStageMask = waitStage;
 
-			Semaphore waitSemaphores[] = { SyncContext::GetImageAvaibleSemaphore(), m_Renderer.RenderSemaphore[CURRENT_FRAME],};
+			Semaphore waitSemaphores[] = { SyncContext::m_TimelineSemaphore, SyncContext::GetImageAvaibleSemaphore(), };
 
 			submit.waitSemaphoreCount = ARRAYSIZE(waitSemaphores);
 			submit.pWaitSemaphores = (VkSemaphore*)waitSemaphores;
 
-			if (Globals.gameState != GameState::PLAY) submit.waitSemaphoreCount = 1;
-
 			submit.signalSemaphoreCount = 1;
-			submit.pSignalSemaphores = SyncContext::GetRenderSemaphore().GetPointer();
+			submit.pSignalSemaphores = SyncContext::GetPresentSemaphore().GetPointer();
 
 			SyncContext::GetGraphicsQueue().Submit(submit, SyncContext::GetRenderFence());
 
 			
-			VkResult presentationResult = Globals.window.Present(swapchainImageIndex, SyncContext::GetRenderSemaphore(), SyncContext::GetPresentQueue());
+			VkResult presentationResult = Globals.window.Present(swapchainImageIndex, SyncContext::GetPresentSemaphore(), SyncContext::GetPresentQueue());
 
 			if (presentationResult == VK_ERROR_OUT_OF_DATE_KHR || presentationResult == VK_SUBOPTIMAL_KHR || Globals.window.resized)
 			{

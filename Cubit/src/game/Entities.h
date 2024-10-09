@@ -149,7 +149,7 @@ namespace wc
 			}
 			else
 			{
-				if (weapon.Magazine < weaponStats.MaxMag)weapon.Timer = weaponStats.ReloadSpeed;
+				if (weapon.Magazine < weaponStats.MaxMag) weapon.Timer = weaponStats.ReloadSpeed;
 				if (weapon.Ammo >= weaponStats.MaxMag - weapon.Magazine) 
                 {
 					weapon.Ammo -= weaponStats.MaxMag - weapon.Magazine;

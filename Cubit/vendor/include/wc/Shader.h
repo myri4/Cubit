@@ -12,9 +12,9 @@
 #include <filesystem>
 #include <spirv_cross/spirv_cross.hpp>
 
-namespace wc 
+namespace wc
 {
-	inline std::vector<uint32_t> ReadBinary(const std::string& filename) 
+	inline std::vector<uint32_t> ReadBinary(const std::string& filename)
 	{
 		std::vector<uint32_t> buffer;
 		std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -40,7 +40,7 @@ namespace wc
 		return buffer;
 	}
 
-	struct ShaderCreateInfo 
+	struct ShaderCreateInfo
 	{
 		std::string vertexShader;
 		std::string fragmentShader;
@@ -75,7 +75,7 @@ namespace wc
 		DescriptorSetLayout GetDescriptorLayout() const { return m_DescriptorLayout; }
 		//PipelineCache GetCache() const { return m_Cache; }
 
-		void Create(const ShaderCreateInfo& createInfo) 
+		void Create(const ShaderCreateInfo& createInfo)
 		{
 			std::array<VkShaderModule, 2> shaderModules = {};
 			std::vector<uint32_t> binaries[2] = {};
@@ -123,7 +123,7 @@ namespace wc
 				std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 				std::vector<VkPushConstantRange> ranges;
 
-				for (uint32_t i = 0; i < shaderModules.size(); i++) 
+				for (uint32_t i = 0; i < shaderModules.size(); i++)
 				{
 					spirv_cross::Compiler compiler(binaries[i]);
 					spirv_cross::ShaderResources resources = compiler.get_shader_resources();
@@ -131,7 +131,7 @@ namespace wc
 					spirv_cross::EntryPoint entryPoint = compiler.get_entry_points_and_stages()[0];
 					VkShaderStageFlags shaderStage = VkShaderStageFlagBits(1 << entryPoint.execution_model);
 
-					for (auto& resource : resources.push_constant_buffers) 
+					for (auto& resource : resources.push_constant_buffers)
 					{
 						auto& baseType = compiler.get_type(resource.base_type_id);
 						uint32_t bufferSize = (uint32_t)compiler.get_declared_struct_size(baseType);
@@ -147,20 +147,20 @@ namespace wc
 					}
 
 
-					for (auto& resource : resources.uniform_buffers) 
+					for (auto& resource : resources.uniform_buffers)
 					{
 						bool add = true;
 						VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 						uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
-						for (auto& layoutBinding : layoutBindings) 
+						for (auto& layoutBinding : layoutBindings)
 							if (layoutBinding.descriptorType == descriptorType && layoutBinding.binding == binding)
 							{
 								add = false;
 								layoutBinding.stageFlags |= shaderStage;
 								break;
-							}						
+							}
 
-						if (add) 
+						if (add)
 						{
 							auto& layoutBinding = layoutBindings.emplace_back();
 
@@ -177,20 +177,20 @@ namespace wc
 						}
 					}
 
-					for (auto& resource : resources.storage_buffers) 
+					for (auto& resource : resources.storage_buffers)
 					{
 						bool add = true;
 						VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 						uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
-						for (auto& layoutBinding : layoutBindings) 
+						for (auto& layoutBinding : layoutBindings)
 							if (layoutBinding.descriptorType == descriptorType && layoutBinding.binding == binding)
 							{
 								add = false;
 								layoutBinding.stageFlags |= shaderStage;
 								break;
-							}						
+							}
 
-						if (add) 
+						if (add)
 						{
 							auto& layoutBinding = layoutBindings.emplace_back();
 
@@ -208,9 +208,9 @@ namespace wc
 						}
 					}
 
-					if (shaderStage == VK_SHADER_STAGE_FRAGMENT_BIT) 
+					if (shaderStage == VK_SHADER_STAGE_FRAGMENT_BIT)
 					{
-						for (auto& resource : resources.storage_images) 
+						for (auto& resource : resources.storage_images)
 						{
 							auto& layoutBinding = layoutBindings.emplace_back();
 
@@ -226,7 +226,7 @@ namespace wc
 							layoutBinding.pImmutableSamplers = nullptr;
 						}
 
-						for (auto& resource : resources.sampled_images) 
+						for (auto& resource : resources.sampled_images)
 						{
 							auto& layoutBinding = layoutBindings.emplace_back();
 
@@ -234,7 +234,7 @@ namespace wc
 
 							uint32_t descriptorCount = 1;
 							//if (type.array[0] > 0) descriptorCount = type.array[0];
-							
+
 							layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 							layoutBinding.descriptorCount = descriptorCount;
 							layoutBinding.stageFlags = shaderStage;
@@ -261,7 +261,7 @@ namespace wc
 
 				VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
 
-				if (createInfo.bindingFlagCount > 0) 
+				if (createInfo.bindingFlagCount > 0)
 				{
 					binding_flags.bindingCount = createInfo.bindingFlagCount;
 					binding_flags.pBindingFlags = createInfo.bindingFlags;
@@ -406,16 +406,16 @@ namespace wc
 			for (uint32_t i = 0; i < shaderModules.size(); i++) vkDestroyShaderModule(VulkanContext::GetLogicalDevice(), shaderModules[i], nullptr);
 		}
 
-		void Bind(CommandBuffer cmd) { vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);	}
+		void Bind(CommandBuffer cmd) { vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline); }
 
-		void SaveCache() 
+		void SaveCache()
 		{
 #if DISABLE_CACHING == 0 // @TODO(myri4): need to add it above
 			//cache.SaveToFile(cachePath);
 #endif
 		}
 
-		void Destroy() 
+		void Destroy()
 		{
 			vkDestroyPipeline(VulkanContext::GetLogicalDevice(), m_Pipeline, VulkanContext::GetAllocator());
 			m_Pipeline = VK_NULL_HANDLE;
@@ -428,7 +428,7 @@ namespace wc
 		}
 	};
 
-	struct ComputeShaderCreateInfo 
+	struct ComputeShaderCreateInfo
 	{
 		std::string path;
 		//std::string infoPath;
@@ -439,7 +439,7 @@ namespace wc
 		uint32_t dynamicDescriptorCount = 0;
 	};
 
-	class ComputeShader 
+	class ComputeShader
 	{
 		VkPipeline m_Pipeline;
 		VkPipelineLayout m_PipelineLayout;
@@ -449,11 +449,11 @@ namespace wc
 		VkPipelineLayout GetPipelineLayout() const { return m_PipelineLayout; }
 		DescriptorSetLayout GetDescriptorLayout() const { return m_DescriptorLayout; }
 
-
-		void Create(const ComputeShaderCreateInfo& createInfo) {
+		void Create(const ComputeShaderCreateInfo& createInfo)
+		{
 			VkShaderModule shaderModule;
 
-				auto binary = ReadBinary(createInfo.path);
+			auto binary = ReadBinary(createInfo.path);
 			{
 				VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 
@@ -477,15 +477,15 @@ namespace wc
 					bool add = true;
 					VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 					uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
-					for (auto& layoutBinding : layoutBindings) 
+					for (auto& layoutBinding : layoutBindings)
 						if (layoutBinding.descriptorType == descriptorType && layoutBinding.binding == binding)
 						{
 							add = false;
 							layoutBinding.stageFlags |= shaderStage;
 							break;
-						}					
+						}
 
-					if (add) 
+					if (add)
 					{
 						auto& layoutBinding = layoutBindings.emplace_back();
 
@@ -506,15 +506,15 @@ namespace wc
 					bool add = true;
 					VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
-					for (auto& layoutBinding : layoutBindings) 
+					for (auto& layoutBinding : layoutBindings)
 						if (layoutBinding.descriptorType == descriptorType && layoutBinding.binding == binding)
 						{
 							add = false;
 							layoutBinding.stageFlags |= shaderStage;
 							break;
-						}					
+						}
 
-					if (add) 
+					if (add)
 					{
 						auto& layoutBinding = layoutBindings.emplace_back();
 
@@ -532,7 +532,7 @@ namespace wc
 				}
 
 
-				for (auto& resource : resources.storage_images) 
+				for (auto& resource : resources.storage_images)
 				{
 					auto& layoutBinding = layoutBindings.emplace_back();
 
@@ -548,7 +548,7 @@ namespace wc
 					layoutBinding.pImmutableSamplers = nullptr;
 				}
 
-				for (auto& resource : resources.sampled_images) 
+				for (auto& resource : resources.sampled_images)
 				{
 					auto& layoutBinding = layoutBindings.emplace_back();
 
@@ -574,7 +574,7 @@ namespace wc
 
 				VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
 
-				if (createInfo.bindingFlagCount > 0) 
+				if (createInfo.bindingFlagCount > 0)
 				{
 					binding_flags.bindingCount = createInfo.bindingFlagCount;
 					binding_flags.pBindingFlags = createInfo.bindingFlags;
@@ -593,7 +593,7 @@ namespace wc
 				range.size = 0;
 				range.offset = 0;
 				range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-				if (resources.push_constant_buffers.size() > 0) 
+				if (resources.push_constant_buffers.size() > 0)
 				{
 					auto& baseType = compiler.get_type(resources.push_constant_buffers[0].base_type_id);
 					range.size = (uint32_t)compiler.get_declared_struct_size(baseType);
@@ -608,13 +608,13 @@ namespace wc
 			//finally build the pipeline
 			VkComputePipelineCreateInfo pipelineCreateInfo = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
 
-			
+
 			VkPipelineShaderStageCreateInfo stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 
 			stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 			stage.module = shaderModule;
 			stage.pName = "main";
-			pipelineCreateInfo.stage = stage;			
+			pipelineCreateInfo.stage = stage;
 			pipelineCreateInfo.layout = m_PipelineLayout;
 
 			vkCreateComputePipelines(VulkanContext::GetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, VulkanContext::GetAllocator(), &m_Pipeline);
@@ -622,14 +622,14 @@ namespace wc
 			vkDestroyShaderModule(VulkanContext::GetLogicalDevice(), shaderModule, nullptr);
 		}
 
-		void Create(const std::string& path) 
+		void Create(const std::string& path)
 		{
 			ComputeShaderCreateInfo info;
 			info.path = path;
 			Create(info);
 		}
 
-		void Create(const std::string& path, const std::string& infoPath) 
+		void Create(const std::string& path, const std::string& infoPath)
 		{
 			ComputeShaderCreateInfo createInfo;
 			createInfo.path = path;
@@ -639,10 +639,25 @@ namespace wc
 
 		void Bind(CommandBuffer cmd) { vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_Pipeline); }
 
-		void PushConstants(CommandBuffer cmd, uint32_t size, const void* data, uint32_t offset = 0) 
-		{ cmd.PushConstants(m_PipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, size, data, offset);	}
+		void PushConstants(CommandBuffer cmd, uint32_t size, const void* data, uint32_t offset = 0)
+		{
+			cmd.PushConstants(m_PipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, size, data, offset);
+		}
 
-		void Destroy() 
+		template<typename T>
+		void PushConstants(CommandBuffer cmd, const T& data)
+		{
+			cmd.PushConstants(m_PipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(data), &data, 0);
+		}
+
+		DescriptorSet AllocateDescriptorSet()
+		{
+			DescriptorSet descriptor;
+			descriptorAllocator.allocate(descriptor, GetDescriptorLayout());
+			return descriptor;
+		}
+
+		void Destroy()
 		{
 			vkDestroyPipeline(VulkanContext::GetLogicalDevice(), m_Pipeline, VulkanContext::GetAllocator());
 			m_Pipeline = VK_NULL_HANDLE;

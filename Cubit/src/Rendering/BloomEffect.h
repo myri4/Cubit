@@ -7,8 +7,8 @@
 
 #include <wc/vk/SyncContext.h>
 
-// @TODO: Make an usable api in the future that just applies effects to images.
-// The api should be structured like a rendergraph and should have automatic synchronazation just like opengl.
+// @TODO: Make an usable API in the future that just applies effects to images.
+// The API should be structured like a render graph and should have automatic synchronization just like OpenGL.
 
 namespace wc
 {
@@ -16,17 +16,8 @@ namespace wc
 	float BloomThreshold = 1.2f;
 	float BloomKnee = 0.6f;
 
-	enum class BloomMode
-	{
-		Prefilter,
-		Downsample,
-		UpsampleFirst,
-		Upsample
-	};
-
-	Sampler m_BloomSampler;
 	ComputeShader m_BloomShader;
-	Sampler m_ScreenSampler;
+	Sampler m_BloomSampler;
 
 	std::vector<VkDescriptorSet> m_BloomSets;
 
@@ -49,9 +40,11 @@ namespace wc
 			imgInfo.mipLevels = mipLevels;
 			imgInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 
-			image.Create(imgInfo);			
+			image.Create(imgInfo);
 
 			{
+				imageViews.reserve(mipLevels);
+
 				VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 				createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 				createInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -62,7 +55,6 @@ namespace wc
 				createInfo.subresourceRange.baseMipLevel = 0;
 				createInfo.subresourceRange.baseArrayLayer = 0;
 				createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
 				{ // Creating the first image view
 					ImageView& imageView = imageViews.emplace_back();
 					imageView.Create(createInfo);
@@ -87,31 +79,23 @@ namespace wc
 		}
 	} m_BloomBuffers[3];
 
-	struct BloomBufferSettings
-	{
-		glm::vec4 Params = glm::vec4(1.f); // (x) threshold, (y) threshold - knee, (z) knee * 2, (w) 0.25 / knee
-		float LOD = 0.f;
-		int Mode = (int)BloomMode::Prefilter;
-	};
-
-	void GenerateBloomDescriptor(const ImageView& outputView, const ImageView& bloomView)
-	{
-		DescriptorSet& descriptor = m_BloomSets.emplace_back();
-		descriptorAllocator.allocate(descriptor, m_BloomShader.GetDescriptorLayout());
-		DescriptorWriter writer;
-		writer.dstSet = descriptor;
-		writer.write_image(0, GetDescriptorData(m_ScreenSampler, outputView, VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-		writer.write_image(1, GetDescriptorData(m_ScreenSampler, bloomView, VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-		writer.write_image(2, GetDescriptorData(m_ScreenSampler, m_BloomBuffers[2].imageViews[0], VK_IMAGE_LAYOUT_GENERAL), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-		writer.Update();
-	}
-
-	// @TODO/NOTE? : mipLevelCount can be ommited and maybe should be
 	void CreateBloomImages(glm::vec2 renderSize, uint32_t mipLevelCount)
 	{
 		glm::ivec2 bloomTexSize = renderSize * 0.5f;
 		bloomTexSize += glm::ivec2(m_ComputeWorkGroupSize - bloomTexSize.x % m_ComputeWorkGroupSize, m_ComputeWorkGroupSize - bloomTexSize.y % m_ComputeWorkGroupSize);
 		m_BloomMipLevels = mipLevelCount - 4;
+
+		SamplerCreateInfo sampler;
+		sampler.magFilter = Filter::LINEAR;
+		sampler.minFilter = Filter::LINEAR;
+		sampler.mipmapMode = SamplerMipmapMode::LINEAR;
+		sampler.addressModeU = SamplerAddressMode::CLAMP_TO_EDGE;
+		sampler.addressModeV = SamplerAddressMode::CLAMP_TO_EDGE;
+		sampler.addressModeW = SamplerAddressMode::CLAMP_TO_EDGE;
+		sampler.minLod = 0.f;
+		sampler.maxLod = float(m_BloomMipLevels);
+
+		m_BloomSampler.Create(sampler);
 
 		for (int i = 0; i < 3; i++)
 		{
@@ -128,9 +112,7 @@ namespace wc
 				range.layerCount = 1;
 				range.levelCount = m_BloomMipLevels;
 				for (int i = 0; i < 3; i++)
-				{
 					m_BloomBuffers[i].image.setLayout(cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, range);
-				}
 			});
 	}
 
@@ -139,17 +121,43 @@ namespace wc
 		m_BloomShader.Create("assets/shaders/bloom.comp");
 	}
 
-	void CreateBloom(ImageView imageView)
+	void CreateBloom(const ImageView& imageView)
 	{
+		m_BloomSets.reserve(m_BloomMipLevels * 3 - 1);
+
+		uint32_t usingSets = 0;
+
+		auto GenerateBloomDescriptor = [&](const ImageView& outputView, const ImageView& bloomView)
+			{
+				DescriptorSet* descriptor = nullptr;
+				if (usingSets < m_BloomSets.size())
+					descriptor = &m_BloomSets[usingSets];
+				else
+				{
+					descriptor = &m_BloomSets.emplace_back();
+					descriptorAllocator.allocate(*descriptor, m_BloomShader.GetDescriptorLayout());
+				}
+				usingSets++;
+
+				DescriptorWriter writer;
+				writer.dstSet = *descriptor;
+				writer.write_image(0, { m_BloomSampler, outputView, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+				writer.write_image(1, { m_BloomSampler, bloomView, VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.write_image(2, { m_BloomSampler, m_BloomBuffers[2].imageViews[0], VK_IMAGE_LAYOUT_GENERAL }, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				writer.Update();
+			};
+
 		GenerateBloomDescriptor(m_BloomBuffers[0].imageViews[0], imageView);
 
-		for (uint32_t currentMip = 1; currentMip < m_BloomMipLevels; currentMip++) {
+		for (uint32_t currentMip = 1; currentMip < m_BloomMipLevels; currentMip++) 
+		{
 			// Ping 
 			GenerateBloomDescriptor(m_BloomBuffers[1].imageViews[currentMip], m_BloomBuffers[0].imageViews[0]);
 
 			// Pong 
 			GenerateBloomDescriptor(m_BloomBuffers[0].imageViews[currentMip], m_BloomBuffers[1].imageViews[0]);
 		}
+
 
 		// First Upsample
 		GenerateBloomDescriptor(m_BloomBuffers[2].imageViews[m_BloomMipLevels - 1], m_BloomBuffers[0].imageViews[0]);
@@ -161,12 +169,11 @@ namespace wc
 	void DestroyBloomImages()
 	{
 		for (int i = 0; i < 3; i++) m_BloomBuffers[i].Destroy();
-		m_BloomSets.clear(); // @TODO/NOTE: This is a memory leak. We should be reusing the already generated descriptor sets
+		m_BloomSampler.Destroy();
 	}
 
 	void DeinitBloom()
 	{
 		m_BloomShader.Destroy();
-		m_ScreenSampler.Destroy();
 	}
 }

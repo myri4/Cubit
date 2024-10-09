@@ -63,8 +63,6 @@ namespace wc
 		}
 
 		float LevelTime = 0.f;
-
-		std::string levelPath;
 	public:	
 		bool Overlay = true;
 
@@ -301,7 +299,7 @@ namespace wc
 					ma_engine_play_sound(&Globals.sfx_engine, Globals.gun.c_str(), nullptr);
 
 					glm::vec2 shootPos = player.Position + dir * 0.25f;
-					auto hitInfo = m_Map.Intersect({ shootPos, dir }, 1, EntityType::Bullet);
+					auto hitInfo = m_Map.Intersect({ shootPos, dir }, 0.f, 1, EntityType::Bullet);
 
 					if (glm::distance(hitInfo.Point, player.Position) < WeaponStats[(int)WeaponType::Laser].Range) {
 						if (hitInfo.Hit && hitInfo.Entity) {
@@ -322,7 +320,7 @@ namespace wc
 					camera.Shake(0.8f);
 
 					glm::vec2 shootPos = player.Position + dir * 0.25f;
-					auto hitInfo = m_Map.Intersect({ shootPos, dir }, 1);
+					auto hitInfo = m_Map.Intersect({ shootPos, dir }, 0.f, 1);
 
 					if (hitInfo.t <= 5.f)
 					{
@@ -409,91 +407,16 @@ namespace wc
 				{
 					ma_engine_play_sound(&Globals.sfx_engine, Globals.swordSwing.c_str(), nullptr);
 					m_RotateSword = true;
-
-					for (uint32_t i = 0; i < m_Map.Entities.size(); i++)
-					{
-						auto& entity = *m_Map.Entities[i];
-#if 0
-						if (entity.Type == EntityType::RedCube)
-						{
-							float dist = glm::distance(entity.Position, player.Position);
-							if (dist < WeaponStats[(int)player.MeleeWeapon].Range)
-							{
-								glm::vec2 direction = glm::normalize(entity.Position - player.Position);
-
-								auto hitInfo = m_Map.Intersect({ player.Position, direction }, m_Map.Entities.size()); // We skip entity intersection
-
-								if ((hitInfo.Hit && dist <= hitInfo.t) || !hitInfo.Hit)
-								{
-									auto vel = glm::sign(direction.x) * 15.f * entity.Body->GetMass();
-									entity.Body->ApplyLinearImpulseToCenter(b2Vec2(vel, 0.f), true);
-									entity.DealDamage(WeaponStats[(int)player.MeleeWeapon].Damage);
-								}
-							}
-						}
-#endif
-					}
 				}
 
 				player.ResetMeleeTimer();
 			}
-
-			//if (ImGui::IsKeyPressed(ImGuiKey_F2))
-			//{
-			//	VulkanContext::GetLogicalDevice().WaitIdle();
-
-			//	uint32_t width = m_Renderer.GetRenderSize().x;
-			//	uint32_t height = m_Renderer.GetRenderSize().y;
-
-			//	StagingBuffer stagingBuffer;
-			//	stagingBuffer.Allocate(sizeof(float) * 4 * width * height, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-			//	SyncContext::immediate_submit([&](VkCommandBuffer cmd) {
-			//		m_Renderer.GetFinalImage().setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-			//		VkBufferImageCopy copyRegion = {};
-			//		copyRegion.bufferOffset = 0;
-			//		copyRegion.bufferRowLength = 0;
-			//		copyRegion.bufferImageHeight = 0;
-
-			//		copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			//		copyRegion.imageSubresource.mipLevel = 0;
-			//		copyRegion.imageSubresource.baseArrayLayer = 0;
-			//		copyRegion.imageSubresource.layerCount = 1;
-			//		copyRegion.imageExtent.width = width;
-			//		copyRegion.imageExtent.height = height;
-			//		copyRegion.imageExtent.depth = 1;
-
-			//		//copy the buffer into the image
-			//		vkCmdCopyImageToBuffer(cmd, m_Renderer.GetFinalImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingBuffer, 1, &copyRegion);
-
-			//		m_Renderer.GetFinalImage().setLayout(cmd, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
-			//		});
-
-			//	float* imagedata = (float*)stagingBuffer.Map();
-
-			//	const auto now = std::chrono::system_clock::now();
-			//	auto filename = std::format("screenshots/screenshot_{:%d-%m-%Y-%H-%M-%OS}.png", now);
-
-			//	int bytes_per_pixel = 4;
-			//	uint32_t bytes_per_scanline = bytes_per_pixel * width;
-			//	uint8_t* imageOutput = new uint8_t[width * height * bytes_per_pixel];
-
-			//	for (int i = 0; i < width * height * bytes_per_pixel; i++)
-			//		imageOutput[i] = (uint8_t)(imagedata[i] * 255.f);
-
-			//	stbi_write_png(filename.c_str(), width, height, bytes_per_pixel, imageOutput, bytes_per_scanline);
-			//	delete[] imageOutput;
-			//	stagingBuffer.Unmap();
-			//	stagingBuffer.Free();
-			//}
 		}
 
 		void RenderGame()
 		{
 			auto& player = m_Map.player;
 
-			m_RenderData.ViewProjection = glm::ortho(-0.5f, 0.5f, -0.5f, 0.5f, -1.f, 1.f);
-			m_RenderData.DrawQuad({ 0.f, 0.f, 0.f }, { 1.f, 1.f }, m_Renderer.BackgroundTexture);
 			m_RenderData.ViewProjection = camera.GetViewProjectionMatrix();
 
 			for (uint32_t x = 0; x < m_Map.Size.x; x++)
@@ -598,11 +521,8 @@ namespace wc
 				camera.Zoom += (m_TargetZoom - camera.Zoom) * 11.5f * Globals.deltaTime;
 				camera.Update(m_Renderer.GetHalfSize());
 			}
-			m_Renderer.ChromaSettings.Falloff += (m_TargetChromaFallOff - m_Renderer.ChromaSettings.Falloff) * 11.5f * Globals.deltaTime;
 
 			m_ParticleEmitter.OnUpdate();
-
-			if (!m_Map.player.Alive()) Globals.gameState = GameState::DEATH;
 
 			RenderGame();
 		}
@@ -678,10 +598,6 @@ namespace wc
 				Globals.gameState = GameState::PLAY;
 			}
 
-			ImVec2 LoadoutSize = ImGui::CalcTextSize("Loadout");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - LoadoutSize.x) * 0.5f, (ImGui::GetWindowSize().y - LoadoutSize.y) * 0.5f + 100));
-			if (ImGui::Button("Loadout")) Globals.gameState = GameState::LOADOUT;
-
 			ImVec2 SettingsSize = ImGui::CalcTextSize("Settings");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - SettingsSize.x) * 0.5f, (ImGui::GetWindowSize().y - SettingsSize.y) * 0.5f + 200));
 			if (ImGui::Button("Settings")) {
@@ -726,17 +642,10 @@ namespace wc
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ResumeSize.x) * 0.5f, (ImGui::GetWindowSize().y - ResumeSize.y) * 0.5f));
 			if (ImGui::Button("Resume"))Globals.gameState = GameState::PLAY;
 
-			ImVec2 ResetSize = ImGui::CalcTextSize("Reset");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ResetSize.x) * 0.5f, (ImGui::GetWindowSize().y - ResetSize.y) * 0.5f + 100));
-			if (ImGui::Button("Reset")) 
-			{
-				LoadFull(m_Map.levelPath);
-				Globals.gameState = GameState::PLAY;
-			}
-
 			ImVec2 SettingsSize = ImGui::CalcTextSize("Settings");
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - SettingsSize.x) * 0.5f, (ImGui::GetWindowSize().y - SettingsSize.y) * 0.5f + 200));
-			if (ImGui::Button("Settings")) {
+			if (ImGui::Button("Settings")) 
+			{
 				Globals.settings.Load();
 				Globals.gameState = GameState::SETTINGS;
 			}
@@ -750,73 +659,6 @@ namespace wc
 			ImGui::GetBackgroundDrawList()->AddImage(m_Renderer.GetRenderImageID(), ImVec2(windowPos.x, windowPos.y), ImVec2((float)Globals.window.GetSize().x + windowPos.x, (float)Globals.window.GetSize().y + windowPos.y));
 			ImGui::End();
 			ImGui::PopStyleVar(3);
-		}
-
-		void LOADOUT_MENU()
-		{
-			const ImGuiViewport* viewport = ImGui::GetMainViewport();
-			ImGui::SetNextWindowPos(viewport->WorkPos);
-			ImGui::SetNextWindowSize(viewport->WorkSize);
-			ImGui::SetNextWindowViewport(viewport->ID);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
-			ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 7.f);
-
-			ImGui::Begin("LOADOUT", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
-			ImGui::SetWindowFontScale(0.8f);
-			if (ImGui::BeginTabBar("Tab", ImGuiTabBarFlags_None))
-			{
-				//@TODO - optimize this
-				// ? put primaries in one class, secondaries in another and melee in another
-				// - make the loops shorter -
-
-				if (ImGui::BeginTabItem("Primary"))
-				{
-					ImGui::SeparatorText("Primary Weapon");
-					for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++)
-					{
-						if (WeaponStats[i].WeaponClass == WeaponClass::Primary)UI::WeaponChoose((WeaponType)i, m_Map.player.PrimaryWeapon);
-					}
-					ImGui::EndTabItem();
-				}
-
-				if (ImGui::BeginTabItem("Secondary"))
-				{
-					ImGui::SeparatorText("Secondary Weapon");
-					for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++)
-					{
-						if (WeaponStats[i].WeaponClass == WeaponClass::Secondary) {
-							UI::WeaponChoose((WeaponType)i, m_Map.player.SecondaryWeapon);
-						}
-					}
-					ImGui::EndTabItem();
-				}
-
-				if (ImGui::BeginTabItem("Melee"))
-				{
-					ImGui::SeparatorText("Melee Weapon");
-					for (int i = 0; i < magic_enum::enum_count<WeaponType>(); i++)
-					{
-						if (WeaponStats[i].WeaponClass == WeaponClass::Melee) {
-							UI::WeaponChoose((WeaponType)i, m_Map.player.MeleeWeapon);
-						}
-					}
-					ImGui::EndTabItem();
-				}
-
-				ImGui::EndTabBar();
-			}
-
-			ImVec2 BackSize = ImGui::CalcTextSize("Save and Go Back");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - BackSize.x) * 0.5f + 300, (ImGui::GetWindowSize().y + BackSize.y + 400) * 0.5f));
-			if (ImGui::Button("Save and Go Back"))
-			{
-				Globals.gameState = GameState::MENU;
-				Globals.settings.Save();
-			}
-			ImGui::End();
-			ImGui::PopStyleVar(5);
 		}
 
 		bool buttonChecks[10] = { false };
@@ -899,72 +741,6 @@ namespace wc
 				Globals.window.SetSize(Globals.settings.WindowSize);
 				Globals.window.RequestAttention();
 				Globals.window.resized = true;
-			}
-			ImGui::End();
-			ImGui::PopStyleVar(5);
-		}
-
-		void DEATH_MENU()
-		{
-			const ImGuiViewport* viewport = ImGui::GetMainViewport();
-			ImGui::SetNextWindowPos(viewport->WorkPos);
-			ImGui::SetNextWindowSize(viewport->WorkSize);
-			ImGui::SetNextWindowViewport(viewport->ID);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
-			ImGui::Begin("DEATH", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
-			ImGui::SetWindowFontScale(1.8f);
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - ImGui::CalcTextSize("You Died").x) * 0.5f, (ImGui::GetWindowSize().y - ImGui::CalcTextSize("You Died").y) * 0.5f));
-			ImGui::TextColored(ImVec4(1.f, 0, 0, 1.f), "You Died");
-			ImGui::SetWindowFontScale(1.f);
-
-			ImVec2 BackSize = ImGui::CalcTextSize("Go Back");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - BackSize.x) * 0.5f, (ImGui::GetWindowSize().y + BackSize.y + 300) * 0.5f));
-			if (ImGui::Button("Go Back")) Globals.gameState = GameState::MENU;
-			
-			ImGui::End();
-			ImGui::PopStyleVar(5);
-		}
-
-		void WIN_MENU()
-		{
-			const ImGuiViewport* viewport = ImGui::GetMainViewport();
-			ImGui::SetNextWindowPos(viewport->WorkPos);
-			ImGui::SetNextWindowSize(viewport->WorkSize);
-			ImGui::SetNextWindowViewport(viewport->ID);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.f);
-
-			ImGui::Begin("WIN", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground);
-
-			ImVec2 WinSize = ImGui::CalcTextSize("CONGRATS You Won!");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - WinSize.x) * 0.5f, (ImGui::GetWindowSize().y - WinSize.y) * 0.5f));
-			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), "CONGRATS! You Won!");
-
-			ImVec2 TimeSize = ImGui::CalcTextSize("Level Time: {} sec.");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - TimeSize.x) * 0.5f, (ImGui::GetWindowSize().y - TimeSize.y) * 0.5f - 100));
-			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), std::format("Level Time: {:.2f} sec.", LevelTime).c_str());
-
-			ImVec2 LevelSize = ImGui::CalcTextSize("Current Level: {}");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - TimeSize.x) * 0.5f, (ImGui::GetWindowSize().y - TimeSize.y) * 0.5f - 200));
-			ImGui::TextColored(ImVec4(95.f / 255.f, 14.f / 255.f, 61.f / 255.f, 1.f), std::format("Current Level: {}", m_LevelID).c_str());
-
-			ImVec2 NextSize = ImGui::CalcTextSize("Go Next");
-			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - NextSize.x) * 0.5f, (ImGui::GetWindowSize().y + NextSize.y + 300) * 0.5f));
-			if (ImGui::Button("Go Next")) 
-			{
-				Globals.gameState = GameState::PLAY;
-				m_Map.LoadFull("levels/level2.malen");
-				m_Map.player.Health = m_Map.player.StartHealth;
-				m_LevelID++;
 			}
 			ImGui::End();
 			ImGui::PopStyleVar(5);

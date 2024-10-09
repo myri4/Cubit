@@ -22,6 +22,8 @@
 #include "Tile.h"
 #include <magic_enum.hpp>
 
+#include <flecs.h>
+
 // @TODO: Separate tile map and scene
 namespace wc
 {
@@ -44,8 +46,6 @@ namespace wc
 		{
 			if (IsLoaded()) WC_CORE_WARN("Forgot to free the scene");
 		}
-
-		std::string levelPath;
 
 		void Allocate()
 		{
@@ -84,6 +84,11 @@ namespace wc
 				Entities.clear();
 			}
 		}
+
+		auto CreateEntity() { return m_Entities.entity(); }
+		auto CreateEntity(const std::string& name) { return m_Entities.entity(name.c_str()); }
+		auto LookupEntity(const std::string& name) { return m_Entities.lookup(name.c_str()); }
+
 
 		void DestroyEntity(uint32_t i)
 		{
@@ -127,7 +132,6 @@ namespace wc
 			Reset();
 
 			std::ifstream file(filepath);
-			levelPath = filepath;
 
 			file >> Size.x >> Size.y >> Size.z;
 			Allocate();
@@ -397,12 +401,11 @@ namespace wc
 			}
 		}
 
-		HitInfo Intersect(const Ray& ray, uint32_t startIndex = 0, EntityType ignoreType = EntityType::UNDEFINED)
+		HitInfo IntersectMap(const Ray& ray, float maxDist = 0.f)
 		{
 			HitInfo hitInfo;
-			float t = FLT_MAX;
 
-			float fMaxDistance = 36.f;
+			float fMaxDistance = maxDist <= 0.f ? glm::length(glm::vec2(Size)) : maxDist;
 
 			glm::vec2 vRayLength1D;
 			auto& vRayStart = ray.Origin;
@@ -437,32 +440,53 @@ namespace wc
 				if (tileID > 0)
 				{
 					hitInfo.Hit = true;
-					t = fDistance;
 					hitInfo.N = glm::vec2(vMapLastCheck - vMapCheck);
 					bTileFound = true;
 				}
 				vMapLastCheck = vMapCheck;
 			}
 
+			hitInfo.t = fDistance;
+			hitInfo.Point = ray.Origin + hitInfo.t * ray.Direction;
+
+			return hitInfo;
+		}
+
+		HitInfo IntersectEntities(const Ray& ray, uint32_t startIndex = 0, EntityType ignoreType = EntityType::UNDEFINED)
+		{
+			HitInfo hitInfo;
+			float t = FLT_MAX;
+
 			for (uint32_t i = startIndex; i < Entities.size(); i++)
 			{
 				auto& entity = *Entities[i];
-				if (entity.Type != ignoreType) {
-					auto oHitInfo = aabbIntersection(ray, -entity.Size + entity.Position, entity.Size + entity.Position);
+				if (entity.Type == ignoreType) continue;
 
-					if (oHitInfo.Hit && oHitInfo.t < t)
-					{
-						hitInfo.Hit = true;
-						t = oHitInfo.t;
-						hitInfo.Entity = Entities[i];
-						hitInfo.N = oHitInfo.N;
-						hitInfo.Point = oHitInfo.Point;
-					}
+				auto oHitInfo = aabbIntersection(ray, -entity.Size + entity.Position, entity.Size + entity.Position);
+
+				if (oHitInfo.Hit && oHitInfo.t < t)
+				{
+					hitInfo.Hit = true;
+					t = oHitInfo.t;
+					hitInfo.Entity = Entities[i];
+					hitInfo.N = oHitInfo.N;
+					hitInfo.Point = oHitInfo.Point;
 				}
 			}
 
-			hitInfo.Point = ray.Origin + t * ray.Direction;
 			hitInfo.t = t;
+			hitInfo.Point = ray.Origin + hitInfo.t * ray.Direction;
+
+			return hitInfo;
+		}
+
+		HitInfo Intersect(const Ray& ray, float maxDist = 0.f, uint32_t startIndex = 0, EntityType ignoreType = EntityType::UNDEFINED)
+		{
+			auto hitInfo = IntersectMap(ray, 0.f);
+
+			auto entityInfo = IntersectEntities(ray, startIndex, ignoreType);
+
+			if (entityInfo.t < hitInfo.t) hitInfo = entityInfo;
 
 			return hitInfo;
 		}
@@ -510,7 +534,7 @@ namespace wc
 				bodyDef.enableSleep = false;
 				bodyDef.gravityScale = 0.f;
 				bodyDef.linearVelocity = { bullet->Direction.x * weaponInfo.BulletSpeed, bullet->Direction.y * weaponInfo.BulletSpeed };
-				bullet->Body.Create(PhysicsWorld, &bodyDef);
+				bullet->Body.Create(PhysicsWorld, bodyDef);
 
 				b2Circle shape;
 				shape.center = { 0.f, 0.f };
@@ -522,7 +546,7 @@ namespace wc
 				shapeDef.isSensor = weaponInfo.IsBulletSensor;
 				shapeDef.userData = (void*)bullet;
 
-				bullet->ShapeID.CreateCircleShape(bullet->Body, &shapeDef, &shape);
+				bullet->ShapeID.CreateCircleShape(bullet->Body, shapeDef, shape);
 
 				auto massData = bullet->Body.GetMassData();
 				massData.mass = 0.01f;
@@ -898,6 +922,7 @@ namespace wc
 	private:
 		TileID* m_Data = nullptr;
 		uint32_t m_Size = 1;		
+		flecs::world m_Entities;
 
 		const float SimulationTime = 1.f / 200.f;
 
@@ -910,7 +935,6 @@ namespace wc
 
 				bullet.HitEntityType = entityB->Type;
 				bullet.HitEntity = entityB;
-				WC_CORE_INFO("A")
 				//if (entityB->Type > EntityType::Entity)
 				//{
 					//entityB->Body->ApplyLinearImpulseToCenter(-bullet.Body->GetLinearVelocity(), true);						
@@ -922,7 +946,6 @@ namespace wc
 
 				bullet.HitEntityType = entityA->Type;
 				bullet.HitEntity = entityA;
-				WC_CORE_INFO("B")
 			}
 		}
 

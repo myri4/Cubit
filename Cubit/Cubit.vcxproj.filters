@@ -390,5 +390,7 @@
     <CustomBuild Include="src\shaders\Renderer2D.vert" />
     <CustomBuild Include="src\shaders\chromaticAberration.comp" />
     <CustomBuild Include="src\shaders\background.comp" />
+    <CustomBuild Include="src\shaders\RCJFA.comp" />
+    <CustomBuild Include="src\shaders\RCGI.comp" />
   </ItemGroup>
 </Project>

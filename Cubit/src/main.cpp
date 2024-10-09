@@ -9,6 +9,7 @@
 //#define GLM_FORCE_PURE
 #define GLM_FORCE_CTOR_INIT
 #define GLM_FORCE_SILENT_WARNINGS
+#define flecs_STATIC
 
 #define MSDFGEN_PUBLIC // ???
 

@@ -478,7 +478,7 @@ namespace wc
             //build a image-view for the depth image to use for rendering
             VkImageViewCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 
-            info.viewType = image.layers > 0 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
+            info.viewType = image.layers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
             info.image = image;
             info.format = image.format;
             info.subresourceRange.baseMipLevel = 0;
@@ -569,13 +569,4 @@ namespace wc
             m_RendererID = VK_NULL_HANDLE;
         }
     };
-
-    inline VkDescriptorImageInfo GetDescriptorData(VkSampler sampler, VkImageView view, VkImageLayout imageLayout)
-    {
-        VkDescriptorImageInfo imageInfo;
-        imageInfo.sampler = sampler;
-        imageInfo.imageView = view;
-        imageInfo.imageLayout = imageLayout;
-        return imageInfo;
-    }
 }
