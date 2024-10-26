@@ -38,6 +38,8 @@ namespace wc
 	ParticleProps m_Particle;
 	ParticleProps m_SummonParticle;
 
+	using EntityID = flecs::entity;
+
 	struct Map
 	{
 		Map() = default;
@@ -59,6 +61,8 @@ namespace wc
 				player.Size = glm::vec2(1.f, 1.f) * 0.5f;
 				player.HitBoxSize = player.Size;
 			}
+
+			
 		}
 
 		void Free(bool ResetSizes = false)
@@ -88,7 +92,6 @@ namespace wc
 		auto CreateEntity() { return m_Entities.entity(); }
 		auto CreateEntity(const std::string& name) { return m_Entities.entity(name.c_str()); }
 		auto LookupEntity(const std::string& name) { return m_Entities.lookup(name.c_str()); }
-
 
 		void DestroyEntity(uint32_t i)
 		{
@@ -713,6 +716,13 @@ namespace wc
 
 			UpdateAI();
 
+			auto query = m_Entities.query<TransformComponent>();
+
+			// Iterate over matching entities
+			query.each([](EntityID e, TransformComponent& t) {
+				WC_CORE_INFO("Found entity {}", e.name())
+				});
+
 			while (AccumulatedTime >= SimulationTime)
 			{
 				for (auto& entity : Entities)
@@ -754,7 +764,12 @@ namespace wc
 					Entity* entityV = static_cast<Entity*>(b2Shape_GetUserData(contact.visitorShapeId)); // visitor
 
 					// Sensor Bullet End Touch
-					BulletClear(entityS);
+					if (entityS->Type == EntityType::Bullet)
+					{
+						Bullet& bullet = *(Bullet*)entityS;
+						bullet.HitEntityType = EntityType::UNDEFINED;
+						bullet.HitEntity = nullptr;
+					}
 				}
 
 
@@ -919,10 +934,10 @@ namespace wc
 
 		
 		float AccumulatedTime = 0.f;
+		flecs::world m_Entities;
 	private:
 		TileID* m_Data = nullptr;
 		uint32_t m_Size = 1;		
-		flecs::world m_Entities;
 
 		const float SimulationTime = 1.f / 200.f;
 
@@ -951,7 +966,6 @@ namespace wc
 
 		void BulletHitTile(Entity* entityA, Entity* entityB, glm::vec2 normal)
 		{
-
 			if (entityA && entityA->Type == EntityType::Bullet && !entityB)
 			{
 				Bullet& bullet = *(Bullet*)entityA;
@@ -965,17 +979,7 @@ namespace wc
 					bullet.Bounces--;
 				}
 			}
-		}
-
-		void BulletClear(Entity* entity)
-		{
-			if (entity->Type == EntityType::Bullet)
-			{
-				Bullet& bullet = *(Bullet*)entity;
-				bullet.HitEntityType = EntityType::UNDEFINED;
-				bullet.HitEntity = nullptr;
-			}
-		}		
+		}	
 
 	private:
 

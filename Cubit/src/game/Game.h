@@ -55,6 +55,8 @@ namespace wc
 		void LoadFull(const std::string& filepath)
 		{
 			m_Map.LoadFull(filepath);
+			EntityID e = m_Map.CreateEntity("lmao");
+			e.add<TransformComponent>();
 
 			LevelTime = 0.f;
 			m_RotateSword = false;
@@ -426,6 +428,8 @@ namespace wc
 					if (tileID != 0) m_RenderData.DrawQuad({ x, y , 0.f }, { 1.f, 1.f }, 0, glm::vec4(0.27f, 0.94f, 0.98f, 1.f));
 				}
 
+			
+
 			for (int i = 0; i < m_Map.Entities.size(); i++)
 			{
 				Entity& entity = *(Entity*)(m_Map.Entities[i]);
@@ -594,7 +598,7 @@ namespace wc
 			ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - PlaySize.x) * 0.5f, (ImGui::GetWindowSize().y - PlaySize.y) * 0.5f));
 			if (ImGui::Button("PLAY"))
 			{
-				m_Map.LoadFull("levels/level1.malen");
+				LoadFull("levels/level1.malen");
 				Globals.gameState = GameState::PLAY;
 			}
 

@@ -265,6 +265,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
+    <ClInclude Include="src\EntryPoint.h" />
     <ClInclude Include="src\game\Components.h" />
     <ClInclude Include="src\game\Entities.h" />
     <ClInclude Include="src\game\Game.h" />
